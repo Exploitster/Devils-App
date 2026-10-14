@@ -16,7 +16,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   const missing = required.filter(name => !env[name]?.trim());
   if (missing.length) throw new Error(`Missing runtime configuration: ${missing.join(', ')}. Configure secure environment bindings.`);
   if (mode === 'local' && (env.DEVILS_LOCAL_AUTH_SECRET?.length ?? 0) < 32) throw new Error('DEVILS_LOCAL_AUTH_SECRET must contain at least 32 characters.');
-  if (mode === 'services' && !env.DEVILS_STRIPE_SECRET_KEY?.startsWith('sk_test_')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
+  if (mode === 'services' && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
   if (mode === 'services' && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
   const appUrl = url(env.DEVILS_APP_URL ?? 'http://127.0.0.1:3000', 'DEVILS_APP_URL', env.NODE_ENV === 'production');
   const supabaseUrl = mode === 'services' ? url(env.DEVILS_SUPABASE_URL!, 'DEVILS_SUPABASE_URL', true) : '';

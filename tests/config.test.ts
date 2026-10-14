@@ -21,6 +21,9 @@ describe('runtime configuration', () => {
     expect(() => readConfig({ ...services, NODE_ENV: 'production' })).toThrow('DEVILS_APP_URL');
     expect(readConfig({ ...services, NODE_ENV: 'production', DEVILS_APP_URL: 'https://devils.example' }).mode).toBe('services');
   });
+  it('accepts opaque proxy credentials while rejecting known live credentials', () => {
+    expect(readConfig({ ...services, DEVILS_STRIPE_SECRET_KEY: 'opaque-platform-binding' }).mode).toBe('services');
+  });
   it('exports a public allowlist without privileged bindings', () => {
     const result = publicConfig(readConfig(local));
     expect(result.runtimeMode).toBe('local');
