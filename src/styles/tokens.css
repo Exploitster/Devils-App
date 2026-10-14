@@ -1,0 +1,35 @@
+:root {
+  color-scheme: light;
+  --background: #f4f5f4;
+  --surface: #ffffff;
+  --text: #222822;
+  --muted: #535c55;
+  --border: #d3d9d4;
+  --mint: #cff5df;
+  --mint-ink: #155038;
+  --lavender: #e8ddff;
+  --lavender-ink: #513174;
+  --citation: #fff1a8;
+  --citation-ink: #554100;
+  --focus: #205caa;
+  --accent: var(--mint);
+  --accent-ink: var(--mint-ink);
+  --radius: 16px;
+  --shadow: 0 4px 18px #17291d0a;
+}
+[data-mode='philosophy'] { --accent: var(--lavender); --accent-ink: var(--lavender-ink); }
+[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #171c19; --surface: #222a25; --text: #f2f5f3; --muted: #bdc9c0;
+  --border: #526158; --mint: #244e3a; --mint-ink: #d2f8df;
+  --lavender: #44345e; --lavender-ink: #ecdeff; --citation: #544815; --citation-ink: #fff1a8;
+  --focus: #a8cfff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--text); font-family: Arial, Helvetica, sans-serif; font-size: 17px; line-height: 1.6; }
+button, input, textarea, select { font: inherit; }
+button, input, select { min-height: 44px; }
+button, a { touch-action: manipulation; }
+a { color: var(--accent-ink); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
