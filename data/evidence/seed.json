@@ -1,0 +1,336 @@
+[
+  {
+    "id": "rethinkdb-shutdown-2016",
+    "mode": "business",
+    "title": "RethinkDB is shutting down",
+    "url": "https://github.com/rethinkdb/www/blob/1be3fee3b171bbdba45e013001f9780b555c67bd/_posts/2016-10-05-rethinkdb-shutdown.md",
+    "sourceIdentifier": "1be3fee3b171bbdba45e013001f9780b555c67bd",
+    "publisher": "RethinkDB; author Slava Akhmechet",
+    "publicationDate": "2016-10-05",
+    "sourceSha256": "8fb6cbe3077f1292807167529c69a767df6df4ad970a551928683a5329bd12d8",
+    "limitations": [
+      "Founder announcement establishes company shutdown and sustainability issue, not a particular pricing, distribution or customer-demand cause. This is a developer-tools case, not evidence about Indian food delivery or consumer demand."
+    ],
+    "author": "Slava Akhmechet",
+    "work": "RethinkDB is shutting down",
+    "edition": "Official repository source at pinned commit",
+    "license": "Source repository includes Apache-2.0 LICENSE. Preserve license and attribution when redistributing excerpts.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "excerpts": [
+      {
+        "id": "rethinkdb-outcome",
+        "text": "After more than seven years of development, the company behind RethinkDB is shutting down. We worked very hard to make RethinkDB successful, but in spite of all our efforts we were ultimately unable to build a sustainable business.",
+        "sha256": "da1602dcba0cf20585b455742f77cb19d121b4d1f4a6df27706ef66ff68d432b",
+        "locator": "Shutdown announcement, first paragraph",
+        "quoteAllowed": true
+      },
+      {
+        "id": "rethinkdb-open-source",
+        "text": "Both projects will continue to be available, distributed under open source licenses.",
+        "sha256": "147268e79d2ec0a86d515103998cf4f859de528d4e3a899b237aaff481248096",
+        "locator": "Shutdown announcement, continuity-plan paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "rethinkdb-outcome-claim",
+        "text": "In its 2016-10-05 announcement, the company behind RethinkDB said it was shutting down after more than seven years of development and had been unable to build a sustainable business.",
+        "excerptIds": [
+          "rethinkdb-outcome"
+        ],
+        "topics": [
+          "database",
+          "developer tools",
+          "open source",
+          "sustainability",
+          "software startup"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      },
+      {
+        "id": "rethinkdb-open-source-claim",
+        "text": "The RethinkDB shutdown announcement said RethinkDB and Horizon would continue to be available under open-source licenses.",
+        "excerptIds": [
+          "rethinkdb-open-source"
+        ],
+        "topics": [
+          "database",
+          "developer tools",
+          "open source",
+          "sustainability",
+          "software startup"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      }
+    ],
+    "business": {
+      "identity": "RethinkDB",
+      "attemptedBusiness": "Build a sustainable business around RethinkDB database software",
+      "customer": "Developers and software teams; characterization from source product references",
+      "industry": "Database software / developer infrastructure",
+      "geography": "",
+      "period": "More than seven years of development through announcement on 2016-10-05; exact founding date not established here",
+      "outcome": "The company announced shutdown; RethinkDB and Horizon software remained available under open-source licenses",
+      "reportedCauses": [
+        "Unable to build a sustainable business; specific causal factors not established in this source"
+      ]
+    }
+  },
+  {
+    "id": "mill-liberty-adversary",
+    "mode": "philosophy",
+    "title": "On Liberty",
+    "url": "https://github.com/GITenberg/On-Liberty_34901/blob/5f5238d21f3be5cfc51f00344934c98fe801d7b2/34901.txt",
+    "sourceIdentifier": "5f5238d21f3be5cfc51f00344934c98fe801d7b2",
+    "publisher": "Project Gutenberg electronic edition, mirrored by GITenberg",
+    "publicationDate": "2011-01-10",
+    "sourceSha256": "64d9d167fabefa7c625f6cf8952aeec9153235c5e1b7d24315f451d30259306b",
+    "limitations": [
+      "Understanding one's view requires serious engagement with opposing arguments; this is a philosophical position, not empirical proof that opposition improves every decision."
+    ],
+    "author": "John Stuart Mill",
+    "work": "On Liberty",
+    "edition": "Walter Scott Publishing Co. edition with W. L. Courtney introduction; print year not stated in inspected header; Gutenberg #34901 release 2011-01-10",
+    "license": "Underlying historical work/translation is public domain; electronic file includes Project Gutenberg License. Preserve source notices/license if distributing Gutenberg-branded text. The file says local law applies outside the USA; assess licensing for distribution jurisdictions. Do not copy modern editorial matter without review.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "excerpts": [
+      {
+        "id": "mill-liberty-adversary-excerpt",
+        "text": "He who knows\nonly his own side of the case, knows little of that.",
+        "sha256": "a9c41a1c20d557f255cb1bbcffbf68a35b49f628c9266e24daa3c289504f45a0",
+        "locator": "Chapter II, Of the Liberty of Thought and Discussion",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "mill-liberty-adversary-excerpt-claim",
+        "text": "Mill argues that knowing only one side of a case gives an incomplete understanding of that case.",
+        "excerptIds": [
+          "mill-liberty-adversary-excerpt"
+        ],
+        "topics": [
+          "opposing arguments",
+          "beliefs",
+          "critical thinking"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "mill-liberty-individuality",
+    "mode": "philosophy",
+    "title": "On Liberty",
+    "url": "https://github.com/GITenberg/On-Liberty_34901/blob/5f5238d21f3be5cfc51f00344934c98fe801d7b2/34901.txt",
+    "sourceIdentifier": "5f5238d21f3be5cfc51f00344934c98fe801d7b2",
+    "publisher": "Project Gutenberg electronic edition, mirrored by GITenberg",
+    "publicationDate": "2011-01-10",
+    "sourceSha256": "64d9d167fabefa7c625f6cf8952aeec9153235c5e1b7d24315f451d30259306b",
+    "limitations": [
+      "Mill contrasts choosing one's own plan with conforming to others. Applying this to a specific career/life decision is an interpretation, not a command to ignore obligations."
+    ],
+    "author": "John Stuart Mill",
+    "work": "On Liberty",
+    "edition": "Walter Scott Publishing Co. edition with W. L. Courtney introduction; print year not stated in inspected header; Gutenberg #34901 release 2011-01-10",
+    "license": "Underlying historical work/translation is public domain; electronic file includes Project Gutenberg License. Preserve source notices/license if distributing Gutenberg-branded text. The file says local law applies outside the USA; assess licensing for distribution jurisdictions. Do not copy modern editorial matter without review.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "excerpts": [
+      {
+        "id": "mill-liberty-individuality-excerpt",
+        "text": "He who lets the world, or his own portion of it, choose his plan of life\nfor him, has no need of any other faculty than the ape-like one of\nimitation. He who chooses his plan for himself, employs all his\nfaculties.",
+        "sha256": "ccd744f1701ef8e76b61af424a7ae7572c4d2383ab7b1f3f57e461286a4782e5",
+        "locator": "Chapter III, Of Individuality, as One of the Elements of Well-being",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "mill-liberty-individuality-excerpt-claim",
+        "text": "Mill contrasts imitating a plan of life chosen by others with exercising one’s faculties to choose a plan oneself.",
+        "excerptIds": [
+          "mill-liberty-individuality-excerpt"
+        ],
+        "topics": [
+          "autonomy",
+          "career",
+          "life choices",
+          "conformity"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "aurelius-revisability",
+    "mode": "philosophy",
+    "title": "Meditations",
+    "url": "https://github.com/GITenberg/Meditations_2680/blob/f586bf5b5ac4ace02faf101904ad43d11170fdeb/2680.txt",
+    "sourceIdentifier": "f586bf5b5ac4ace02faf101904ad43d11170fdeb",
+    "publisher": "Project Gutenberg electronic edition, mirrored by GITenberg",
+    "publicationDate": "2008-12-25",
+    "sourceSha256": "9997e73afcce91209ee554db83fb68d0b3b531459c64f9ec266afa9c1b139921",
+    "limitations": [
+      "The passage asks for readiness to change mistaken beliefs on reasonable grounds, alongside action for common benefit. Archaic edition; its section numbering can differ from modern editions."
+    ],
+    "author": "Marcus Aurelius",
+    "work": "Meditations",
+    "edition": "Meric Casaubon translation prepared by comparison of 1634/1635 editions, with alterations noted in text; Gutenberg #2680 release June 2001, posted 2008-12-25",
+    "license": "Underlying historical work/translation is public domain; electronic file includes Project Gutenberg License. Preserve source notices/license if distributing Gutenberg-branded text. The file says local law applies outside the USA; assess licensing for distribution jurisdictions. Do not copy modern editorial matter without review.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "excerpts": [
+      {
+        "id": "aurelius-revisability-excerpt",
+        "text": "These two rules, thou must have always in a readiness. First, do\nnothing at all, but what reason proceeding from that regal and supreme\npart, shall for the good and benefit of men, suggest unto thee. And\nsecondly, if any man that is present shall be able to rectify thee or to\nturn thee from some erroneous persuasion, that thou be always ready to\nchange thy mind, and this change to proceed, not from any respect of any\npleasure or credit thereon depending, but always from some probable\napparent ground of justice, or of some public good thereby to be\nfurthered; or from some other such inducement.",
+        "sha256": "01e1ce39f9bc288865f5efe936caef538d9d20b7d2c097cfc53019006e923274",
+        "locator": "Fourth Book, X (section numbering in this edition)",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "aurelius-revisability-excerpt-claim",
+        "text": "In this translation, Aurelius urges readiness to revise mistaken beliefs on reasonable grounds and to act for the common benefit.",
+        "excerptIds": [
+          "aurelius-revisability-excerpt"
+        ],
+        "topics": [
+          "changing mind",
+          "public good",
+          "obligations",
+          "beliefs"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "mill-utility-consequences",
+    "mode": "philosophy",
+    "title": "Utilitarianism",
+    "url": "https://github.com/GITenberg/Utilitarianism_11224/blob/7417ae902febaa7fb3c1c1c83e5ea0d33bef0529/11224.txt",
+    "sourceIdentifier": "7417ae902febaa7fb3c1c1c83e5ea0d33bef0529",
+    "publisher": "Project Gutenberg electronic edition, mirrored by GITenberg",
+    "publicationDate": "2004-02-22",
+    "sourceSha256": "15fb18e02075a181e5efabce710898b4cdd2e99ebcd68f5125833a6f9f55761c",
+    "limitations": [
+      "A utilitarian position relating rightness to happiness and pain; do not present it as consensus or a verdict about an individual choice."
+    ],
+    "author": "John Stuart Mill",
+    "work": "Utilitarianism",
+    "edition": "Seventh edition, Longmans, Green, and Co., London, 1879; Gutenberg #11224 release 2004-02-22",
+    "license": "Underlying historical work/translation is public domain; electronic file includes Project Gutenberg License. Preserve source notices/license if distributing Gutenberg-branded text. The file says local law applies outside the USA; assess licensing for distribution jurisdictions. Do not copy modern editorial matter without review.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "excerpts": [
+      {
+        "id": "mill-utility-consequences-excerpt",
+        "text": "The creed which accepts as the foundation of morals, Utility, or the\nGreatest Happiness Principle, holds that actions are right in proportion\nas they tend to promote happiness, wrong as they tend to produce the\nreverse of happiness. By happiness is intended pleasure, and the\nabsence of pain; by unhappiness, pain, and the privation of pleasure.",
+        "sha256": "ae5eac95b51645af4cb1dccc223ffe1ea481356bb1410c28814fec43d7b96bdd",
+        "locator": "Chapter II, What Utilitarianism Is",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "mill-utility-consequences-excerpt-claim",
+        "text": "Mill presents a utilitarian position connecting right action with promoting happiness and reducing pain.",
+        "excerptIds": [
+          "mill-utility-consequences-excerpt"
+        ],
+        "topics": [
+          "consequences",
+          "happiness",
+          "obligations",
+          "meaning",
+          "wellbeing"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "atom-product-retirement-2022",
+    "mode": "business",
+    "title": "Atom official project README",
+    "url": "https://github.com/atom/atom/blob/1c3bd35ce238dc0491def9e1780d04748d8e18af/README.md",
+    "sourceIdentifier": "1c3bd35ce238dc0491def9e1780d04748d8e18af",
+    "publisher": "GitHub / Atom project",
+    "publicationDate": null,
+    "sourceSha256": "e1d811dd3a601c7758b6483e64e5717853059199907d18148f3fa4ee06ce5797",
+    "limitations": [
+      "Optional product-retirement case. Atom is not a failed startup and GitHub did not close. This README states no economic cause; reasons must remain unknown until linked official blog can be inspected. Do not infer lack of product-market fit, losses, willingness to pay, or distribution failure."
+    ],
+    "author": "GitHub / Atom project",
+    "work": "Atom official project README",
+    "edition": "Official repository source at pinned commit",
+    "license": "MIT LICENSE.md inspected; retain GitHub copyright and MIT license when redistributing substantial portions.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected",
+    "inspectedAt": "2026-10-14T08:19:26.287262Z",
+    "excerpts": [
+      {
+        "id": "atom-retirement-announcement",
+        "text": "Atom and all repositories under Atom will be archived on December 15, 2022.",
+        "sha256": "ffc0a51d99217752f5903719785aa4caddeae1bae6e5ab104ffec5e9f79bd0ad",
+        "locator": "Official README, archival notice",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "atom-retirement-announcement-claim",
+        "text": "The official Atom README announced that Atom and its repositories would be archived on December 15, 2022; it does not establish company failure or the reason for retirement.",
+        "excerptIds": [
+          "atom-retirement-announcement"
+        ],
+        "topics": [
+          "developer tools",
+          "text editor",
+          "product retirement"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      }
+    ],
+    "business": {
+      "identity": "GitHub / Atom product",
+      "attemptedBusiness": "Customizable approachable Electron-based text editor",
+      "customer": "Developers; interpretation of text editor description",
+      "industry": "Developer tools / text editor",
+      "geography": "",
+      "period": "",
+      "outcome": "Official README announces archival of Atom and its repositories for December 15, 2022. This excerpt verifies the announcement, not the realized date.",
+      "reportedCauses": []
+    }
+  }
+]
