@@ -31,7 +31,7 @@ export class SupabaseStore implements Store {
  async listUsage(userId:string,since:string) {this.owner(userId);const {data,error}=await this.client.from('usage_events').select('data').eq('user_id',userId).gte('data->>committedAt',since);if(error)throw new AppError('STORE_UNAVAILABLE','Storage is temporarily unavailable.',503);return(data??[]).map(row=>row.data as UsageEvent);}
  async reserveSpend(attempt:SpendAttempt,dailyLimitMicros:number) {if(this.ownerId!==null)this.owner(attempt.userId);await this.rpc('reserveSpend',{attempt,dailyLimitMicros});}
  async reconcileSpend(attemptId:string,actualMicros:number) {await this.rpc('reconcileSpend',{attemptId,actualMicros});}
- beginWebhook(eventId:string,now:string,leaseExpiresAt:string) {return this.rpc<'process'|'duplicate'>('beginWebhook',{eventId,now,leaseExpiresAt});}
+ beginWebhook(eventId:string,now:string,leaseExpiresAt:string) {return this.rpc<'process'|'duplicate'|'pending'>('beginWebhook',{eventId,now,leaseExpiresAt});}
  async completeWebhook(eventId:string,subscription:Subscription|null) {await this.rpc('completeWebhook',{eventId,subscription});}
  async failWebhook(eventId:string) {await this.rpc('failWebhook',{eventId});}
  async beginAccountDeletion(userId:string) {this.owner(userId);await this.rpc('beginAccountDeletion',{userId});}

@@ -86,7 +86,7 @@ describe('entitlement and account closure foundations',()=>{
    expect(await store.listUsage('a',now)).toEqual([]);
  });
  it('makes webhook leases and failed retry durable and atomically grants access once',async()=>{
-   expect(await store.beginWebhook('evt',now,'2026-10-14T15:01:00.000Z')).toBe('process');expect(await store.beginWebhook('evt',now,'2026-10-14T15:01:00.000Z')).toBe('duplicate');await store.failWebhook('evt');
+   expect(await store.beginWebhook('evt',now,'2026-10-14T15:01:00.000Z')).toBe('process');expect(await store.beginWebhook('evt',now,'2026-10-14T15:01:00.000Z')).toBe('pending');await store.failWebhook('evt');
    expect(await store.beginWebhook('evt',now,'2026-10-14T15:01:00.000Z')).toBe('process');await store.completeWebhook('evt',{userId:'a',customerId:'cus',subscriptionId:'sub',priceId:'price',status:'active',currentPeriodEnd:'2026-11-01T00:00:00.000Z',cancelAtPeriodEnd:false,updatedAt:now});
    store.close();store=new LocalStore(join(directory,'store.sqlite'));expect(await store.beginWebhook('evt','2026-10-14T16:00:00.000Z','2026-10-14T16:01:00.000Z')).toBe('duplicate');expect(await store.getSubscription('a')).toMatchObject({status:'active'});
  });

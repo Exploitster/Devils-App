@@ -113,7 +113,8 @@ begin
    update spend_attempts set data=old||jsonb_build_object('actualMicros',greatest((p_args->>'actualMicros')::bigint,coalesce((old->>'actualMicros')::bigint,0))) where id=p_args->>'attemptId';
  when 'beginWebhook' then
    perform pg_advisory_xact_lock(hashtextextended('devils-webhooks',0));oid:=p_args->>'eventId';select data into old from webhook_events where id=oid for update;
-   if old is not null and (old->>'status'='complete' or (old->>'status'='processing' and (old->>'leaseExpiresAt')::timestamptz>(p_args->>'now')::timestamptz)) then return '"duplicate"'::jsonb;end if;
+   if old->>'status'='complete' then return '"duplicate"'::jsonb;end if;
+   if old->>'status'='processing' and (old->>'leaseExpiresAt')::timestamptz>(p_args->>'now')::timestamptz then return '"pending"'::jsonb;end if;
    v:=jsonb_build_object('id',oid,'status','processing','leaseExpiresAt',p_args->>'leaseExpiresAt','attempts',coalesce((old->>'attempts')::integer,0)+1);insert into webhook_events values(oid,v) on conflict(id) do update set data=excluded.data;return '"process"'::jsonb;
  when 'completeWebhook' then
    perform pg_advisory_xact_lock(hashtextextended('devils-webhooks',0));oid:=p_args->>'eventId';select data into old from webhook_events where id=oid for update;if old is null then perform app_error('NOT_FOUND');end if;
