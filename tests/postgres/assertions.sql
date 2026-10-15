@@ -50,5 +50,13 @@ DO $$ DECLARE sid text; args jsonb; result jsonb; BEGIN
   PERFORM public.app_store('deleteSession',jsonb_build_object('userId','00000000-0000-4000-8000-000000000001','sessionId',sid),'00000000-0000-4000-8000-000000000001');
   IF EXISTS(SELECT 1 FROM public.turn_operations WHERE id='sql-turn-one') THEN RAISE EXCEPTION 'Private operation did not cascade'; END IF;
 END $$;
+SET ROLE service_role;
+SELECT public.app_store('beginAccountDeletion', '{"userId":"00000000-0000-4000-8000-000000000002"}', '00000000-0000-4000-8000-000000000002');
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
+DO $$ BEGIN
+ IF (SELECT count(*) FROM public.sessions) <> 0 THEN RAISE EXCEPTION 'Disabled account can still read private sessions'; END IF;
+ IF (SELECT count(*) FROM public.profiles) <> 1 THEN RAISE EXCEPTION 'Closure retry profile is unavailable'; END IF;
+END $$;
 RESET ROLE;
 ROLLBACK;

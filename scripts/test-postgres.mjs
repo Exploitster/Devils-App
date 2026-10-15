@@ -21,7 +21,7 @@ try {
   started = true;
   let ready = false;
   for (let attempt = 0; attempt < 120; attempt++) {
-    try { docker(['exec', container, 'pg_isready', '-U', 'postgres']); ready = true; break; }
+    try { docker(['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']); ready = true; break; }
     catch { await new Promise(resolve => setTimeout(resolve, 250)); }
   }
   if (!ready) throw new Error('The isolated PostgreSQL service did not become ready.');
@@ -32,7 +32,7 @@ try {
     console.log(`Applied ${migration}`);
   }
   sql(readFileSync(new URL('../tests/postgres/assertions.sql', import.meta.url), 'utf8'));
-  console.log('Passed SQL ownership, RLS, privilege, revision reservation, idempotency, cancellation and cascade assertions.');
+  console.log('Passed SQL ownership, RLS, privilege, revision reservation, idempotency, cancellation, cascade and disabled-account read assertions.');
   console.log('Supabase JWT issuance and hosted authentication remain separate sandbox checks.');
 } catch (error) {
   console.error('PostgreSQL validation failed:', error.message);
