@@ -8,7 +8,8 @@ const phraseMatch = (query: string, phrase: string) => (` ${query} `).includes(`
 // vocabulary does not make developer-infrastructure evidence comparable to any startup.
 function domainMatches(e: Evidence, query: string): boolean {
   if (e.mode !== 'business') return true;
-  if (/\b(food|delivery|hostel|india|crm|consumer|restaurant|grocery|travel|booking)\b/.test(query)) return false;
+  const softwareCase = ['atom-product-retirement-2022', 'rethinkdb-shutdown-2016'].includes(e.id);
+  if (softwareCase && /\b(food|delivery|hostel|india|crm|consumer|restaurant|grocery|travel|booking)\b/.test(query)) return false;
   const editor = /\b(atom|editor|editors)\b/.test(query);
   if (e.id === 'atom-product-retirement-2022') return editor;
   if (e.id === 'rethinkdb-shutdown-2016') return /\b(rethinkdb|database|databases)\b/.test(query) || (!editor && ['developer tools', 'developer infrastructure', 'open source', 'software infrastructure'].some(x => phraseMatch(query, x)));

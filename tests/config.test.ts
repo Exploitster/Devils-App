@@ -29,7 +29,7 @@ describe('runtime configuration', () => {
     void [_key, _webhook, _monthly, _yearly];
     const config = readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: undefined, DEVILS_MODEL: undefined });
     expect(config.paymentsEnabled).toBe(false);
-    expect(config.model).toBe('gemini-2.5-flash');
+    expect(config.model).toBe('gemini-3.8-flash');
     expect(config.modelApiKey).toBe('provider-secret');
     expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'true' })).toThrow('DEVILS_STRIPE_SECRET_KEY');
     expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'typo' })).toThrow('DEVILS_PAYMENTS_ENABLED');

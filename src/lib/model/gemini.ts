@@ -1,17 +1,11 @@
 import { z } from 'zod';
-import { ModelOutputSchema, type ModelInput, type ModelService } from '../contracts';
+import { type ModelInput, type ModelService } from '../contracts';
 import type { RuntimeConfig } from '../config';
 import { assessSafety } from '../conversation/safety';
 import { prepareState } from '../conversation/state';
-import { instructions, ProviderError } from './provider';
+import { ProviderError } from './provider';
+import { EnvelopeSchema, geminiRequest } from './request';
 
-const EnvelopeSchema=z.object({safety:z.enum(['ordinary','crisis','harm','political','qualified']),output:ModelOutputSchema}).strict();
-function responseSchema(){
- const schema=z.toJSONSchema(EnvelopeSchema);
- const supported=new Set(['$id','$defs','$ref','$anchor','type','format','title','description','enum','items','prefixItems','minItems','maxItems','minimum','maximum','anyOf','oneOf','properties','additionalProperties','required','propertyOrdering']);
- const clean=(node:unknown):void=>{if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(clean);return;}const value=node as Record<string,unknown>;if('const'in value)value.enum=[value.const];for(const key of Object.keys(value)){if(!supported.has(key)){delete value[key];continue;}if(key==='properties'||key==='$defs')Object.values(value[key] as Record<string,unknown>).forEach(clean);else if(['items','prefixItems','anyOf','oneOf','additionalProperties'].includes(key))clean(value[key]);}};
- clean(schema);return schema;
-}
 function safeOutput(raw:string,input:ModelInput):unknown {
  let envelope:z.infer<typeof EnvelopeSchema>;try{envelope=EnvelopeSchema.parse(JSON.parse(raw));}catch{return null;}
  if(['crisis','harm','political'].includes(envelope.safety)){
@@ -28,7 +22,8 @@ interface GeminiResponse {
  usageMetadata?:{promptTokenCount?:number;candidatesTokenCount?:number;thoughtsTokenCount?:number;totalTokenCount?:number;cachedContentTokenCount?:number;toolUsePromptTokenCount?:number};
 }
 /** One native generateContent request. The engine owns attempts, deadlines and
- * spend reservations. Thinking is disabled to bound output spending; any returned
+ * spend reservations. Thinking is disabled for compatible Gemini 2.5 models; Gemini 3 uses low
+ * thinking within the output-token cap. Any returned
  * thought tokens are still charged at the configured output rate. No tools/cache. */
 export class GeminiModel implements ModelService {
  constructor(private config:RuntimeConfig,private fetcher:typeof fetch=fetch){if(typeof window!=='undefined')throw new Error('Models are server-only.');}
@@ -37,7 +32,7 @@ export class GeminiModel implements ModelService {
   let response:Response;
   try{response=await this.fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent`,{
    method:'POST',signal,headers:{'x-goog-api-key':this.config.modelApiKey,'Content-Type':'application/json'},
-   body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{candidateCount:1,maxOutputTokens:this.config.maxOutputTokens,responseMimeType:'application/json',responseJsonSchema:responseSchema(),thinkingConfig:{thinkingBudget:0}}}),
+   body:JSON.stringify(geminiRequest(input,this.config)),
   });}catch(error){if(signal.aborted)throw error;throw new ProviderError(true);}
   if(!response.ok)throw new ProviderError(response.status===429||response.status>=500);
   let body:GeminiResponse;try{body=await response.json() as GeminiResponse;}catch{throw new ProviderError(false,'The provider returned an invalid response.');}

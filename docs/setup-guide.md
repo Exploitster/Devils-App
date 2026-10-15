@@ -29,10 +29,10 @@ The privileged key stays on the server. Never put it in a `NEXT_PUBLIC_` variabl
 
 1. Open https://aistudio.google.com/ and create a Gemini API key for the appropriate Google project.
 2. Put that key in the environment's secure credential settings as **`DEVILS_GEMINI_API_KEY`**, with HTTPS access to **`generativelanguage.googleapis.com`**. Do not paste it into chat.
-3. Set `DEVILS_MODEL=gemini-2.5-flash`. The current adapter disables thinking for this model to keep output spending bounded. Other model families need compatibility checks before switching.
-4. Check the current Gemini price for your account and set `DEVILS_MODEL_INPUT_USD_PER_MILLION` and `DEVILS_MODEL_OUTPUT_USD_PER_MILLION` to the USD prices per million tokens. Do not copy assumed prices. Set zero only if the applicable tier is actually free.
+3. Set `DEVILS_MODEL=gemini-3.8-flash`. The Gemini 3 adapter requests low thinking within the output-token cap. A real generation attempt on October 15, 2026 returned `404 NOT_FOUND` for the previous `gemini-2.5-flash`, explaining that it was unavailable to new users and recommending 3.8. Model-list success alone does not prove generation availability.
+4. Check the current Gemini price for your account and set `DEVILS_MODEL_INPUT_USD_PER_MILLION` and `DEVILS_MODEL_OUTPUT_USD_PER_MILLION` to the USD prices per million tokens. Google's [published standard text rates](https://ai.google.dev/gemini-api/docs/pricing) checked October 15, 2026 list **0.75 input / 3.75 output** for 3.8 Flash through December 31, 2026, and **1.50 / 7.50** starting January 1, 2027. These can serve as conservative paid-rate estimates; your free/paid tier and invoice may differ. Review and update the configured rates when the tariff changes. Set zero only if the applicable tier is actually free.
 5. Set `DEVILS_RUNTIME_MODE=services`. Keep `DEVILS_PAYMENTS_ENABLED=false`; leave all Stripe fields blank. Restart the app after configuration changes.
-6. Sign in with an invited account, send a synthetic conversation, inspect the returned source, and create a card. Confirm that provider usage appears in the server store. This live connection check has not been performed without your credentials.
+6. Run `npm run eval:live -- --confirm-live` for three synthetic scenarios using the real engine and a maximum $0.25 estimated run budget. Read `.local/evaluations/live-latest.json`; schema checks and human quality review are separate. The October 15 run stopped on Google's repeated `503 UNAVAILABLE` responses. Live model quality remains unverified. Once Google accepts generation, sign in with an invited account, send a synthetic conversation, inspect the returned source, and create a card. Confirm that provider usage appears in the server store.
 
 In the Codex environment, draft changes must be reviewed, saved, and published before they apply to a new environment. The old `DEVILS_MODEL_API_KEY` OpenAI requirement and Stripe requirements may still appear in saved settings; they are unused with the configuration above and can be removed there. The app reads only the Gemini key.
 
@@ -48,7 +48,7 @@ The app footer links to your marketing website. Adding an “Open app” link on
 
 After creating the authentication user, use its exact UUID with the service-only `public.app_store` RPC. `putProfile` accepts `{profile:{id,email,disabled:false,deletionState:"none",createdAt}}`; `putInvite` accepts `{invite:{userId,enabled:true,expiresAt}}`. Timestamps must be ISO strings, and the invite expiry must be in the future. Make these calls only from a trusted server/admin environment, never from a browser. Owner RLS does not allow users to grant themselves invites or subscriptions.
 
-`/api/health` reports configuration readiness only. It does not prove that Supabase or Gemini is reachable. Verify real sign-in, two-user isolation, generation, and deletion in the development project before release.
+`/api/health` reports configuration readiness only. It does not prove that Supabase or Gemini is reachable. `npm run test:supabase -- --sandbox` verifies two-user password authentication, owner isolation, operation reservation/cancellation, disabled-account RLS and deletion using temporary synthetic identities in a dedicated development project. It cleans up only identities it creates and sends no email. These hosted checks passed on October 15; browser magic-link delivery, refresh and the final HTTPS callback still need verification before release.
 
 ## Database updates and safe retries
 

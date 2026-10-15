@@ -114,6 +114,20 @@ export function SessionView({ id }: {
     } setBusy(false); }
     const state = session?.state;
     const question = state?.clarifications.find(q => q.answer === undefined && !q.skipped);
+    const pricing = session?.mode === 'business' && /pricing/i.test(session.title);
+    const starter = pricing ? {
+        guidance: 'Share your goal, current and proposed prices, who your customers are, and any costs you know. Unknowns are fine; you can skip a question.',
+        example: 'Example only — replace these details with your own: I run a subscription product for small businesses. I am considering increasing the monthly price from $20 to $25 to improve margins. Variable costs are about $5 per customer. I do not yet know how customers would respond.',
+        label: 'Use pricing example',
+    } : session?.mode === 'philosophy' ? {
+        guidance: 'Describe the choice, the options you see, and what matters to you. Share only the personal details you are comfortable discussing.',
+        example: 'Example only — replace these details with your own: I am considering a new job that offers more freedom but less stability. I value learning and have family commitments. I want to examine which tradeoffs I could accept.',
+        label: 'Use personal decision example',
+    } : {
+        guidance: 'Describe your idea, who it helps, the problem it addresses, and what you want to decide or test. You do not need a complete business plan.',
+        example: 'Example only — replace these details with your own: I want to build a scheduling tool for independent tutors. I think they lose time coordinating lessons, but I have not interviewed customers or tested willingness to pay. I want to decide what to validate first.',
+        label: 'Use business idea example',
+    };
     return <Shell mode={session?.mode}>
       <div className="session-heading">
       <div>
@@ -137,6 +151,12 @@ export function SessionView({ id }: {
       <button>Save title</button>
       </form>
       </details>
+      {session.messages.length === 0 && <section className="panel" aria-labelledby="starting-point">
+      <h2 id="starting-point">Start with your situation</h2>
+      <p>{starter.guidance}</p>
+      <button type="button" onClick={() => setText(starter.example)}>{starter.label}</button>
+      <p className="fine">The example contains fictional details. Edit the draft to describe your own situation before sending. Nothing is sent automatically.</p>
+      </section>}
       <section className="conversation" aria-label="Conversation" aria-live="polite">{session.messages.map(message => <article key={message.id} className={`message ${message.role}`}>
       <span className="eyebrow">{message.role === 'user' ? 'You' : 'Devils Advocate'}</span>{message.role === 'assistant' && message.text.startsWith('Underlying question:') ? <details><summary>Read full saved response</summary><p className="preserve">{message.text}</p></details> : <p className="preserve">{message.text}</p>}{message.citations.map((citation, index) => <SourceButton citation={citation} key={index}/>)}</article>)}</section>{state && state.phase !== 'support' && state.strengths.length > 0 && <section className="panel reflection">
       <h2>The underlying question</h2>

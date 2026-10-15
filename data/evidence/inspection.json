@@ -70,5 +70,41 @@
     "inspectedAt": "2026-10-14T08:19:26.287262Z",
     "reviewedAt": "2026-10-14T08:44:32Z",
     "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "google-adk-evaluation-objectives",
+    "sourcePath": "sources/google-adk-evaluation.md",
+    "sourceSha256": "ae64cc5c9c69e6601f8261e69d6e394d7e1f54f88f92f28828fc52c031019b75",
+    "licensePath": "sources/google-adk-LICENSE",
+    "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/index.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  },
+  {
+    "evidenceId": "google-adk-evaluation-metric-meaning",
+    "sourcePath": "sources/google-adk-evaluation-criteria.md",
+    "sourceSha256": "e33450dadb1b3a110ccf9889218bbec9e61fd6cb1639152d76a9d3500d953bf0",
+    "licensePath": "sources/google-adk-LICENSE",
+    "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/criteria.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  },
+  {
+    "evidenceId": "nist-dioptra-experiment-provenance",
+    "sourcePath": "sources/nist-dioptra-readme.md",
+    "sourceSha256": "e2d7b38ca802beef471bff3d02a65ab942fbc40ecd73e1dce65b0189af782ed7",
+    "licensePath": "sources/nist-dioptra-LICENSE",
+    "licenseSha256": "7cbbe8e239a276077609790a5bad284c8cf69709ca7ceca41102062e6202bdaa",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/usnistgov/Dioptra/blob/a31c15a4981c54a59a3649a701cd78380120e43e/README.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
   }
 ]

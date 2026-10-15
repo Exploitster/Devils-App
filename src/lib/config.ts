@@ -21,7 +21,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   if (mode === 'local' && (env.DEVILS_LOCAL_AUTH_SECRET?.length ?? 0) < 32) throw new Error('DEVILS_LOCAL_AUTH_SECRET must contain at least 32 characters.');
   if (mode === 'services' && paymentsEnabled && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
   if (mode === 'services' && paymentsEnabled && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
-  const model = env.DEVILS_MODEL ?? 'gemini-2.5-flash';
+  const model = env.DEVILS_MODEL ?? 'gemini-3.8-flash';
   if (!/^gemini-[A-Za-z0-9._-]+$/.test(model)) throw new Error('DEVILS_MODEL must be a Gemini model ID.');
   const appUrl = url(env.DEVILS_APP_URL ?? 'http://127.0.0.1:3000', 'DEVILS_APP_URL', env.NODE_ENV === 'production');
   const supabaseUrl = mode === 'services' ? url(env.DEVILS_SUPABASE_URL!, 'DEVILS_SUPABASE_URL', true) : '';

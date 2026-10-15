@@ -332,5 +332,213 @@
       "outcome": "Official README announces archival of Atom and its repositories for December 15, 2022. This excerpt verifies the announcement, not the realized date.",
       "reportedCauses": []
     }
+  },
+  {
+    "id": "google-adk-evaluation-objectives",
+    "mode": "business",
+    "title": "Why evaluate agents",
+    "url": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/index.md",
+    "sourceIdentifier": "3b0a93bb03031493735ac47b93547721c674b113",
+    "publisher": "Google, Agent Development Kit documentation",
+    "publicationDate": null,
+    "sourceSha256": "ae64cc5c9c69e6601f8261e69d6e394d7e1f54f88f92f28828fc52c031019b75",
+    "limitations": [
+      "Provider documentation recommends evaluation practices; it is not an independent benchmark, customer-demand study, guarantee of agent quality, or evidence that an AI-evaluation business will succeed or fail.",
+      "Voice-AI applicability is a question for the user's own task, dataset and operating conditions; this passage does not evaluate speech recognition, latency, accent coverage, privacy compliance or any particular voice product."
+    ],
+    "author": "Google, Agent Development Kit documentation",
+    "work": "Why evaluate agents",
+    "edition": "Official repository source at pinned commit; publication date not asserted",
+    "license": "Apache-2.0; preserve the complete license and source attribution. Snapshot is unmodified except LF newline normalization. No NOTICE file was present at the inspected repository root.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "excerpts": [
+      {
+        "id": "google-adk-objectives-excerpt",
+        "text": "Before automating agent evaluations, define clear objectives and success criteria:\n\n* **Define Success:** What constitutes a successful outcome for your agent?\n* **Identify Critical Tasks:** What are the essential tasks your agent must accomplish?\n* **Choose Relevant Metrics:** What metrics will you track to measure performance?",
+        "sha256": "a148e7a4ea8de79b19524b6e672054a1cbca7f71e710611c97ceb38774340043",
+        "locator": "Prepare for agent evaluations, introductory paragraph and three bullets",
+        "quoteAllowed": true
+      },
+      {
+        "id": "google-adk-trajectory-excerpt",
+        "text": "1. **Evaluate Trajectory and Tool Use:** Analyzing the steps an agent takes to reach a solution, including its choice of tools, strategies, and the efficiency of its approach.\n2. **Evaluate the Final Response:** Assessing the quality, relevance, and correctness of the agent's final output.",
+        "sha256": "b0c968b329156b75609fab7338e2a4af9776050a6733a2fd6959fac6e461b2de",
+        "locator": "What to evaluate?, numbered list",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "google-adk-objectives-excerpt-claim",
+        "text": "Google's ADK evaluation documentation recommends defining success, identifying critical tasks, and choosing relevant metrics before automating agent evaluations.",
+        "excerptIds": [
+          "google-adk-objectives-excerpt"
+        ],
+        "topics": [
+          "ai evals",
+          "ai evaluation",
+          "agent evaluation",
+          "voice ai",
+          "ai agent",
+          "ai agents",
+          "evaluation metrics"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      },
+      {
+        "id": "google-adk-trajectory-excerpt-claim",
+        "text": "Google's ADK evaluation documentation separates evaluating an agent's trajectory and tool use from evaluating the quality, relevance, and correctness of its final response.",
+        "excerptIds": [
+          "google-adk-trajectory-excerpt"
+        ],
+        "topics": [
+          "ai evals",
+          "ai evaluation",
+          "agent evaluation",
+          "voice ai",
+          "ai agent",
+          "ai agents",
+          "evaluation metrics"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "google-adk-evaluation-metric-meaning",
+    "mode": "business",
+    "title": "Evaluation Criteria: lexical matching and rubric judging",
+    "url": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/criteria.md",
+    "sourceIdentifier": "3b0a93bb03031493735ac47b93547721c674b113",
+    "publisher": "Google, Agent Development Kit documentation",
+    "publicationDate": null,
+    "sourceSha256": "e33450dadb1b3a110ccf9889218bbec9e61fd6cb1639152d76a9d3500d953bf0",
+    "limitations": [
+      "This documents particular ADK criteria at one pinned version; a score is a result under the chosen metric and reference or rubric, not a universal truth or a product-safety certification.",
+      "The excerpt does not establish judge error rates, unbiasedness, causality, benchmark accuracy, pricing, or the superiority of any vendor. Majority voting is a documented implementation choice, not proof that judgments are correct."
+    ],
+    "author": "Google, Agent Development Kit documentation",
+    "work": "Evaluation Criteria: lexical matching and rubric judging",
+    "edition": "Official repository source at pinned commit; publication date not asserted",
+    "license": "Apache-2.0; preserve the complete license and source attribution. Snapshot is unmodified except LF newline normalization. No NOTICE file was present at the inspected repository root.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "excerpts": [
+      {
+        "id": "google-adk-rouge-excerpt",
+        "text": "ROUGE-1 specifically measures the overlap of unigrams (single words) between the\nsystem-generated text (candidate summary) and the a reference text. It\nessentially checks how many individual words from the reference text are present\nin the candidate text.",
+        "sha256": "ce8b502090fecd30d2483a995fb779a1343d3973385181649591debe9cfadd0a",
+        "locator": "response_match_score, Details, opening three sentences; source typo retained",
+        "quoteAllowed": true
+      },
+      {
+        "id": "google-adk-rubric-excerpt",
+        "text": "The criterion uses an LLM-as-a-judge to evaluate the agent's final response\nagainst each rubric, producing a `yes` (1.0) or `no` (0.0) verdict for each.\nLike other LLM-based metrics, it samples the judge model multiple times per\ninvocation and uses a majority vote to determine the score for each rubric in\nthat invocation. The overall score for an invocation is the average of its\nrubric scores. The final criterion score for the eval case is the average of\nthese overall scores across all invocations.",
+        "sha256": "7092879692bcc3d44d2356ef8f6e42d268380d67ceda5b8ba2e4ff8d892ef4b3",
+        "locator": "rubric_based_final_response_quality_v1, Details, final paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "google-adk-rouge-excerpt-claim",
+        "text": "Google's ADK documentation describes ROUGE-1 as measuring unigram overlap between generated text and a reference text.",
+        "excerptIds": [
+          "google-adk-rouge-excerpt"
+        ],
+        "topics": [
+          "ai evals",
+          "ai evaluation",
+          "agent evaluation",
+          "llm judge",
+          "llm as a judge",
+          "evaluation metrics",
+          "rouge"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      },
+      {
+        "id": "google-adk-rubric-excerpt-claim",
+        "text": "Google's ADK rubric-based final-response criterion uses an LLM judge to score each rubric, samples judgments multiple times per invocation, and uses majority voting before averaging scores.",
+        "excerptIds": [
+          "google-adk-rubric-excerpt"
+        ],
+        "topics": [
+          "ai evals",
+          "ai evaluation",
+          "agent evaluation",
+          "llm judge",
+          "llm as a judge",
+          "evaluation metrics",
+          "rouge"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "nist-dioptra-experiment-provenance",
+    "mode": "business",
+    "title": "Dioptra: reproducible and traceable AI experiments",
+    "url": "https://github.com/usnistgov/Dioptra/blob/a31c15a4981c54a59a3649a701cd78380120e43e/README.md",
+    "sourceIdentifier": "a31c15a4981c54a59a3649a701cd78380120e43e",
+    "publisher": "US National Institute of Standards and Technology (NIST)",
+    "publicationDate": null,
+    "sourceSha256": "e2d7b38ca802beef471bff3d02a65ab942fbc40ecd73e1dce65b0189af782ed7",
+    "limitations": [
+      "These are the project's stated properties, not an independent audit or a guarantee that any experiment will reproduce. The introduction says Dioptra supports the NIST AI RMF Measure function; citing this README does not establish conformance to the whole framework.",
+      "This does not establish demand, margins, regulatory compliance, sensitive-data permissions, or whether an AI-evaluation startup will succeed. NIST does not endorse this app or the user's business."
+    ],
+    "author": "US National Institute of Standards and Technology (NIST)",
+    "work": "Dioptra: reproducible and traceable AI experiments",
+    "edition": "Official repository source at pinned commit; publication date not asserted",
+    "license": "CC BY 4.0 to the extent NIST holds copyright; the source includes US-government and contractor copyright qualifications. Preserve NIST attribution and the complete license. No endorsement is implied; snapshot is unchanged except LF newline normalization.",
+    "status": "reviewed",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "excerpts": [
+      {
+        "id": "nist-dioptra-provenance-excerpt",
+        "text": "-   Reproducible: Dioptra automatically creates snapshots of resources so experiments can be reproduced and validated\n-   Traceable: The full history of experiments and their inputs are tracked",
+        "sha256": "cb21f5868060106225a64e49250531b2958108ef1bc4f7aeaede8af410ab9410",
+        "locator": "Key Properties, first two bullets",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "nist-dioptra-provenance-excerpt-claim",
+        "text": "NIST's Dioptra README lists resource snapshots for reproducible experiments and tracking the full history of experiments and their inputs among the platform's intended properties.",
+        "excerptIds": [
+          "nist-dioptra-provenance-excerpt"
+        ],
+        "topics": [
+          "ai evals",
+          "ai evaluation",
+          "ai experiments",
+          "evaluation reproducibility",
+          "evaluation traceability",
+          "model testing",
+          "red teaming"
+        ],
+        "status": "supported",
+        "supportType": "direct",
+        "paraphraseAllowed": true
+      }
+    ]
   }
 ]

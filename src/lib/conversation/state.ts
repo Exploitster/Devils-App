@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { AppError } from '../errors';
 import type { ModelInput, ModelOutput, SessionState, TurnRequest, HandBackCard } from '../contracts';
 export function prepareState(input:ModelInput):SessionState {
  const state=structuredClone(input.session.state);const request=input.request as TurnRequest;
  if(input.task==='turn'){
   if(!state.position || request.action==='correction')state.position=request.text;
-  if(request.action==='correction'){state.counterpoints=[];state.usedEvidenceIds=[];state.usedArgumentIds=[];state.strengths=[];state.openQuestions=[];state.underlyingQuestion='';state.summary='';state.nextStep='';delete state.coverageNote;}
+  if(request.action==='correction'){for(const question of state.clarifications)if(question.answer===undefined)question.skipped=true;state.counterpoints=[];state.usedEvidenceIds=[];state.usedArgumentIds=[];state.strengths=[];state.openQuestions=[];state.underlyingQuestion='';state.summary='';state.nextStep='';delete state.coverageNote;}
   const pending=state.clarifications.find(q=>q.answer===undefined&&!q.skipped);
   if(pending&&request.action!=='correction'){if(request.action==='skip')pending.skipped=true;else pending.answer=request.text;}
  }
@@ -17,8 +18,25 @@ export function controlOutput(input:ModelInput,output:ModelOutput):ModelOutput {
  const prepared=prepareState(input); const state=output.state;
  state.position=prepared.position;
  const known=new Set(prepared.clarifications.map(q=>q.id));
- const additions=state.clarifications.filter(q=>!known.has(q.id)).slice(0,Math.max(0,3-prepared.clarifications.length)).slice(0,1).map(q=>({id:q.id,question:q.question,skipped:false}));
+ const normalize=(text:string)=>text.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const asked=new Set(prepared.clarifications.map(q=>normalize(q.question)));
+ const canAsk=!prepared.clarifications.some(q=>q.answer===undefined&&!q.skipped)&&!prepared.clarifications.some(q=>q.skipped)&&input.task==='turn'&&(!('action'in input.request)||!['skip','pushback','correction'].includes(input.request.action));
+ const additions=(canAsk?state.clarifications:[]).filter(q=>!known.has(q.id)&&!asked.has(normalize(q.question))).slice(0,Math.max(0,3-prepared.clarifications.length)).slice(0,1).map(q=>({id:q.id,question:q.question,skipped:false}));
  state.clarifications=[...prepared.clarifications,...additions];
+ if(state.phase==='clarifying'){
+  const pending=state.clarifications.find(q=>q.answer===undefined&&!q.skipped);
+  if(pending)output.response=pending.question;
+  else {
+   state.phase='debate';state.underlyingQuestion=state.underlyingQuestion||'Which assumption would change this decision?';
+   state.strengths=state.strengths.length?state.strengths:['You have identified a decision to examine.'];
+   state.openQuestions=['Which observation would make you reconsider your position?'];
+   state.nextStep=state.nextStep||'Write down one assumption and test it with a small, reversible step this month.';
+   state.coverageNote=state.coverageNote||'No new reviewed evidence is established by this response.';
+   output.response=`Underlying question: ${state.underlyingQuestion}\n\nStrengths: ${state.strengths.join(' ')}\n\n${state.coverageNote}\n\n${state.openQuestions[0]}\n${state.nextStep}`;
+  }
+ }
+ if(state.phase==='description')throw new AppError('INVALID_MODEL_OUTPUT','The response did not advance this decision. Please try again.',502);
+ if(['debate','card'].includes(state.phase)&&(!state.underlyingQuestion.trim()||!state.strengths.some(s=>s.trim())||!state.nextStep.trim()||!state.openQuestions.some(q=>q.trim())))throw new AppError('INVALID_MODEL_OUTPUT','The response did not provide a usable decision reflection. Please try again.',502);
  state.usedArgumentIds=[...new Set([...prepared.usedArgumentIds,...state.counterpoints.map(p=>p.id)])].slice(-200);
  state.usedEvidenceIds=[...new Set([...prepared.usedEvidenceIds,...output.citations.map(c=>c.evidenceId),...state.counterpoints.flatMap(p=>p.citations.map(c=>c.evidenceId))])].slice(-200);
  if(input.task==='card'||('action' in input.request&&input.request.action==='correction'&&input.session.cards.length>0)){state.phase='card';output.card=makeCard(state,input);}else delete output.card;

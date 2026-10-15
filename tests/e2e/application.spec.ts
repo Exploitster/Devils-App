@@ -8,7 +8,9 @@ async function login(page: import('@playwright/test').Page) {
 for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, source, card, history and resume`, async ({ page }) => {
   await login(page);
   await page.getByRole('button', { name: new RegExp(`^${mode}`) }).click();
+  const loaded = page.waitForResponse(response => /\/api\/sessions\/[^/?]+$/.test(new URL(response.url()).pathname) && response.request().method() === 'GET' && response.status() === 200, {timeout:30000});
   await page.getByRole('button', { name: 'Start a conversation' }).click();
+  await loaded;
   await expect(page.getByLabel('Your message')).toBeVisible();
   await page.getByLabel('Your message').fill(mode === 'Business' ? 'I want to build an open source database startup because developer tools customers will pay for support but serving costs may be high.' : 'I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();

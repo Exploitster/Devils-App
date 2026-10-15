@@ -20,7 +20,7 @@ function output(e: Evidence, kind: 'quote' | 'paraphrase' = 'paraphrase'): Model
 describe('inspected evidence', () => {
   it('verifies every exact excerpt, source hash, review and license snapshot offline', async () => {
     const report = await verifyEvidenceCollection();
-    expect(report.records).toBe(6); expect(report.excerpts).toBe(7);
+    expect(report.records).toBe(9); expect(report.excerpts).toBe(12);
   });
   it('retrieves reviewed relevant business sources, bounded to three and excludes used sources', async () => {
     const found = await retrieve('Build an open source database for developers');
@@ -139,7 +139,7 @@ describe('inspected evidence', () => {
     } finally { await rm(temporary, { recursive: true, force: true }); }
   });
   it('CLI verifies offline and cannot directly import reviewed candidates or write outside drafts', async () => {
-    expect(await runEvidenceImport(['--verify'])).toContain('6 reviewed records');
+    expect(await runEvidenceImport(['--verify'])).toContain('9 reviewed records');
     await expect(runEvidenceImport(['--draft', 'data/evidence/seed.json', '--manifest', 'data/evidence/inspection.json', '--output', 'drafts/reviewed-import.json'])).rejects.toThrow('Draft import cannot carry');
     await expect(runEvidenceImport(['--draft', 'data/evidence/seed.json', '--manifest', 'data/evidence/inspection.json', '--output', '../seed.json'])).rejects.toThrow('Output must');
   });
@@ -171,4 +171,11 @@ describe('inspected evidence', () => {
   it('protects snapshot paths against traversal and absolute paths', async () => {
     for (const path of ['../outside', '/etc/passwd', 'sources/../../outside', 'sources/../seed.json']) await expect(safeSnapshotPath('/workspace/Devils-App/data/evidence', path)).rejects.toThrow();
   });
+});
+
+it('retrieves AI-evaluation methodology for a consumer-product voice agent without unrelated software failures', async () => {
+  const found = await retrieve('AI evaluation and voice AI for a consumer food booking service in India');
+  expect(found.map(record => record.id)).toContain('google-adk-evaluation-objectives');
+  expect(found.map(record => record.id)).not.toContain('rethinkdb-shutdown-2016');
+  expect(found.map(record => record.id)).not.toContain('atom-product-retirement-2022');
 });
