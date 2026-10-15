@@ -75,7 +75,7 @@ export interface Store {
   reserveSpend(attempt: SpendAttempt, dailyLimitMicros: number): Promise<void>;
   reconcileSpend(attemptId: string, actualMicros: number): Promise<void>;
   beginWebhook(eventId: string, now: string, leaseExpiresAt: string): Promise<'process' | 'duplicate' | 'pending'>;
-  completeWebhook(eventId: string, subscription: Subscription | null): Promise<void>;
+  completeWebhook(eventId: string, subscription: Subscription | null, guard?: { customerId: string; token: string }): Promise<void>;
   failWebhook(eventId: string): Promise<void>;
   beginAccountDeletion(userId: string): Promise<void>;
   deleteAccountData(userId: string): Promise<void>;

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { LocalStore } from '../src/lib/store/local';
 import { LocalAuth } from '../src/lib/auth/local';
 import { readConfig } from '../src/lib/config';
+import { DatabaseSync } from 'node:sqlite';
 
 let directory: string; let store: LocalStore;
 const now = '2026-10-14T15:00:00.000Z';
@@ -12,6 +13,16 @@ const profile = (id: string) => ({ id, email: `${id}@example.test`, disabled: fa
 beforeEach(async () => { directory = mkdtempSync(join(tmpdir(), 'devils-u2-')); store = new LocalStore(join(directory, 'store.sqlite')); await store.putProfile(profile('a')); await store.putProfile(profile('b')); });
 afterEach(() => { store.close(); rmSync(directory, { recursive: true, force: true }); });
 describe('durable owner-scoped store', () => {
+  it('fences an expired billing reconciler before committing its receipt', async () => {
+    const db = new DatabaseSync(join(directory, 'store.sqlite'));
+    db.exec('CREATE TABLE IF NOT EXISTS billing_sync_leases(customer_id TEXT PRIMARY KEY, token TEXT NOT NULL, expires_at INTEGER NOT NULL)');
+    db.prepare('INSERT INTO billing_sync_leases VALUES(?,?,?)').run('cus_fenced', 'replacement', Date.now() + 60000);
+    db.close();
+    await store.beginWebhook('evt_fenced', new Date().toISOString(), new Date(Date.now() + 60000).toISOString());
+    await expect(store.completeWebhook('evt_fenced', null, { customerId: 'cus_fenced', token: 'stale' })).rejects.toMatchObject({ code: 'BILLING_SYNC_CONFLICT' });
+    await store.completeWebhook('evt_fenced', null, { customerId: 'cus_fenced', token: 'replacement' });
+    expect(await store.beginWebhook('evt_fenced', new Date().toISOString(), new Date(Date.now() + 60000).toISOString())).toBe('duplicate');
+  });
   it('denies foreign read, rename, delete, reservation and survives restart', async () => {
     const s = await store.createSession('a', { mode: 'philosophy', topic: 'life' }, now);
     expect(await store.listSessions('b')).toEqual([]);

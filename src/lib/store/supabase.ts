@@ -8,7 +8,7 @@ export class SupabaseStore implements Store {
  private owner(userId:string) {if(this.ownerId!==userId)throw notFound();}
  private async rpc<T>(method:string,args:unknown):Promise<T> {
   const {data,error}=await this.admin.rpc('app_store',{p_method:method,p_args:args,p_owner:this.ownerId});
-  if(error){const code=error.message;const statuses:Record<string,number>={NOT_FOUND:404,REVISION_CONFLICT:409,IDEMPOTENCY_CONFLICT:409,TURN_IN_PROGRESS:409,RATE_LIMITED:429,SPEND_LIMIT:503};if(code in statuses)throw new AppError(code,code==='NOT_FOUND'?'This item is unavailable.':code==='RATE_LIMITED'?'Please wait before submitting again.':'The operation could not complete. Please reload and try again.',statuses[code],code==='RATE_LIMITED'?60:undefined);throw new AppError('STORE_UNAVAILABLE','Storage is temporarily unavailable.',503);}return data as T;
+  if(error){const code=error.message;const statuses:Record<string,number>={NOT_FOUND:404,REVISION_CONFLICT:409,IDEMPOTENCY_CONFLICT:409,TURN_IN_PROGRESS:409,RATE_LIMITED:429,SPEND_LIMIT:503,BILLING_SYNC_CONFLICT:503};if(code in statuses)throw new AppError(code,code==='NOT_FOUND'?'This item is unavailable.':code==='RATE_LIMITED'?'Please wait before submitting again.':'The operation could not complete. Please reload and try again.',statuses[code],code==='RATE_LIMITED'?60:undefined);throw new AppError('STORE_UNAVAILABLE','Storage is temporarily unavailable.',503);}return data as T;
  }
  private async read<T>(table:string,userId:string):Promise<T|null> {if(this.privileged){const methods:Record<string,string>={profiles:'getProfile',invites:'getInvite',subscriptions:'getSubscription'};return this.rpc<T|null>(methods[table],{userId});}this.owner(userId);const {data,error}=await this.client.from(table).select('data').eq('user_id',userId).maybeSingle();if(error)throw new AppError('STORE_UNAVAILABLE','Storage is temporarily unavailable.',503);return data?.data as T??null;}
  getProfile(userId:string) {return this.read<UserProfile>('profiles',userId);}
@@ -32,7 +32,7 @@ export class SupabaseStore implements Store {
  async reserveSpend(attempt:SpendAttempt,dailyLimitMicros:number) {if(this.ownerId!==null)this.owner(attempt.userId);await this.rpc('reserveSpend',{attempt,dailyLimitMicros});}
  async reconcileSpend(attemptId:string,actualMicros:number) {await this.rpc('reconcileSpend',{attemptId,actualMicros});}
  beginWebhook(eventId:string,now:string,leaseExpiresAt:string) {return this.rpc<'process'|'duplicate'|'pending'>('beginWebhook',{eventId,now,leaseExpiresAt});}
- async completeWebhook(eventId:string,subscription:Subscription|null) {await this.rpc('completeWebhook',{eventId,subscription});}
+ async completeWebhook(eventId:string,subscription:Subscription|null,guard?:{customerId:string;token:string}) {await this.rpc('completeWebhook',{eventId,subscription,...(guard?{guard}:{})});}
  async failWebhook(eventId:string) {await this.rpc('failWebhook',{eventId});}
  async beginAccountDeletion(userId:string) {this.owner(userId);await this.rpc('beginAccountDeletion',{userId});}
  async deleteAccountData(userId:string) {this.owner(userId);await this.rpc('deleteAccountData',{userId});}

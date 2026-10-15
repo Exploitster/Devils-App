@@ -117,6 +117,10 @@ begin
    if old->>'status'='processing' and (old->>'leaseExpiresAt')::timestamptz>(p_args->>'now')::timestamptz then return '"pending"'::jsonb;end if;
    v:=jsonb_build_object('id',oid,'status','processing','leaseExpiresAt',p_args->>'leaseExpiresAt','attempts',coalesce((old->>'attempts')::integer,0)+1);insert into webhook_events values(oid,v) on conflict(id) do update set data=excluded.data;return '"process"'::jsonb;
  when 'completeWebhook' then
+   if p_args->'guard' is not null and p_args->'guard'<>'null'::jsonb then
+     perform 1 from public.billing_sync_leases where customer_id=p_args->'guard'->>'customerId' and token=p_args->'guard'->>'token' and expires_at>extract(epoch from clock_timestamp())*1000 for update;
+     if not found then perform app_error('BILLING_SYNC_CONFLICT');end if;
+   end if;
    perform pg_advisory_xact_lock(hashtextextended('devils-webhooks',0));oid:=p_args->>'eventId';select data into old from webhook_events where id=oid for update;if old is null then perform app_error('NOT_FOUND');end if;
    v:=p_args->'subscription';if v is not null and v<>'null'::jsonb then insert into subscriptions values((v->>'userId')::uuid,v) on conflict(user_id) do update set data=excluded.data where (subscriptions.data->>'updatedAt')::timestamptz<=(excluded.data->>'updatedAt')::timestamptz;end if;update webhook_events set data=old||jsonb_build_object('status','complete') where id=oid;
  when 'failWebhook' then
