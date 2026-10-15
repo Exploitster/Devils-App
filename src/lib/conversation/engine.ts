@@ -6,7 +6,7 @@ import { requireAccess } from '../auth/access';
 import { assessSafety } from './safety';
 import { controlOutput, prepareState } from './state';
 import { boundInput, reserveCost } from './limits';
-import { ProviderError } from '../model/openai';
+import { ProviderError } from '../model/provider';
 const active=new Map<string,AbortController>();
 export interface ConversationServices {store:Store;evidence:EvidenceService;model:ModelService;clock:Clock;config:RuntimeConfig;}
 export class ConversationEngine {
@@ -26,10 +26,10 @@ export class ConversationEngine {
  if(reserved.kind==='duplicate'){if(reserved.operation.status==='committed')return reserved.session;throw new AppError('TURN_IN_PROGRESS','Wait for the current response.',409);}
  const controller=new AbortController();const key=`${userId}:${request.operationId}`;active.set(key,controller);const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(abort,config.generationTimeoutMs);
  try{
- const session=reserved.session;const fresh=safety.response&&safety.kind!=='qualified'?[]:await evidence.retrieve({mode:session.mode,query:('text'in request&&request.action==='correction')?request.text:('text'in request?request.text:'')+' '+session.state.position,excludeIds:session.state.usedEvidenceIds,limit:3});
+ const session=reserved.session;const corrected=task==='turn'&&'action'in request&&request.action==='correction';const fresh=safety.response&&safety.kind!=='qualified'?[]:await evidence.retrieve({mode:session.mode,query:('text'in request&&request.action==='correction')?request.text:('text'in request?request.text:'')+' '+session.state.position,excludeIds:corrected?[]:session.state.usedEvidenceIds,limit:3});
  const historicalIds=new Set(session.state.counterpoints.flatMap(p=>p.citations.map(c=>c.evidenceId)));
  for(const card of session.cards.slice(-1))for(const p of card.counterpoints)for(const c of p.citations)historicalIds.add(c.evidenceId);
- const historical=(await Promise.all([...historicalIds].map(id=>evidence.get(id)))).filter(e=>e!==null);
+ const historical=corrected?[]:(await Promise.all([...historicalIds].map(id=>evidence.get(id)))).filter(e=>e!==null);
  const input=boundInput({session,request,task,evidence:[...fresh,...historical.filter(e=>!fresh.some(f=>f.id===e.id))],now:now.toISOString()},config);
  let result:ModelResult;
  if(safety.response&&safety.kind!=='qualified'){const state=prepareState(input);state.phase='support';state.counterpoints=[];state.strengths=[];state.openQuestions=[];state.coverageNote='Adversarial discussion paused for safety.';result={output:{state,response:safety.response,citations:[]},inputTokens:0,outputTokens:0,costMicros:0};}

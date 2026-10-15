@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readConfig, publicConfig } from '../src/lib/config';
-const services = { DEVILS_SUPABASE_URL: 'https://example.supabase.co', DEVILS_SUPABASE_ANON_KEY: 'public', DEVILS_SUPABASE_SERVICE_ROLE_KEY: 'privileged-role-secret', DEVILS_MODEL_API_KEY: 'provider-secret', DEVILS_MODEL: 'configured-model', DEVILS_MODEL_INPUT_USD_PER_MILLION: '1.2', DEVILS_MODEL_OUTPUT_USD_PER_MILLION: '4.5', DEVILS_STRIPE_SECRET_KEY: 'sk_test_fake', DEVILS_STRIPE_WEBHOOK_SECRET: 'whsec_fake', DEVILS_STRIPE_MONTHLY_PRICE_ID: 'price_month', DEVILS_STRIPE_YEARLY_PRICE_ID: 'price_year' };
+const services = { DEVILS_SUPABASE_URL: 'https://example.supabase.co', DEVILS_SUPABASE_ANON_KEY: 'public', DEVILS_SUPABASE_SERVICE_ROLE_KEY: 'privileged-role-secret', DEVILS_GEMINI_API_KEY: 'provider-secret', DEVILS_MODEL: 'gemini-2.5-flash', DEVILS_MODEL_INPUT_USD_PER_MILLION: '1.2', DEVILS_MODEL_OUTPUT_USD_PER_MILLION: '4.5', DEVILS_PAYMENTS_ENABLED:'true', DEVILS_STRIPE_SECRET_KEY: 'sk_test_fake', DEVILS_STRIPE_WEBHOOK_SECRET: 'whsec_fake', DEVILS_STRIPE_MONTHLY_PRICE_ID: 'price_month', DEVILS_STRIPE_YEARLY_PRICE_ID: 'price_year' };
 const local = { DEVILS_RUNTIME_MODE: 'local', DEVILS_LOCAL_AUTH_SECRET: 'a-development-signing-secret-with-32-characters' };
 describe('runtime configuration', () => {
   it('defaults to services and fails closed with sanitized missing names', () => {
@@ -24,12 +24,23 @@ describe('runtime configuration', () => {
   it('accepts opaque proxy credentials while rejecting known live credentials', () => {
     expect(readConfig({ ...services, DEVILS_STRIPE_SECRET_KEY: 'opaque-platform-binding' }).mode).toBe('services');
   });
+  it('runs Supabase and Gemini without Stripe settings when payments are deferred', () => {
+    const { DEVILS_STRIPE_SECRET_KEY: _key, DEVILS_STRIPE_WEBHOOK_SECRET: _webhook, DEVILS_STRIPE_MONTHLY_PRICE_ID: _monthly, DEVILS_STRIPE_YEARLY_PRICE_ID: _yearly, ...bindings } = services;
+    void [_key, _webhook, _monthly, _yearly];
+    const config = readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: undefined, DEVILS_MODEL: undefined });
+    expect(config.paymentsEnabled).toBe(false);
+    expect(config.model).toBe('gemini-2.5-flash');
+    expect(config.modelApiKey).toBe('provider-secret');
+    expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'true' })).toThrow('DEVILS_STRIPE_SECRET_KEY');
+    expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'typo' })).toThrow('DEVILS_PAYMENTS_ENABLED');
+    expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'false', DEVILS_GEMINI_API_KEY: undefined })).toThrow('DEVILS_GEMINI_API_KEY');
+  });
   it('exports a public allowlist without privileged bindings', () => {
     const result = publicConfig(readConfig(local));
     expect(result.runtimeMode).toBe('local');
     expect(JSON.stringify(result)).not.toContain(local.DEVILS_LOCAL_AUTH_SECRET);
     const realPublic = JSON.stringify(publicConfig(readConfig(services)));
-    for (const value of [services.DEVILS_SUPABASE_SERVICE_ROLE_KEY, services.DEVILS_MODEL_API_KEY, services.DEVILS_STRIPE_SECRET_KEY, services.DEVILS_STRIPE_WEBHOOK_SECRET]) expect(realPublic).not.toContain(value);
+    for (const value of [services.DEVILS_SUPABASE_SERVICE_ROLE_KEY, services.DEVILS_GEMINI_API_KEY, services.DEVILS_STRIPE_SECRET_KEY, services.DEVILS_STRIPE_WEBHOOK_SECRET]) expect(realPublic).not.toContain(value);
     expect(Object.keys(result).sort()).toEqual(['betaActive', 'launchDate', 'runtimeMode']);
   });
 });

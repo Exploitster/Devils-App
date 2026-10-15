@@ -3,7 +3,7 @@ export interface RuntimeConfig {
   mode: 'local' | 'services'; appUrl: string; sqlitePath: string; localAuthSecret: string;
   supabaseUrl: string; supabaseAnonKey: string; supabaseServiceRoleKey: string;
   modelApiKey: string; model: string; modelInputUsdPerMillion: number; modelOutputUsdPerMillion: number; maxOutputTokens: number;
-  stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
+  paymentsEnabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
   betaActive: boolean; launchDate: string; generationTimeoutMs: number; dailySpendLimitMicros: number;
   maxInputCharacters: number; maxContextMessages: number; submissionsPerMinute: number;
 }
@@ -12,12 +12,17 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   const mode = env.DEVILS_RUNTIME_MODE ?? 'services';
   if (mode !== 'local' && mode !== 'services') throw new Error('DEVILS_RUNTIME_MODE must be local or services.');
   if (mode === 'local' && env.NODE_ENV === 'production') throw new Error('Local runtime is forbidden in production.');
-  const required = mode === 'local' ? ['DEVILS_LOCAL_AUTH_SECRET'] : ['DEVILS_SUPABASE_URL', 'DEVILS_SUPABASE_ANON_KEY', 'DEVILS_SUPABASE_SERVICE_ROLE_KEY', 'DEVILS_MODEL_API_KEY', 'DEVILS_MODEL', 'DEVILS_MODEL_INPUT_USD_PER_MILLION', 'DEVILS_MODEL_OUTPUT_USD_PER_MILLION', 'DEVILS_STRIPE_SECRET_KEY', 'DEVILS_STRIPE_WEBHOOK_SECRET', 'DEVILS_STRIPE_MONTHLY_PRICE_ID', 'DEVILS_STRIPE_YEARLY_PRICE_ID'];
+  const paymentSetting = env.DEVILS_PAYMENTS_ENABLED ?? 'false';
+  if (!['true', 'false'].includes(paymentSetting)) throw new Error('DEVILS_PAYMENTS_ENABLED must be true or false.');
+  const paymentsEnabled = paymentSetting === 'true';
+  const required = mode === 'local' ? ['DEVILS_LOCAL_AUTH_SECRET'] : ['DEVILS_SUPABASE_URL', 'DEVILS_SUPABASE_ANON_KEY', 'DEVILS_SUPABASE_SERVICE_ROLE_KEY', 'DEVILS_GEMINI_API_KEY', 'DEVILS_MODEL_INPUT_USD_PER_MILLION', 'DEVILS_MODEL_OUTPUT_USD_PER_MILLION', ...(paymentsEnabled ? ['DEVILS_STRIPE_SECRET_KEY', 'DEVILS_STRIPE_WEBHOOK_SECRET', 'DEVILS_STRIPE_MONTHLY_PRICE_ID', 'DEVILS_STRIPE_YEARLY_PRICE_ID'] : [])];
   const missing = required.filter(name => !env[name]?.trim());
   if (missing.length) throw new Error(`Missing runtime configuration: ${missing.join(', ')}. Configure secure environment bindings.`);
   if (mode === 'local' && (env.DEVILS_LOCAL_AUTH_SECRET?.length ?? 0) < 32) throw new Error('DEVILS_LOCAL_AUTH_SECRET must contain at least 32 characters.');
-  if (mode === 'services' && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
-  if (mode === 'services' && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
+  if (mode === 'services' && paymentsEnabled && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
+  if (mode === 'services' && paymentsEnabled && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
+  const model = env.DEVILS_MODEL ?? 'gemini-2.5-flash';
+  if (!/^gemini-[A-Za-z0-9._-]+$/.test(model)) throw new Error('DEVILS_MODEL must be a Gemini model ID.');
   const appUrl = url(env.DEVILS_APP_URL ?? 'http://127.0.0.1:3000', 'DEVILS_APP_URL', env.NODE_ENV === 'production');
   const supabaseUrl = mode === 'services' ? url(env.DEVILS_SUPABASE_URL!, 'DEVILS_SUPABASE_URL', true) : '';
   const launchDate = env.DEVILS_LAUNCH_DATE ?? '2026-12-01';
@@ -26,7 +31,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   if (!['true', 'false'].includes(beta)) throw new Error('DEVILS_BETA_ACTIVE must be true or false.');
   return { mode, appUrl, sqlitePath: env.DEVILS_SQLITE_PATH ?? '.local/devils.sqlite', localAuthSecret: env.DEVILS_LOCAL_AUTH_SECRET ?? '',
     supabaseUrl, supabaseAnonKey: env.DEVILS_SUPABASE_ANON_KEY ?? '', supabaseServiceRoleKey: env.DEVILS_SUPABASE_SERVICE_ROLE_KEY ?? '',
-    modelApiKey: env.DEVILS_MODEL_API_KEY ?? '', model: env.DEVILS_MODEL ?? '', modelInputUsdPerMillion: price(env, 'DEVILS_MODEL_INPUT_USD_PER_MILLION'), modelOutputUsdPerMillion: price(env, 'DEVILS_MODEL_OUTPUT_USD_PER_MILLION'), maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
+    modelApiKey: env.DEVILS_GEMINI_API_KEY ?? '', model, modelInputUsdPerMillion: price(env, 'DEVILS_MODEL_INPUT_USD_PER_MILLION'), modelOutputUsdPerMillion: price(env, 'DEVILS_MODEL_OUTPUT_USD_PER_MILLION'), maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), paymentsEnabled, stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
     betaActive: beta === 'true', launchDate, generationTimeoutMs: integer(env, 'DEVILS_GENERATION_TIMEOUT_MS', 30000, 1000, 120000), dailySpendLimitMicros: integer(env, 'DEVILS_DAILY_SPEND_LIMIT_MICROS', 5000000, 1, 1000000000), maxInputCharacters: 12000, maxContextMessages: 24, submissionsPerMinute: 10 };
 }
 function price(env: Environment, name: string): number {
