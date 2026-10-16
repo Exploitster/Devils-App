@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { setTimeout as retryDelay } from 'node:timers/promises';
 import { ModelOutputSchema, type Store, type EvidenceService, type ModelService, type Clock, type TurnRequest, type ModelInput, type Session, type ModelResult } from '../contracts';
 import type { RuntimeConfig } from '../config';
 import { AppError } from '../errors';
@@ -38,10 +39,10 @@ export class ConversationEngine {
  let generated:ModelResult|undefined;for(let attempt=0;attempt<2;attempt++){
  controller.signal.throwIfAborted();const op=await store.getOperation(userId,sessionId,request.operationId);if(op?.status!=='pending')throw new AppError('CANCELLED','This response was cancelled.',409);
  const attemptId=randomUUID();await store.reserveSpend({id:attemptId,operationId:request.operationId,userId,reservedMicros:reserveCost(input,config),createdAt:clock.now().toISOString()},config.dailySpendLimitMicros);
- try{generated=await Promise.race([model.generate(input,controller.signal),new Promise<never>((_,reject)=>{if(controller.signal.aborted)reject(new Error('Cancelled'));else controller.signal.addEventListener('abort',()=>reject(new Error('Cancelled')),{once:true});})]);await store.reconcileSpend(attemptId,generated.costMicros);break;}catch(error){if(!(error instanceof ProviderError&&error.transient&&attempt===0&&!controller.signal.aborted))throw error;}
+ try{generated=await Promise.race([model.generate(input,controller.signal),new Promise<never>((_,reject)=>{if(controller.signal.aborted)reject(new Error('Cancelled'));else controller.signal.addEventListener('abort',()=>reject(new Error('Cancelled')),{once:true});})]);await store.reconcileSpend(attemptId,generated.costMicros);break;}catch(error){if(!(error instanceof ProviderError&&error.transient&&attempt===0&&!controller.signal.aborted))throw error;await retryDelay(200+Math.floor(Math.random()*200),undefined,{signal:controller.signal});}
  }if(!generated)throw new AppError('PROVIDER_ERROR','The response could not complete.',503);result=generated;
  }
- controller.signal.throwIfAborted();let output=controlOutput(input,ModelOutputSchema.parse(result.output));if(safety.kind==='qualified')output.response=`${safety.response}\n\n${output.response}`;
+ controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw new AppError('INVALID_MODEL_OUTPUT','The AI response could not be verified. Your conversation is unchanged; please try again.',502);let output=controlOutput(input,parsed.data);if(safety.kind==='qualified')output.response=`${safety.response}\n\n${output.response}`;
  if(output.state.counterpoints.some(p=>p.citations.length===0)||output.card?.counterpoints.some(p=>p.citations.length===0))throw new AppError('INVALID_EVIDENCE','Counterpoints require reviewed source support.',502);
  output=await evidence.validate(output,input.evidence);
  const stamp=clock.now().toISOString();const messages=[...('text'in request?[{id:randomUUID(),role:'user' as const,text:request.text,createdAt:stamp,operationId:request.operationId,citations:[]}]:[]),{id:randomUUID(),role:'assistant' as const,text:output.response,createdAt:stamp,operationId:request.operationId,citations:output.citations}];

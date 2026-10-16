@@ -15,6 +15,8 @@ DEVILS_BETA_ACTIVE=true npm run dev:local
 
 Service mode is the default. See `.env.example` for exact names and supply Supabase and Gemini bindings securely. Payments are deferred: keep `DEVILS_PAYMENTS_ENABLED=false` and leave Stripe fields blank. The billing page is ready with disabled payment controls. See [the step-by-step connection guide](docs/setup-guide.md). `DEVILS_APP_URL` must be HTTPS in production. Never expose the Supabase service role, model key, Stripe secrets, or development signing secret using `NEXT_PUBLIC_` variables. Public configuration is limited to runtime mode, beta availability, and launch date. Beta activation is explicit and separate from the configurable December 1, 2026 launch date; individual invites carry their own expiry.
 
+OpenRouter is also supported with explicit primary/backup models, provider privacy restrictions, price ceilings, bounded retries and server-resolved source quotations. See [OpenRouter setup and live verification](docs/openrouter-setup.md). Select it with `DEVILS_MODEL_PROVIDER=openrouter` and supply `DEVILS_OPENROUTER_API_KEY`; existing Gemini settings remain available for an explicit rollback. A passing offline test suite is not proof of live provider readiness.
+
 ```sh
 npm run typecheck
 npm run lint

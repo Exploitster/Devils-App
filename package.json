@@ -17,6 +17,7 @@
     "evidence:verify": "tsx scripts/evidence-import.ts --verify",
     "eval": "tsx tests/evaluations/run.ts",
     "eval:live": "NODE_USE_ENV_PROXY=1 tsx tests/evaluations/live.ts",
+    "test:openrouter": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-openrouter.ts",
     "test:supabase": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-supabase.ts",
     "setup:local": "node scripts/local-setup.mjs",
     "test:db": "node scripts/test-postgres.mjs",
