@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { HandBackCard, Session, Counterpoint, Evidence } from '@/lib/contracts';
-import { api, ApiError, ErrorNotice, Shell } from './app';
+import { api, ApiError, ErrorNotice, Icon, Shell } from './app';
 import { SourceButton } from './source';
 function Points({ points }: {
     points: Counterpoint[];
@@ -21,7 +21,7 @@ function Card({ card, latest }: {
     card: HandBackCard;
     latest: boolean;
 }) { const [status, setStatus] = useState(''); return <section className="panel handback">
-      <p className="eyebrow">Keep what is useful</p>
+      <p className="eyebrow">YOUR DECISION, WITH A LITTLE MORE CLARITY</p>
       <h2>Hand-back card · version {card.version}</h2>
       <p className="muted">{latest ? 'Latest saved card' : 'Earlier saved card'} · session revision {card.sessionRevision}{card.version > 1 ? ' · Updated after the conversation evolved' : ''}</p>
       <h3>Your position</h3>
@@ -133,8 +133,7 @@ export function SessionView({ id }: {
       <div>
       <p className="eyebrow">{session?.mode ?? 'Your conversation'} · {session?.topic}</p>
       <h1>{session?.title ?? 'Loading conversation…'}</h1>
-      </div>{session && <button onClick={() => setConfirm(true)}>Delete conversation</button>}</div>{error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={load}/>}<p className="fine">History and export remain available when generation access ends. <a href="/billing">Manage access</a>
-      </p>{session && <>
+      </div>{session && <button onClick={() => setConfirm(true)}>Delete conversation</button>}</div>{error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={load}/>}<p className="session-tip"><Icon name="shield"/>Your conversation is saved to your account. Share only what you’re comfortable sending to an AI provider.</p>{session && <>
       <details>
       <summary>Rename conversation</summary>
       <form className="actions" onSubmit={async (e) => { e.preventDefault(); try {
@@ -151,8 +150,8 @@ export function SessionView({ id }: {
       <button>Save title</button>
       </form>
       </details>
-      {session.messages.length === 0 && <section className="panel" aria-labelledby="starting-point">
-      <h2 id="starting-point">Start with your situation</h2>
+      {session.messages.length === 0 && <section className="panel starter-panel" aria-labelledby="starting-point">
+      <span className="icon-tile blue" style={{ marginBottom: 20 }}><Icon name="chat" size={24}/></span><h2 id="starting-point">Start with your situation</h2>
       <p>{starter.guidance}</p>
       <button type="button" onClick={() => setText(starter.example)}>{starter.label}</button>
       <p className="fine">The example contains fictional details. Edit the draft to describe your own situation before sending. Nothing is sent automatically.</p>
@@ -190,7 +189,7 @@ export function SessionView({ id }: {
       <div className="actions">
       <button className="primary" disabled={busy || stale || !text.trim()}>{busy ? 'Thinking…' : 'Send'}</button>{busy ? <button type="button" onClick={cancel}>Cancel generation</button> : <button type="button" disabled={!session.messages.length || stale} onClick={() => generate('card')}>Make a hand-back card</button>}</div>
       </form>
-      <p className="fine" role="status">{busy ? 'Preparing a checked response. Your message stays here until it is saved.' : 'One generation at a time · 10 submissions/minute · 24-message context · daily cost limit applies.'}</p>
+      <p className="fine" role="status">{busy ? 'Preparing a checked response. Your message stays here until it is saved.' : 'AI can make mistakes. Inspect sources and keep your own judgment. Fair-use limits apply.'}</p>
       </section>
       </>}<dialog ref={dialog} aria-labelledby="delete-title" onClose={() => setConfirm(false)}>
       <h2 id="delete-title">Delete this conversation?</h2>

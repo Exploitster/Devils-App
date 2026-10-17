@@ -21,28 +21,30 @@
     "test:supabase": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-supabase.ts",
     "setup:local": "node scripts/local-setup.mjs",
     "test:db": "node scripts/test-postgres.mjs",
-    "db:setup:bundle": "node scripts/build-supabase-setup.mjs"
+    "db:setup:bundle": "node scripts/build-supabase-setup.mjs",
+    "test:gateway": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-gateway.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.3",
+    "@vercel/oidc": "4.0.1",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@supabase/ssr": "0.12.7",
-    "@supabase/supabase-js": "2.117.3",
     "stripe": "23.0.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "typescript": "6.0.3",
+    "@axe-core/playwright": "4.11.0",
+    "@playwright/test": "1.64.0",
     "@types/node": "24.10.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.1",
     "eslint-config-next": "16.4.0",
-    "vitest": "5.0.0",
-    "@playwright/test": "1.64.0",
-    "@axe-core/playwright": "4.11.0",
-    "tsx": "4.21.0"
+    "tsx": "4.21.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
   },
   "type": "module"
 }

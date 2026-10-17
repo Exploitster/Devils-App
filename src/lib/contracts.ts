@@ -27,6 +27,18 @@ export const TurnRequestSchema = z.object({ operationId: IdSchema, expectedRevis
 export type TurnRequest = z.infer<typeof TurnRequestSchema>;
 export const CardRequestSchema = z.object({ operationId: IdSchema, expectedRevision: z.number().int().nonnegative() }).strict();
 export const RenameSessionSchema = z.object({ title: z.string().trim().min(1).max(120), expectedRevision: z.number().int().nonnegative() }).strict();
+const EmailSchema = z.string().trim().email().max(254).transform(v => v.toLowerCase());
+const PasswordSchema = z.string().min(10, 'Use at least 10 characters for your password.').max(128);
+export const AccountAuthSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('signup'), email: EmailSchema, password: PasswordSchema, name: z.string().trim().min(1).max(80) }).strict(),
+  z.object({ action: z.literal('signin'), email: EmailSchema, password: z.string().min(1).max(128) }).strict(),
+  z.object({ action: z.literal('google') }).strict(),
+  z.object({ action: z.literal('reset'), email: EmailSchema }).strict(),
+  z.object({ action: z.literal('resend'), email: EmailSchema }).strict(),
+  z.object({ action: z.literal('update-password'), password: PasswordSchema }).strict(),
+  z.object({ action: z.literal('complete-onboarding'), name: z.string().trim().min(1).max(80) }).strict(),
+]);
+export type AccountAuthRequest = z.infer<typeof AccountAuthSchema>;
 export const AuthRequestSchema = z.object({ email: z.string().email().max(254) }).strict();
 
 export const EvidenceExcerptSchema = z.object({ id: IdSchema, text: z.string().min(1).max(10000), sha256: z.string().regex(/^[a-f0-9]{64}$/), locator: z.string().min(1).max(1000), quoteAllowed: z.boolean() }).strict();
@@ -37,12 +49,12 @@ export type EvidenceClaim = z.infer<typeof EvidenceClaimSchema>;
 export const ModelOutputSchema = z.object({ state: SessionStateSchema, response: TextSchema, citations: z.array(CitationSchema).max(9).default([]), card: HandBackCardSchema.optional() }).strict();
 export type ModelOutput = z.infer<typeof ModelOutputSchema>;
 
-export interface Identity { id: string; email: string; }
-export interface UserProfile { id: string; email: string; disabled: boolean; deletionState: 'none' | 'pending' | 'complete'; createdAt: string; }
+export interface Identity { id: string; email: string; name?: string; onboarded?: boolean; }
+export interface UserProfile { id: string; email: string; disabled: boolean; deletionState: 'none' | 'pending' | 'complete'; createdAt: string; name?: string; onboarded?: boolean; }
 export interface Invite { userId: string; expiresAt: string; enabled: boolean; }
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
 export interface Subscription { userId: string; customerId: string; subscriptionId: string; priceId: string; status: SubscriptionStatus; currentPeriodEnd: string; cancelAtPeriodEnd: boolean; updatedAt: string; }
-export interface AccessDecision { allowed: boolean; reason: 'beta' | 'paid' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
+export interface AccessDecision { allowed: boolean; reason: 'free' | 'beta' | 'paid' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
 export interface UsageEvent { operationId: string; userId: string; sessionId: string; committedAt: string; inputTokens: number; outputTokens: number; costMicros: number; }
 export interface SpendAttempt { id: string; operationId: string; userId: string; reservedMicros: number; actualMicros?: number; createdAt: string; }
 export interface TurnOperation { id: string; userId: string; sessionId: string; fingerprint: string; expectedRevision: number; status: 'pending' | 'committed' | 'failed' | 'cancelled'; leaseExpiresAt: string; createdAt: string; resultRevision?: number; errorCode?: string; }
@@ -80,11 +92,11 @@ export interface Store {
   beginAccountDeletion(userId: string): Promise<void>;
   deleteAccountData(userId: string): Promise<void>;
 }
-export interface AuthService { getIdentity(request: Request): Promise<Identity | null>; signIn(email: string, request: Request): Promise<Response>; signOut(request: Request): Promise<Response>; deleteIdentity(userId: string): Promise<void>; }
+export interface AuthService { authenticate(input: AccountAuthRequest, request: Request): Promise<Response>; getIdentity(request: Request): Promise<Identity | null>; signIn(email: string, request: Request): Promise<Response>; signOut(request: Request): Promise<Response>; deleteIdentity(userId: string): Promise<void>; }
 export interface Clock { now(): Date; }
 export interface EvidenceService { retrieve(input: { mode: Mode; query: string; excludeIds: string[]; limit: number }): Promise<Evidence[]>; get(id: string): Promise<Evidence | null>; validate(output: ModelOutput, retrieved: Evidence[]): Promise<ModelOutput>; }
 export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; }
-export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; }
+export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }
 export interface BillingService { checkout(user: Identity, plan: 'monthly' | 'yearly'): Promise<{ url: string }>; portal(user: Identity): Promise<{ url: string }>; processWebhook(rawBody: string, signature: string): Promise<void>; cancelRenewal(userId: string): Promise<void>; }
 export interface Services { auth: AuthService; store: Store; evidence: EvidenceService; model: ModelService; billing: BillingService; clock: Clock; }

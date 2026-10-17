@@ -3,6 +3,7 @@ import type { RuntimeConfig } from '../config';
 import { AppError } from '../errors';
 export async function accessDecision(store:Store,userId:string,config:RuntimeConfig,now=new Date()):Promise<AccessDecision> {
  const profile=await store.getProfile(userId);if(!profile||profile.disabled)return {allowed:false,reason:'disabled'};
+ if(!config.paymentsEnabled)return {allowed:true,reason:'free'};
  const subscription=await store.getSubscription(userId);
  if(subscription && ['active','trialing'].includes(subscription.status) && Date.parse(subscription.currentPeriodEnd)>now.getTime())return {allowed:true,reason:'paid',expiresAt:subscription.currentPeriodEnd};
  const invite=await store.getInvite(userId);if(config.betaActive && invite?.enabled && Date.parse(invite.expiresAt)>now.getTime())return {allowed:true,reason:'beta',expiresAt:invite.expiresAt};

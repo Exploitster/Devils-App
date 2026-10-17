@@ -1,45 +1,15 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { api, ErrorNotice, Shell } from '@/components/app';
+import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { api, type AuthData, ErrorNotice, Icon, Shell } from '@/components/app';
 import type { Mode, Session, Topic } from '@/lib/contracts';
-export default function Home() {
-    const [mode, setMode] = useState<Mode>('business');
-    const [topic, setTopic] = useState<Topic>('startup');
-    const [pricing, setPricing] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState('');
-    const router = useRouter();
-    return <Shell mode={mode}>
-      <p className="eyebrow">A little distance. A clearer view.</p>
-      <h1>What would you like to think through?</h1>
-      <p className="lead">Bring an idea you believe in, or a decision you are still making.</p>
-      <div className="mode-grid">{(['business', 'philosophy'] as const).map(value => <button key={value} className={`mode-card ${mode === value ? 'selected' : ''}`} aria-pressed={mode === value} onClick={() => { setMode(value); setTopic(value === 'business' ? 'startup' : 'life'); setPricing(false); }}>
-      <strong>{value === 'business' ? 'Business' : 'Philosophy'}</strong>
-      <span>{value === 'business' ? 'Test assumptions against the experience of real businesses.' : 'Examine values, obligations, and the choice in front of you.'}</span>
-      <span>{mode === value ? 'Selected' : 'Choose this perspective'}</span>
-      </button>)}</div>
-      <section className="panel">
-      <h2>What are you working through?</h2>
-      <div className="topics" role="group" aria-label="Decision type">
-      <button aria-pressed={mode === 'business' && !pricing} onClick={() => { setMode('business'); setTopic('startup'); setPricing(false); }}>Explore an idea</button>
-      <button aria-pressed={pricing} onClick={() => { setMode('business'); setTopic('startup'); setPricing(true); }}>Pricing decision</button>
-      <button aria-pressed={mode === 'philosophy'} onClick={() => { setMode('philosophy'); setTopic('life'); setPricing(false); }}>Personal decision</button>
-      </div>
-      {pricing && <p>Think through a price change, its effect on customers, and what you need to test before deciding.</p>}
-      <h2>Where does it fit?</h2>
-      <div className="topics" role="group" aria-label="Topic">{(['startup', 'work', 'life', 'beliefs'] as const).map(value => <button key={value} aria-pressed={topic === value} onClick={() => { setTopic(value); setMode(value === 'startup' || value === 'work' ? 'business' : 'philosophy'); if (value !== 'startup') setPricing(false); }}>{({ startup: 'Startup & business', work: 'Work & career', life: 'Life & decisions', beliefs: 'Beliefs & values' })[value]}</button>)}</div>
-      <p className="muted">You can push back, correct the framing, or ask for a hand-back card at any point.</p>
-      <button className="primary" disabled={busy} onClick={async () => { setBusy(true); setError(''); try {
-        const data = await api<{
-            session: Session;
-        }>('/api/sessions', 'POST', { mode, topic, ...(pricing ? {title:'Pricing decision'} : {}) });
-        router.push(`/sessions/${data.session.id}`);
-    }
-    catch (e) {
-        setError((e as Error).message);
-        setBusy(false);
-    } }}>{busy ? 'Starting…' : 'Start a conversation'}</button>{error && <ErrorNotice error={error}/>}</section>
-      <p className="fine">Fair use: 10 submissions per minute, one generation at a time, 12,000 characters per message and a 24-message context window. An operator daily cost limit may pause generation. No monthly debate quota.</p>
-      </Shell>;
+export default function Home() { return <Suspense fallback={<Shell><p role="status">Preparing your space…</p></Shell>}><HomeContent/></Suspense>; }
+function HomeContent() {
+  const search = useSearchParams();
+  const [mode, setMode] = useState<Mode>(search.get('perspective') === 'philosophy' ? 'philosophy' : 'business'); const [topic, setTopic] = useState<Topic>(search.get('perspective') === 'philosophy' ? 'life' : 'startup'); const [pricing, setPricing] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState(''); const [sessions, setSessions] = useState<Session[]>(); const [historyError, setHistoryError] = useState(''); const router = useRouter();
+  useEffect(() => { api<AuthData>('/api/auth').then(data => setName(data.user?.name?.split(' ')[0] || '')).catch(() => {}); api<{ sessions: Session[] }>('/api/sessions').then(data => setSessions(data.sessions)).catch(() => setHistoryError('Your recent conversations couldn’t load. You can try again in History.')); }, []);
+  function choose(value: Mode) { setMode(value); setTopic(value === 'business' ? 'startup' : 'life'); setPricing(false); }
+  async function start() { setBusy(true); setError(''); try { const data = await api<{ session: Session }>('/api/sessions', 'POST', { mode, topic, ...(pricing ? { title: 'Pricing decision' } : {}) }); router.push(`/sessions/${data.session.id}`); } catch (e) { setError((e as Error).message); setBusy(false); } }
+  return <Shell mode={mode}><p className="home-welcome"><Icon name="spark"/>{name ? `Good to see you, ${name}.` : 'A little distance. A clearer view.'}</p><div className="page-heading"><div><h1>What would you like<br className="desktop-break"/> to think through?</h1><p className="lead">Bring an idea you believe in, or a decision you’re still making. Let’s look at it from another angle.</p></div></div><section className="panel home-start"><p className="eyebrow">CHOOSE YOUR PERSPECTIVE</p><div className="mode-grid">{(['business', 'philosophy'] as const).map(value => <button key={value} className={`mode-card ${mode === value ? 'selected' : ''}`} aria-pressed={mode === value} onClick={() => choose(value)} aria-label={value === 'business' ? 'Business: test an idea or plan' : 'Philosophy: think through a personal decision'}><span className={`icon-tile ${value === 'business' ? 'blue' : 'violet'}`}><Icon name={value === 'business' ? 'business' : 'personal'}/></span><span className="mode-check"><Icon name="check" size={15}/></span><strong>{value === 'business' ? 'Business & ideas' : 'Life & decisions'}</strong><span>{value === 'business' ? 'Test your assumptions with real-world comparisons. Find what’s strong and what needs a closer look.' : 'Examine your options through philosophical perspectives. Make room for your values and the tradeoffs.'}</span></button>)}</div><div className="topics" role="group" aria-label="Decision type"><button aria-pressed={mode === 'business' && !pricing} onClick={() => choose('business')}>Explore an idea</button><button aria-pressed={pricing} onClick={() => { setMode('business'); setTopic('startup'); setPricing(true); }}>Pricing decision</button><button aria-pressed={mode === 'philosophy'} onClick={() => choose('philosophy')}>Personal decision</button></div>{pricing && <p className="fine" style={{ marginTop: 14 }}>Explore a price change, its effect on customers, and what you need to test before deciding.</p>}<details className="more-options"><summary>Choose a more specific topic</summary><div className="topics" role="group" aria-label="Topic">{(['startup', 'work', 'life', 'beliefs'] as const).map(value => <button key={value} aria-pressed={topic === value} onClick={() => { setTopic(value); setMode(value === 'startup' || value === 'work' ? 'business' : 'philosophy'); if (value !== 'startup') setPricing(false); }}>{({ startup: 'Startup & business', work: 'Work & career', life: 'Life & decisions', beliefs: 'Beliefs & values' })[value]}</button>)}</div></details><div className="start-footer"><p>You don’t need a perfect question. We’ll start with your situation and take it one step at a time.</p><button className="primary" disabled={busy} onClick={start}>{busy ? 'Starting…' : 'Start a conversation'}<Icon name="arrow" size={17}/></button></div>{error && <div style={{ marginTop: 20 }}><ErrorNotice error={error}/></div>}</section><div className="section-heading"><h2>A little inspiration</h2><span className="fine">Select a starting point</span></div><div className="quick-prompts">{[{ icon: 'business', title: 'Is this idea worth pursuing?', text: 'Look at what to validate first.', pick: () => choose('business') }, { icon: 'card', title: 'Am I pricing this right?', text: 'Examine the assumptions.', pick: () => { setMode('business'); setTopic('startup'); setPricing(true); } }, { icon: 'personal', title: 'Should I make a change?', text: 'Think through what matters.', pick: () => choose('philosophy') }].map(item => <button className="prompt-card" key={item.title} onClick={item.pick}><Icon name={item.icon}/><span><strong>{item.title}</strong><span>{item.text}</span></span></button>)}</div><div className="section-heading"><h2>Pick up a thought</h2><Link href="/history">View history →</Link></div>{historyError ? <p className="fine">{historyError}</p> : !sessions ? <p className="fine" role="status">Loading recent conversations…</p> : sessions.length ? <div className="history-list">{sessions.slice(0, 3).map(session => <Link className="panel history-item" key={session.id} href={`/sessions/${session.id}`}><div><p className="eyebrow">{session.mode === 'business' ? 'Business & ideas' : 'Life & decisions'}</p><h2>{session.title}</h2><p className="muted">{new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {session.messages.length} messages</p></div><Icon name="arrow" size={17}/></Link>)}</div> : <p className="fine">Your first conversation is a fresh start. Your saved thoughts will appear here.</p>}<p className="subtle-note">AI can miss things. Inspect the sources, question the framing, and keep your own judgment.</p></Shell>;
 }

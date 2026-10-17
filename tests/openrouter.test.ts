@@ -92,3 +92,19 @@ it('keeps cancellation final and preserves the original abort signal', async () 
   const model = new OpenRouterModel(config(), async (_url, options) => { expect(options!.signal).toBe(controller.signal); controller.abort(); throw error; });
   await expect(model.generate(input, controller.signal)).rejects.toBe(error);
 });
+it('replaces a cited clarification response without leaving detached response citations', async () => {
+  const { store, input, evidence, envelope } = await fixture();
+  const clarified = { ...envelope, output: { ...envelope.output, state: { ...envelope.output.state, phase: 'clarifying', clarifications: [{ id: 'payer', question: 'Which customer will pay?' }] } } };
+  const cfg = { ...config(), mode: 'services' as const };
+  const model = new OpenRouterModel(cfg, async () => response(clarified));
+  const engine = new ConversationEngine({ store, evidence, model, config: cfg, clock: { now: () => new Date(input.now) } });
+  const saved = await engine.turn('u', input.session.id, input.request);
+  expect(saved.messages.at(-1)).toMatchObject({ text: 'Which customer will pay?', citations: [] });
+  expect(saved.state.counterpoints[0].citations).toHaveLength(1);
+  expect(saved.revision).toBe(1);
+});
+it('still rejects unknown sources in a cited clarification', async () => {
+  const { input, envelope } = await fixture();
+  const invalid = { ...envelope, output: { ...envelope.output, citations: [{ ...envelope.output.citations[0], evidenceId: 'invented-source' }], state: { ...envelope.output.state, phase: 'clarifying', clarifications: [{ id: 'payer', question: 'Which customer will pay?' }] } } };
+  expect((await new OpenRouterModel(config(), async () => response(invalid)).generate(input, new AbortController().signal)).output).toBeNull();
+});

@@ -2,17 +2,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Session } from '@/lib/contracts';
-import { api, ErrorNotice, Shell } from '@/components/app';
-export default function History() { const [sessions, setSessions] = useState<Session[]>(); const [error, setError] = useState(''); function load() { return api<{ sessions: Session[] }>('/api/sessions').then(data => { setSessions(data.sessions); setError(''); }).catch((e: Error) => setError(e.message)); } useEffect(() => { void load(); }, []); return <Shell>
-      <p className="eyebrow">Pick up a thought</p>
-      <h1>History</h1>
-      <p className="lead">Your saved conversations, ready when you are.</p>{error ? <ErrorNotice error={error} retry={load}/> : !sessions ? <p role="status">Loading your conversations…</p> : sessions.length ? <div className="history-list">{sessions.map(session => <Link className="panel history-item" key={session.id} href={`/sessions/${session.id}`}>
-      <span className="eyebrow">{session.mode} · {session.topic}</span>
-      <h2>{session.title}</h2>
-      <p className="muted">{new Date(session.updatedAt).toLocaleDateString()} · {session.messages.length} messages · {session.cards.length} cards</p>
-      <span>Resume conversation →</span>
-      </Link>)}</div> : <section className="panel">
-      <h2>A clear space to start.</h2>
-      <p>Your conversations will appear here after you begin.</p>
-      <Link className="button primary" href="/home">Start a conversation</Link>
-      </section>}</Shell>; }
+import { api, ErrorNotice, Icon, Shell } from '@/components/app';
+export default function History() {
+  const [sessions, setSessions] = useState<Session[]>(); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filter, setFilter] = useState('all');
+  function load() { return api<{ sessions: Session[] }>('/api/sessions').then(data => { setSessions(data.sessions); setError(''); }).catch((e: Error) => setError(e.message)); }
+  useEffect(() => { void load(); }, []);
+  const results = sessions?.filter(session => (filter === 'all' || session.mode === filter) && `${session.title} ${session.topic} ${session.state.position}`.toLowerCase().includes(search.trim().toLowerCase()));
+  return <Shell><div className="page-heading"><div><p className="eyebrow">YOUR THINKING, IN ONE PLACE</p><h1>History</h1><p className="lead">Some thoughts need a little time. Pick up where you left off.</p></div><Link className="button small" href="/home"><Icon name="plus" size={16}/>New conversation</Link></div><div className="history-tools"><div className="search-field"><label htmlFor="search-conversations" className="sr-only">Search conversations</label><Icon name="search"/><input id="search-conversations" type="search" placeholder="Find a conversation…" value={search} onChange={e => setSearch(e.target.value)}/></div><div className="filter-tabs" role="group" aria-label="Filter conversations">{[['all', 'All thoughts'], ['business', 'Business'], ['philosophy', 'Personal']].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div></div>{error ? <ErrorNotice error={error} retry={load}/> : !sessions ? <div className="page-loading" role="status"><span className="loading-orb"/>Finding your conversations…</div> : results?.length ? <><p className="fine">{results.length} {results.length === 1 ? 'conversation' : 'conversations'}</p><div className="history-list">{results.map(session => <Link className="panel history-item" key={session.id} href={`/sessions/${session.id}`}><div><p className="eyebrow">{session.mode === 'business' ? 'Business & ideas' : 'Life & decisions'} · {session.topic}</p><h2>{session.title}</h2><p className="muted">{new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · {session.messages.length} messages · {session.cards.length} {session.cards.length === 1 ? 'card' : 'cards'}</p></div><Icon name="arrow" size={18}/></Link>)}</div></> : <section className="panel empty-state"><span className="icon-tile blue"><Icon name={sessions.length ? 'search' : 'history'} size={27}/></span><h2>{sessions.length ? 'No thoughts found here.' : 'A clear space to start.'}</h2><p>{sessions.length ? 'Try a different search or perspective. Your other conversations are still here.' : 'Your conversations and decision cards will be waiting here whenever you need a fresh look.'}</p>{sessions.length ? <button onClick={() => { setSearch(''); setFilter('all'); }}>Clear filters</button> : <Link className="button primary" href="/home">Start a conversation<Icon name="arrow" size={17}/></Link>}</section>}</Shell>;
+}

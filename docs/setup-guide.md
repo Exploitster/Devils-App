@@ -21,7 +21,7 @@ Open the development server address printed by Next.js. On the sign-in screen us
 3. Keep API keys out of chat. In project settings, find the project API keys. The server needs the public anonymous key and a privileged service-role key compatible with Supabase JS. Store them in secure environment variables as `DEVILS_SUPABASE_ANON_KEY` and `DEVILS_SUPABASE_SERVICE_ROLE_KEY`. Store the URL as `DEVILS_SUPABASE_URL`.
 4. For a new dedicated project, run `npm run db:setup:bundle` and open `.local/supabase/Devils-Advocate-Supabase-Setup.sql`. In Supabase **SQL Editor → New query**, paste the **entire file**, from its `START` comment through its `END` comment. Click inside the editor to clear any selection, then click **Run**. Running a selected fragment beginning with `if p_args...` causes a syntax error because it is part of a function, not a standalone SQL statement. A successful full run returns `Devils Advocate database setup complete`. Migration 002 creates dormant billing storage; it does not contact Stripe or charge anyone.
 5. Set `DEVILS_APP_URL` to the app's actual origin. In Supabase Authentication URL Configuration, set the site URL and allow the exact `${DEVILS_APP_URL}/auth/callback` redirect. Production service cookies require HTTPS.
-6. Create/invite each user through Supabase Authentication. Public self-registration is not supported by the app. Create matching application profile and expiring invite records through the service-only store interface described below. Set `DEVILS_BETA_ACTIVE=true` for invited beta access; this does not grant access without an unexpired invite.
+6. Create/invite each user through Supabase Authentication. The current free MVP supports public registration. Enable new-user signup and email/password in Supabase Authentication. Verified identities receive profiles automatically; do not create invites for free access. Follow docs/public-auth-setup.md for Google sign-in and email delivery.
 
 The privileged key stays on the server. Never put it in a `NEXT_PUBLIC_` variable or commit it to Git.
 
@@ -44,7 +44,7 @@ No Stripe account or keys are needed now. The billing page retains the monthly a
 
 The app footer links to your marketing website. Adding an “Open app” link on that website will need its repository and the final hosted app URL. This work has not modified the website or its waitlist.
 
-## Operator-only invite records
+## Legacy operator-only invite records (not needed for the free MVP)
 
 After creating the authentication user, use its exact UUID with the service-only `public.app_store` RPC. `putProfile` accepts `{profile:{id,email,disabled:false,deletionState:"none",createdAt}}`; `putInvite` accepts `{invite:{userId,enabled:true,expiresAt}}`. Timestamps must be ISO strings, and the invite expiry must be in the future. Make these calls only from a trusted server/admin environment, never from a browser. Owner RLS does not allow users to grant themselves invites or subscriptions.
 

@@ -65,9 +65,6 @@ export function decodeRouterOutput(raw: string, input: ModelInput): ModelOutput 
       return { id: resolved.claimId, text: resolved.claimText, interpretation: point.interpretation, citations: [ref] };
     });
     let response = value.response;
-    // Clarifications are rendered by the controller as a single question. Keep
-    // them source-free so its rewrite cannot detach citations from their text.
-    if (value.state.phase === 'clarifying' && citations.length) return null;
     for (const ref of citations) {
       const source = resolveCitation(ref, input.evidence);
       const text = source.text;

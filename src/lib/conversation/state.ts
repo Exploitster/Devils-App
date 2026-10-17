@@ -25,8 +25,12 @@ export function controlOutput(input:ModelInput,output:ModelOutput):ModelOutput {
  state.clarifications=[...prepared.clarifications,...additions];
  if(state.phase==='clarifying'){
   const pending=state.clarifications.find(q=>q.answer===undefined&&!q.skipped);
-  if(pending)output.response=pending.question;
+  // The controller replaces the entire response with one question. Its old
+  // response citations cannot remain attached to the replacement text. Source
+  // references on retained counterpoints still undergo canonical validation.
+  if(pending){output.response=pending.question;output.citations=[];}
   else {
+   output.citations=[]; // The synthesized reflection replaces the cited provider text too.
    state.phase='debate';state.underlyingQuestion=state.underlyingQuestion||'Which assumption would change this decision?';
    state.strengths=state.strengths.length?state.strengths:['You have identified a decision to examine.'];
    state.openQuestions=['Which observation would make you reconsider your position?'];

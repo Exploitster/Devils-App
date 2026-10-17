@@ -78,7 +78,7 @@ describe('signed local authentication',()=>{
 describe('entitlement and account closure foundations',()=>{
  it('history survives invite expiry; paid access requires active current period and beta flag',async()=>{
    const {accessDecision}=await import('../src/lib/auth/access');
-   const config=readConfig({DEVILS_RUNTIME_MODE:'local',DEVILS_LOCAL_AUTH_SECRET:'x'.repeat(32),DEVILS_BETA_ACTIVE:'true'});
+   const config={...readConfig({DEVILS_RUNTIME_MODE:'local',DEVILS_LOCAL_AUTH_SECRET:'x'.repeat(32),DEVILS_BETA_ACTIVE:'true'}),paymentsEnabled:true};
    const s=await store.createSession('a',{mode:'business',topic:'startup'},now);
    await store.putInvite({userId:'a',enabled:true,expiresAt:'2026-10-15T00:00:00.000Z'});
    expect(await accessDecision(store,'a',config,new Date(now))).toMatchObject({allowed:true,reason:'beta'});

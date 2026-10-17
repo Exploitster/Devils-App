@@ -25,9 +25,10 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
   await page.locator(`a[href="${new URL(url).pathname}"]`).click();
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
 });
-test('expired access preserves history and offers billing', async ({ page }) => {
+test('expired legacy invites retain free access without a paywall', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Email address').fill('expired@example.test'); await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('link', { name: /View plans/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start a conversation', exact:true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /View plans|Billing/ })).toHaveCount(0);
   await page.getByRole('link', { name: 'History', exact: true }).click(); await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 });
 test('stale revisions and offline submission keep the unsent message', async ({ page, context }) => {
@@ -47,27 +48,14 @@ test('stale revisions and offline submission keep the unsent message', async ({ 
   await context.setOffline(false); await page.getByRole('button', {name:'Send',exact:true}).click();
   await expect(page.getByLabel('Your message')).toHaveValue('');
 });
-test('deferred payments retain pricing and cannot change access', async ({ page }) => {
+test('payments stay disabled and the old billing route returns to the free app', async ({ page }) => {
   await login(page);
-  const before = await (await page.request.get('/api/billing')).json();
-  expect(before.paymentsEnabled).toBe(false);
-  await page.goto('/billing?testCheckout=11111111-1111-4111-8111-111111111111');
-  await expect(page.getByText('Payments are not connected yet', {exact:true})).toBeVisible();
-  await expect(page.locator('.price').filter({hasText:'$59'})).toBeVisible();
-  await expect(page.locator('.price').filter({hasText:'$150'})).toBeVisible();
-  await expect(page.getByText(/Business and philosophy modes, saved conversations/)).toBeVisible();
-  for (const name of ['Choose monthly', 'Choose yearly', 'Manage billing']) {
-    await expect(page.getByRole('button', {name, exact:true})).toBeDisabled();
-  }
-  await expect(page.getByRole('button', {name:'Confirm simulated subscription'})).toHaveCount(0);
-  const response = await page.request.post('/api/billing/checkout', {
-    data: {plan:'yearly'}, headers: {Origin:new URL(page.url()).origin}
-  });
+  await page.goto('/billing');
+  await expect(page).toHaveURL(/\/home/);
+  await expect(page.getByRole('link', {name:'Billing',exact:true})).toHaveCount(0);
+  const response = await page.request.post('/api/billing/checkout', {data:{plan:'yearly'},headers:{Origin:new URL(page.url()).origin}});
   expect(response.status()).toBe(503);
   expect((await response.json()).error.code).toBe('PAYMENTS_DISABLED');
-  const after = await (await page.request.get('/api/billing')).json();
-  expect(after.access).toEqual(before.access);
-  expect(after.subscription).toEqual(before.subscription);
 });
 
 test('earlier saved questions remain readable after pushback and reload', async ({ page }) => {
