@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "npm exec -- tsx scripts/verify-auth.ts && npm test && npm run build"
+  "buildCommand": "node scripts/verify-release-environment.mjs && npm exec -- tsx scripts/verify-auth.ts && npm test && npm run build"
 }

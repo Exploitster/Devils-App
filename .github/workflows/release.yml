@@ -1,0 +1,144 @@
+name: Tested release
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+    inputs:
+      tested_sha:
+        description: Full commit SHA from a successful staging run (production only)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  VERCEL_ORG_ID: team_B9l2Lu20MEEzgSApa7BsJJAW
+  VERCEL_CLI_VERSION: '64.2.0'
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: checks
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.ref == 'refs/heads/main' && 'production-build' || 'staging' }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_PROJECT_ID: ${{ github.ref == 'refs/heads/main' && 'prj_RtFOuKfu3erBBiaiU7uIuvGPndEt' || vars.VERCEL_STAGING_PROJECT_ID }}
+      TESTED_SHA: ${{ inputs.tested_sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.19.0
+      - name: Require the same source that passed testing
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$TESTED_SHA" "$GITHUB_SHA"
+          git diff --exit-code "$TESTED_SHA" "$GITHUB_SHA"
+          count="$(gh run list --workflow=release.yml --branch=staging --commit="$TESTED_SHA" --status=success --json headSha --jq 'length')"
+          test "$count" -gt 0
+      - name: Verify destination and link without copying credentials
+        run: |
+          node --input-type=module <<'JS'
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          const { VERCEL_PROJECT_ID: projectId, VERCEL_ORG_ID: orgId, GITHUB_REF: ref } = process.env;
+          if (!/^prj_[a-zA-Z0-9]+$/.test(projectId ?? '')) throw new Error('Set VERCEL_STAGING_PROJECT_ID to the separate testing project ID.');
+          if (ref === 'refs/heads/staging' && projectId === 'prj_RtFOuKfu3erBBiaiU7uIuvGPndEt') throw new Error('Testing must never deploy into production.');
+          mkdirSync('.vercel', { recursive: true });
+          writeFileSync('.vercel/project.json', JSON.stringify({ projectId, orgId }));
+          JS
+      - name: Install reviewed CLI
+        run: npm install --global "vercel@$VERCEL_CLI_VERSION"
+      - name: Build on Vercel using that project's private configuration
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" || { echo 'Add the Vercel deployment token to this protected GitHub environment.'; exit 1; }
+          flags=()
+          if [ "$GITHUB_REF" = 'refs/heads/main' ]; then flags+=(--skip-domain); fi
+          deployment_url="$(vercel deploy --yes --prod --scope "$VERCEL_ORG_ID" "${flags[@]}")"
+          DEPLOYMENT_URL="$deployment_url" node --input-type=module -e '
+            const v = process.env.DEPLOYMENT_URL; const u = new URL(v);
+            if (u.protocol !== "https:" || u.origin !== v || !u.hostname.endsWith(".vercel.app")) process.exit(1);
+          '
+          printf 'url=%s\n' "$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Check the deployed candidate
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/smoke-deployment.mjs "$DEPLOYMENT_URL"
+
+  publish:
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Required reviewer must be configured in GitHub before adding the token.
+    environment:
+      name: production
+      url: https://www.devils-advocate.app
+    env:
+      DEPLOYMENT_URL: ${{ needs.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.19.0
+      - run: npm install --global "vercel@$VERCEL_CLI_VERSION"
+      - name: Reject a release superseded while waiting for approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')" = "$GITHUB_SHA"
+      - name: Publish checked build; restore previous release on failure
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          previous_json="$(vercel api "/v4/aliases/www.devils-advocate.app?teamId=$VERCEL_ORG_ID" --method GET)"
+          previous_id="$(printf '%s' "$previous_json" | node --input-type=module -e '
+            let text = "";
+            for await (const chunk of process.stdin) text += chunk;
+            const alias = JSON.parse(text);
+            const id = alias.deploymentId ?? alias.deployment?.id;
+            if (!/^dpl_[a-zA-Z0-9]+$/.test(id ?? "")) process.exit(1);
+            process.stdout.write(id);
+          ')"
+          restore_previous_release() {
+            if vercel rollback "$previous_id" --yes --scope "$VERCEL_ORG_ID"; then
+              echo 'Release failed. Rollback to the previous deployment completed.'
+            else
+              echo '::error::Automatic rollback failed. Restore the previous deployment in the Vercel dashboard.'
+            fi
+            exit 1
+          }
+          # A failed promotion may already have changed some aliases.
+          if ! vercel promote "$DEPLOYMENT_URL" --yes --scope "$VERCEL_ORG_ID"; then
+            restore_previous_release
+          fi
+          # Promotion re-enables domain assignment; freeze it again. The project
+          # must also keep its Git ignored-build command set to exit 0.
+          printf '{"autoAssignCustomDomains":false}' > "$RUNNER_TEMP/freeze-release.json"
+          if ! vercel api "/v9/projects/prj_RtFOuKfu3erBBiaiU7uIuvGPndEt?teamId=$VERCEL_ORG_ID" --method PATCH --input "$RUNNER_TEMP/freeze-release.json" > /dev/null || ! node scripts/smoke-deployment.mjs https://www.devils-advocate.app; then
+            restore_previous_release
+          fi

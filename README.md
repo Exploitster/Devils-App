@@ -1,5 +1,10 @@
 # Devils Advocate
 
+The live app is https://www.devils-advocate.app. For testing environments,
+release gates, rollback and the remaining dashboard setup, follow
+[testing and production](docs/testing-and-production.md). Production Git
+publishing is paused; a push to `main` must not publish directly.
+
 A private application for challenging business ideas and personal decisions. This checkout contains the application. Your marketing website is https://exploitster.github.io/devilsadvocate/ and remains separately managed; the app links back to it. Its waitlist has not been changed or independently verified.
 
 Use Node **24.19.0** and npm **11.9.0**. Dependencies are pinned and the lockfile is committed. TypeScript 6.0.3 matches the supported ESLint parser range. Next.js uses App Router and Node server handlers; local persistence uses Node's built-in SQLite module.

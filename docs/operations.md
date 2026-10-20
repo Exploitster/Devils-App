@@ -1,6 +1,11 @@
 # Operating the development app
 
-The application uses a Node 24 server with Supabase persistence in services mode. Static GitHub Pages hosting can serve the existing marketing website, but cannot run the app's private server routes. No deployment has been performed.
+The application uses a Node 24 server with Supabase persistence in services mode.
+The live app is https://www.devils-advocate.app. Follow
+[testing and production](testing-and-production.md) for the current deployment
+process and setup blockers. The historical service-check details below do not
+authorize publishing directly to production or testing against its database.
+Static GitHub Pages hosting cannot run the app's private server routes.
 
 ## Runtime and costs
 
