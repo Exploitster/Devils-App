@@ -8,6 +8,7 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await page.getByLabel('Password', { exact: true }).fill('My long unique test password');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding/);
+  const firstCreatedAt=(await (await page.request.get('/api/account')).json()).profile.createdAt;
   await expect(page.getByLabel('What should we call you?')).toHaveValue('Taylor');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -44,6 +45,7 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await expect(page).toHaveURL(/\/home/);
   await expect(page.getByText('Good to see you, Taylor.')).toBeVisible();
   expect((await (await page.request.get('/api/auth')).json()).user.onboarded).toBe(true);
+  expect((await (await page.request.get('/api/account')).json()).profile.createdAt).toBe(firstCreatedAt);
 });
 test('new public pages work on a phone, reset links fail gracefully, and Google does not fake success in local mode', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });

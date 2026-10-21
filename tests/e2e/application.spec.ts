@@ -28,7 +28,7 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
 test('expired legacy invites retain free access without a paywall', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Email address').fill('expired@example.test'); await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start a conversation', exact:true })).toBeVisible();
-  await expect(page.getByRole('link', { name: /View plans|Billing/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Subscribe|test checkout/ })).toHaveCount(0);
   await page.getByRole('link', { name: 'History', exact: true }).click(); await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 });
 test('stale revisions and offline submission keep the unsent message', async ({ page, context }) => {
@@ -48,11 +48,19 @@ test('stale revisions and offline submission keep the unsent message', async ({ 
   await context.setOffline(false); await page.getByRole('button', {name:'Send',exact:true}).click();
   await expect(page.getByLabel('Your message')).toHaveValue('');
 });
-test('payments stay disabled and the old billing route returns to the free app', async ({ page }) => {
+test('billing shows the INR monthly plan while payment collection stays disabled', async ({ page }) => {
   await login(page);
   await page.goto('/billing');
-  await expect(page).toHaveURL(/\/home/);
-  await expect(page.getByRole('link', {name:'Billing',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'Your subscription'})).toBeVisible();
+  await expect(page.getByText('₹2,000',{exact:true})).toBeVisible();
+  await expect(page.getByText('Free access is currently active.')).toBeVisible();
+  await expect(page.getByRole('button',{name:/Subscribe|test checkout/})).toHaveCount(0);
+  const billing=await (await page.request.get('/api/billing')).json();
+  expect(billing.plans).toEqual({monthly:{amount:200000,currency:'INR',interval:'month'}});
+  expect(billing.checkoutAvailable).toBe(false);
+  await page.setViewportSize({width:360,height:780});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'.local/screenshots/billing-mobile.png',fullPage:true});
   const response = await page.request.post('/api/billing/checkout', {data:{plan:'yearly'},headers:{Origin:new URL(page.url()).origin}});
   expect(response.status()).toBe(503);
   expect((await response.json()).error.code).toBe('PAYMENTS_DISABLED');

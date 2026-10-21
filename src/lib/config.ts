@@ -4,7 +4,7 @@ export interface RuntimeConfig {
   supabaseUrl: string; supabaseAnonKey: string; supabaseServiceRoleKey: string;
   modelProvider: 'gemini' | 'openrouter' | 'gateway'; fallbackModels: string[]; gatewayProviders: string[];
   modelApiKey: string; model: string; modelInputUsdPerMillion: number; modelOutputUsdPerMillion: number; maxOutputTokens: number;
-  paymentsEnabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
+  billingProvider?: 'stripe' | 'dodo'; dodoTestUserIds?: string[]; paymentsEnabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
   betaActive: boolean; launchDate: string; generationTimeoutMs: number; dailySpendLimitMicros: number;
   maxInputCharacters: number; maxContextMessages: number; submissionsPerMinute: number;
 }
@@ -16,15 +16,18 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   const paymentSetting = env.DEVILS_PAYMENTS_ENABLED ?? 'false';
   if (!['true', 'false'].includes(paymentSetting)) throw new Error('DEVILS_PAYMENTS_ENABLED must be true or false.');
   const paymentsEnabled = paymentSetting === 'true';
+  const billingProvider = env.DEVILS_BILLING_PROVIDER ?? 'stripe';
+  if (!['stripe','dodo'].includes(billingProvider)) throw new Error('DEVILS_BILLING_PROVIDER must be stripe or dodo.');
+  if (paymentsEnabled && billingProvider === 'dodo' && env.DEVILS_DODO_ENVIRONMENT !== 'live_mode') throw new Error('Paid access requires Dodo live_mode; test payments never unlock paid access.');
   const modelProvider = env.DEVILS_MODEL_PROVIDER ?? 'gemini';
   if (modelProvider !== 'gemini' && modelProvider !== 'openrouter' && modelProvider !== 'gateway') throw new Error('DEVILS_MODEL_PROVIDER must be gemini, openrouter or gateway.');
   const modelBindings = modelProvider === 'gateway' ? [] : modelProvider === 'openrouter' ? ['DEVILS_OPENROUTER_API_KEY'] : ['DEVILS_GEMINI_API_KEY', 'DEVILS_MODEL_INPUT_USD_PER_MILLION', 'DEVILS_MODEL_OUTPUT_USD_PER_MILLION'];
-  const required = mode === 'local' ? ['DEVILS_LOCAL_AUTH_SECRET'] : ['DEVILS_SUPABASE_URL', 'DEVILS_SUPABASE_ANON_KEY', 'DEVILS_SUPABASE_SERVICE_ROLE_KEY', ...modelBindings, ...(paymentsEnabled ? ['DEVILS_STRIPE_SECRET_KEY', 'DEVILS_STRIPE_WEBHOOK_SECRET', 'DEVILS_STRIPE_MONTHLY_PRICE_ID', 'DEVILS_STRIPE_YEARLY_PRICE_ID'] : [])];
+  const required = mode === 'local' ? ['DEVILS_LOCAL_AUTH_SECRET'] : ['DEVILS_SUPABASE_URL', 'DEVILS_SUPABASE_ANON_KEY', 'DEVILS_SUPABASE_SERVICE_ROLE_KEY', ...modelBindings, ...(paymentsEnabled && billingProvider === 'dodo' ? ['DEVILS_DODO_API_KEY','DEVILS_DODO_WEBHOOK_SECRET','DEVILS_DODO_MONTHLY_PRODUCT_ID'] : []), ...(paymentsEnabled && billingProvider === 'stripe' ? ['DEVILS_STRIPE_SECRET_KEY', 'DEVILS_STRIPE_WEBHOOK_SECRET', 'DEVILS_STRIPE_MONTHLY_PRICE_ID', 'DEVILS_STRIPE_YEARLY_PRICE_ID'] : [])];
   const missing = required.filter(name => !env[name]?.trim());
   if (missing.length) throw new Error(`Missing runtime configuration: ${missing.join(', ')}. Configure secure environment bindings.`);
   if (mode === 'local' && (env.DEVILS_LOCAL_AUTH_SECRET?.length ?? 0) < 32) throw new Error('DEVILS_LOCAL_AUTH_SECRET must contain at least 32 characters.');
-  if (mode === 'services' && paymentsEnabled && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
-  if (mode === 'services' && paymentsEnabled && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
+  if (mode === 'services' && paymentsEnabled && billingProvider === 'stripe' && /^(sk|rk)_live_/.test(env.DEVILS_STRIPE_SECRET_KEY ?? '')) throw new Error('DEVILS_STRIPE_SECRET_KEY must be a Stripe test key.');
+  if (mode === 'services' && paymentsEnabled && billingProvider === 'stripe' && !env.DEVILS_STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) throw new Error('DEVILS_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.');
   const model = modelProvider === 'gateway' ? env.DEVILS_GATEWAY_MODEL ?? 'google/gemini-2.5-flash' : modelProvider === 'openrouter' ? env.DEVILS_OPENROUTER_MODEL ?? 'openai/gpt-5.4-mini' : env.DEVILS_MODEL ?? 'gemini-3.8-flash';
   if (modelProvider === 'gateway' && model !== 'google/gemini-2.5-flash') throw new Error('Gateway model must be the reviewed google/gemini-2.5-flash.');
   const fallbackModels = modelProvider === 'openrouter' ? (env.DEVILS_OPENROUTER_FALLBACK_MODELS ?? 'anthropic/claude-haiku-4.5').split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -42,7 +45,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   if (!['true', 'false'].includes(beta)) throw new Error('DEVILS_BETA_ACTIVE must be true or false.');
   return { mode, appUrl, sqlitePath: env.DEVILS_SQLITE_PATH ?? '.local/devils.sqlite', localAuthSecret: env.DEVILS_LOCAL_AUTH_SECRET ?? '',
     supabaseUrl, supabaseAnonKey: env.DEVILS_SUPABASE_ANON_KEY ?? '', supabaseServiceRoleKey: env.DEVILS_SUPABASE_SERVICE_ROLE_KEY ?? '',
-    modelProvider, gatewayProviders: ['vertex'], fallbackModels: [...new Set(fallbackModels)].filter(id => id !== model), modelApiKey: (modelProvider === 'gateway' ? env.AI_GATEWAY_API_KEY : modelProvider === 'openrouter' ? env.DEVILS_OPENROUTER_API_KEY : env.DEVILS_GEMINI_API_KEY) ?? '', model, modelInputUsdPerMillion: inputPrice, modelOutputUsdPerMillion: outputPrice, maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), paymentsEnabled, stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
+    modelProvider, gatewayProviders: ['vertex'], fallbackModels: [...new Set(fallbackModels)].filter(id => id !== model), modelApiKey: (modelProvider === 'gateway' ? env.AI_GATEWAY_API_KEY : modelProvider === 'openrouter' ? env.DEVILS_OPENROUTER_API_KEY : env.DEVILS_GEMINI_API_KEY) ?? '', model, modelInputUsdPerMillion: inputPrice, modelOutputUsdPerMillion: outputPrice, billingProvider: billingProvider as 'stripe'|'dodo', dodoTestUserIds: (env.DEVILS_DODO_TEST_USER_IDS ?? '').split(',').map(v=>v.trim()).filter(Boolean), maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), paymentsEnabled, stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
     betaActive: beta === 'true', launchDate, generationTimeoutMs: integer(env, 'DEVILS_GENERATION_TIMEOUT_MS', modelProvider === 'gateway' ? 90000 : modelProvider === 'openrouter' ? 60000 : 30000, 1000, 120000), dailySpendLimitMicros: integer(env, 'DEVILS_DAILY_SPEND_LIMIT_MICROS', 5000000, 1, 1000000000), maxInputCharacters: 12000, maxContextMessages: 24, submissionsPerMinute: 10 };
 }
 function price(env: Environment, name: string): number {
@@ -61,4 +64,4 @@ function url(raw: string, name: string, httpsRequired: boolean): string {
   if (result.username || result.password || !['http:', 'https:'].includes(result.protocol) || (httpsRequired && result.protocol !== 'https:')) throw new Error(`${name} must use a permitted protocol without embedded credentials.`);
   return result.origin;
 }
-export function publicConfig(config: RuntimeConfig) { return { runtimeMode: config.mode, betaActive: config.betaActive, launchDate: config.launchDate }; }
+export function publicConfig(config: RuntimeConfig) { return { runtimeMode: config.mode, betaActive: config.betaActive, launchDate: config.launchDate, paymentsEnabled: config.paymentsEnabled }; }

@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { DodoBilling } from './dodo-service';
 import { createHmac, randomUUID } from 'node:crypto';
 import type { BillingService, Identity, Store, Subscription } from '../contracts';
 import type { RuntimeConfig } from '../config';
@@ -9,8 +10,8 @@ import { billingPersistence, type BillingContext, type BillingPersistence } from
 const fail=(message='Billing verification failed.')=>new AppError('BILLING_UNAVAILABLE',message,503);
 export const plans={monthly:{amount:5900,interval:'month'},yearly:{amount:15000,interval:'year'}} as const;
 export interface BillingOptions {config:RuntimeConfig;store:Store;persistence?:BillingPersistence;stripe?:Stripe;}
-export function createBillingService(requestOrOptions?:Request|BillingOptions):VerifiedBilling {
- const options=requestOrOptions instanceof Request?{config:getRuntimeConfig(requestOrOptions),store:getAdminStore()}:requestOrOptions??{config:readConfig(),store:getAdminStore()};return new VerifiedBilling(options);
+export function createBillingService(requestOrOptions?:Request|BillingOptions):VerifiedBilling|DodoBilling {
+ const options=requestOrOptions instanceof Request?{config:getRuntimeConfig(requestOrOptions),store:getAdminStore()}:requestOrOptions??{config:readConfig(),store:getAdminStore()};return options.config.billingProvider==='dodo'?new DodoBilling(options):new VerifiedBilling(options);
 }
 export class VerifiedBilling implements BillingService {
  private stripe:Stripe;private _persistence?:BillingPersistence;private config:RuntimeConfig;private store:Store;

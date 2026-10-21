@@ -14,7 +14,7 @@ test('public and mobile authenticated screens are accessible', async ({ page }) 
   await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({path: '.local/screenshots/home-mobile-dark.png', fullPage:true, animations:'disabled'});
-  await page.getByRole('button', {name:'Light theme'}).click();
+  await page.goto('/billing');await expect(page.getByRole('heading',{name:'Your subscription'})).toBeVisible();expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);await page.getByRole('button', {name:'Light theme'}).click();
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path: '.local/screenshots/home-desktop.png', fullPage:true, animations:'disabled'});
 });

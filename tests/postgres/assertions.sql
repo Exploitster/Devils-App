@@ -58,5 +58,22 @@ DO $$ BEGIN
  IF (SELECT count(*) FROM public.sessions) <> 0 THEN RAISE EXCEPTION 'Disabled account can still read private sessions'; END IF;
  IF (SELECT count(*) FROM public.profiles) <> 1 THEN RAISE EXCEPTION 'Closure retry profile is unavailable'; END IF;
 END $$;
+SET ROLE service_role;
+DO $$ DECLARE uid text := '00000000-0000-4000-8000-000000000001'; ctx jsonb; BEGIN
+ ctx:=jsonb_build_object('userId',uid,'token','attempt','plan','monthly','expiresAt',0,'provider','dodo','environment','test_mode');
+ PERFORM public.billing_sync_operation('acquire',jsonb_build_object('customerId','dodo-test-fence','token','owner','expiresAt',(extract(epoch from clock_timestamp())*1000)::bigint+60000));
+ PERFORM public.billing_context_save_guarded(ctx,'{"key":"dodo-test-fence","token":"owner"}');
+ BEGIN
+  PERFORM public.billing_context_save_guarded(ctx||'{"customerId":"wrong"}','{"key":"dodo-test-fence","token":"stale"}');
+  RAISE EXCEPTION 'Stale billing save accepted';
+ EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'Billing lease expired' THEN RAISE; END IF; END;
+ IF (public.billing_context_operation('get',jsonb_build_object('userId',uid))->>'customerId') IS NOT NULL THEN RAISE EXCEPTION 'Stale save changed billing authority'; END IF;
+END $$;
+SET ROLE authenticated;
+DO $$ BEGIN
+ BEGIN
+  PERFORM public.billing_context_save_guarded('{}','{}');RAISE EXCEPTION 'Client can change billing authority';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+END $$;
 RESET ROLE;
 ROLLBACK;
