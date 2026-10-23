@@ -1,10 +1,11 @@
+import {sharedDataRehearsal} from './rehearsal-environment';
 // This module is for server services. Only publicConfig() may be returned to clients.
 export interface RuntimeConfig {
   mode: 'local' | 'services'; appUrl: string; sqlitePath: string; localAuthSecret: string;
   supabaseUrl: string; supabaseAnonKey: string; supabaseServiceRoleKey: string;
   modelProvider: 'gemini' | 'openrouter' | 'gateway'; fallbackModels: string[]; gatewayProviders: string[];
   modelApiKey: string; model: string; modelInputUsdPerMillion: number; modelOutputUsdPerMillion: number; maxOutputTokens: number;
-  billingProvider?: 'stripe' | 'dodo'; dodoTestUserIds?: string[]; paymentsEnabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
+  sharedDataRehearsal?: boolean; billingProvider?: 'stripe' | 'dodo'; dodoTestUserIds?: string[]; paymentsEnabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; stripeMonthlyPriceId: string; stripeYearlyPriceId: string;
   betaActive: boolean; launchDate: string; generationTimeoutMs: number; dailySpendLimitMicros: number;
   maxInputCharacters: number; maxContextMessages: number; submissionsPerMinute: number;
 }
@@ -43,7 +44,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(launchDate) || Number.isNaN(Date.parse(launchDate))) throw new Error('DEVILS_LAUNCH_DATE must be an ISO calendar date.');
   const beta = env.DEVILS_BETA_ACTIVE ?? 'false';
   if (!['true', 'false'].includes(beta)) throw new Error('DEVILS_BETA_ACTIVE must be true or false.');
-  return { mode, appUrl, sqlitePath: env.DEVILS_SQLITE_PATH ?? '.local/devils.sqlite', localAuthSecret: env.DEVILS_LOCAL_AUTH_SECRET ?? '',
+  return { sharedDataRehearsal: sharedDataRehearsal(env), mode, appUrl, sqlitePath: env.DEVILS_SQLITE_PATH ?? '.local/devils.sqlite', localAuthSecret: env.DEVILS_LOCAL_AUTH_SECRET ?? '',
     supabaseUrl, supabaseAnonKey: env.DEVILS_SUPABASE_ANON_KEY ?? '', supabaseServiceRoleKey: env.DEVILS_SUPABASE_SERVICE_ROLE_KEY ?? '',
     modelProvider, gatewayProviders: ['vertex'], fallbackModels: [...new Set(fallbackModels)].filter(id => id !== model), modelApiKey: (modelProvider === 'gateway' ? env.AI_GATEWAY_API_KEY : modelProvider === 'openrouter' ? env.DEVILS_OPENROUTER_API_KEY : env.DEVILS_GEMINI_API_KEY) ?? '', model, modelInputUsdPerMillion: inputPrice, modelOutputUsdPerMillion: outputPrice, billingProvider: billingProvider as 'stripe'|'dodo', dodoTestUserIds: (env.DEVILS_DODO_TEST_USER_IDS ?? '').split(',').map(v=>v.trim()).filter(Boolean), maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), paymentsEnabled, stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
     betaActive: beta === 'true', launchDate, generationTimeoutMs: integer(env, 'DEVILS_GENERATION_TIMEOUT_MS', modelProvider === 'gateway' ? 90000 : modelProvider === 'openrouter' ? 60000 : 30000, 1000, 120000), dailySpendLimitMicros: integer(env, 'DEVILS_DAILY_SPEND_LIMIT_MICROS', 5000000, 1, 1000000000), maxInputCharacters: 12000, maxContextMessages: 24, submissionsPerMinute: 10 };
@@ -64,4 +65,4 @@ function url(raw: string, name: string, httpsRequired: boolean): string {
   if (result.username || result.password || !['http:', 'https:'].includes(result.protocol) || (httpsRequired && result.protocol !== 'https:')) throw new Error(`${name} must use a permitted protocol without embedded credentials.`);
   return result.origin;
 }
-export function publicConfig(config: RuntimeConfig) { return { runtimeMode: config.mode, betaActive: config.betaActive, launchDate: config.launchDate, paymentsEnabled: config.paymentsEnabled }; }
+export function publicConfig(config: RuntimeConfig) { return { runtimeMode: config.mode, betaActive: config.betaActive, launchDate: config.launchDate, paymentsEnabled: config.paymentsEnabled, sharedDataRehearsal: config.sharedDataRehearsal??false }; }

@@ -3,6 +3,11 @@ import { readConfig, publicConfig } from '../src/lib/config';
 const services = { DEVILS_SUPABASE_URL: 'https://example.supabase.co', DEVILS_SUPABASE_ANON_KEY: 'public', DEVILS_SUPABASE_SERVICE_ROLE_KEY: 'privileged-role-secret', DEVILS_GEMINI_API_KEY: 'provider-secret', DEVILS_MODEL: 'gemini-2.5-flash', DEVILS_MODEL_INPUT_USD_PER_MILLION: '1.2', DEVILS_MODEL_OUTPUT_USD_PER_MILLION: '4.5', DEVILS_PAYMENTS_ENABLED:'true', DEVILS_STRIPE_SECRET_KEY: 'sk_test_fake', DEVILS_STRIPE_WEBHOOK_SECRET: 'whsec_fake', DEVILS_STRIPE_MONTHLY_PRICE_ID: 'price_month', DEVILS_STRIPE_YEARLY_PRICE_ID: 'price_year' };
 const local = { DEVILS_RUNTIME_MODE: 'local', DEVILS_LOCAL_AUTH_SECRET: 'a-development-signing-secret-with-32-characters' };
 describe('runtime configuration', () => {
+  it('uses the fixed rehearsal callback origin, shares no secret or account IDs publicly, and fails closed at runtime',()=>{
+    const bindings={...services,DEVILS_PAYMENTS_ENABLED:'false',DEVILS_MODEL_PROVIDER:'gateway',DEVILS_DEPLOYMENT_ENV:'rehearsal',DEVILS_SHARED_DATA_REHEARSAL:'true',VERCEL_ENV:'preview',VERCEL_PROJECT_ID:'prj_RtFOuKfu3erBBiaiU7uIuvGPndEt',DEVILS_SUPABASE_URL:'https://fttulbecvnxlutpqjrky.supabase.co',DEVILS_APP_URL:'https://devils-advocate-preview-exploitster1.vercel.app',DEVILS_BILLING_PROVIDER:'dodo',DEVILS_DODO_ENVIRONMENT:'test_mode',DEVILS_DODO_TEST_USER_IDS:'00000000-0000-4000-8000-000000000001'};
+    const config=readConfig(bindings);expect(config.appUrl).toBe(bindings.DEVILS_APP_URL);expect(publicConfig(config)).toMatchObject({sharedDataRehearsal:true,paymentsEnabled:false});expect(JSON.stringify(publicConfig(config))).not.toContain(bindings.DEVILS_DODO_TEST_USER_IDS);
+    expect(()=>readConfig({...bindings,VERCEL_ENV:'production'})).toThrow('REHEARSAL');
+  });
   it('keeps Dodo setup independent from legacy Stripe keys and rejects paid test mode',()=>{
     const bindings={...services,DEVILS_BILLING_PROVIDER:'dodo',DEVILS_PAYMENTS_ENABLED:'false',DEVILS_STRIPE_SECRET_KEY:undefined};
     expect(readConfig(bindings).billingProvider).toBe('dodo');
@@ -68,6 +73,6 @@ describe('runtime configuration', () => {
     expect(JSON.stringify(result)).not.toContain(local.DEVILS_LOCAL_AUTH_SECRET);
     const realPublic = JSON.stringify(publicConfig(readConfig(services)));
     for (const value of [services.DEVILS_SUPABASE_SERVICE_ROLE_KEY, services.DEVILS_GEMINI_API_KEY, services.DEVILS_STRIPE_SECRET_KEY, services.DEVILS_STRIPE_WEBHOOK_SECRET]) expect(realPublic).not.toContain(value);
-    expect(Object.keys(result).sort()).toEqual(['betaActive', 'launchDate', 'paymentsEnabled', 'runtimeMode']);
+    expect(Object.keys(result).sort()).toEqual(['betaActive', 'launchDate', 'paymentsEnabled', 'runtimeMode', 'sharedDataRehearsal']);
   });
 });
