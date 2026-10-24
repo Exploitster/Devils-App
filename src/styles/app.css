@@ -14,3 +14,16 @@ h1,h2,h3,p{margin-top:0}h1{font-size:clamp(2.3rem,4vw,3.5rem);line-height:1.09;l
 /* Public explanation of the two conversation perspectives. */
 .perspectives-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:36px;text-align:left}.perspective-detail{padding:32px;display:flex;flex-direction:column;align-items:flex-start;gap:18px;min-width:0}.perspective-detail h3{font-size:clamp(1.6rem,2.6vw,2.1rem);line-height:1.15;letter-spacing:-.04em}.perspective-detail>p,.perspective-detail li{color:var(--muted);line-height:1.65}.perspective-detail ul{padding-left:20px;margin:0;display:grid;gap:12px}.perspective-detail .eyebrow{margin:0}.perspective-example{padding:20px;border-radius:18px;background:var(--surface-soft);width:100%;margin-top:auto}.perspective-example p{margin-top:8px;line-height:1.55}.perspective-detail .text-link{line-height:1.5}@media(max-width:760px){.perspectives-grid{grid-template-columns:1fr;gap:18px}.perspective-detail{padding:24px}}
 @media(max-width:760px){.sidebar nav a{flex-direction:column;gap:4px;padding:8px 4px;min-width:0}.sidebar nav a span{white-space:nowrap;font-size:11px;overflow-wrap:normal}}
+
+.pricing-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 32px; text-align: left; align-items: start; }
+.pricing-plan { padding: clamp(24px, 4vw, 44px); }
+.pricing-plan h3 { margin: 22px 0 12px; }
+.plan-price { font-size: clamp(2.5rem, 6vw, 3.8rem); letter-spacing: -.05em; line-height: 1.1; }
+.plan-benefits { list-style: none; padding: 0; margin: 26px 0; display: grid; gap: 16px; }
+.plan-benefits li { display: flex; align-items: flex-start; gap: 12px; }
+.plan-benefits svg { flex-shrink: 0; margin-top: 3px; }
+.pricing-answers { padding: 12px 0; }
+.pricing-answers details { padding: 18px 0; border-bottom: 1px solid var(--border); }
+.pricing-answers summary { font-weight: 600; cursor: pointer; }
+.pricing-answers p { line-height: 1.65; }
+@media(max-width: 760px) { .pricing-grid { grid-template-columns: 1fr; gap: 18px; } .pricing-plan .button { white-space: normal; text-align: center; } }

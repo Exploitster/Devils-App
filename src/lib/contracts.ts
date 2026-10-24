@@ -30,11 +30,11 @@ export const RenameSessionSchema = z.object({ title: z.string().trim().min(1).ma
 const EmailSchema = z.string().trim().email().max(254).transform(v => v.toLowerCase());
 const PasswordSchema = z.string().min(10, 'Use at least 10 characters for your password.').max(128);
 export const AccountAuthSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('signup'), email: EmailSchema, password: PasswordSchema, name: z.string().trim().min(1).max(80) }).strict(),
+  z.object({ action: z.literal('signup'), email: EmailSchema, password: PasswordSchema, name: z.string().trim().min(1).max(80), next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('signin'), email: EmailSchema, password: z.string().min(1).max(128) }).strict(),
-  z.object({ action: z.literal('google') }).strict(),
+  z.object({ action: z.literal('google'), next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('reset'), email: EmailSchema }).strict(),
-  z.object({ action: z.literal('resend'), email: EmailSchema }).strict(),
+  z.object({ action: z.literal('resend'), email: EmailSchema, next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('update-password'), password: PasswordSchema }).strict(),
   z.object({ action: z.literal('complete-onboarding'), name: z.string().trim().min(1).max(80) }).strict(),
 ]);

@@ -65,8 +65,20 @@ export class DodoProvider {
     const product = await this.request(() => this.client.products.retrieve(this.config.productId));
     const p = product.price;
     const lifetimeIsOngoing = p.type === 'recurring_price' && ((p.subscription_period_interval === 'Year' && p.subscription_period_count === 20) || (p.subscription_period_interval === 'Month' && p.subscription_period_count === 240));
-    if (product.product_id !== this.config.productId || !product.is_recurring || p.type !== 'recurring_price' || p.currency !== 'INR' || p.price !== 200000 || p.payment_frequency_count !== 1 || p.payment_frequency_interval !== 'Month' || !lifetimeIsOngoing || (p.discount ?? 0) !== 0 || (p.discount_bps ?? 0) !== 0 || p.purchasing_power_parity === true || (p.trial_period_days ?? 0) !== 0 || (p.trial_amount ?? 0) !== 0 || product.pricing_mode != null) {
-      throw new AppError('DODO_PRODUCT_MISMATCH', 'Configure the Dodo product as INR 2,000 charged every month, with no discounts, purchasing-power pricing or provider trial, and a 20-year subscription lifetime for ongoing monthly renewals. The lifetime is not an annual charge or a commitment to pay for 20 years.', 503);
+    const fixes: string[] = [];
+    if (product.product_id !== this.config.productId) fixes.push('Product: select the configured product in the correct Dodo mode');
+    if (!product.is_recurring || p.type !== 'recurring_price') fixes.push('Plan type: select recurring subscription');
+    if (p.type === 'recurring_price') {
+      if (p.currency !== 'INR' || p.price !== 200000) fixes.push('Price: set INR 2,000');
+      if (p.payment_frequency_count !== 1 || p.payment_frequency_interval !== 'Month') fixes.push('Payment frequency: set every 1 month');
+      if (!lifetimeIsOngoing) fixes.push('Subscription lifetime: set 20 years (or 240 months)');
+      if ((p.discount ?? 0) !== 0 || (p.discount_bps ?? 0) !== 0) fixes.push('Discount: set 0');
+      if (p.purchasing_power_parity === true) fixes.push('Purchasing-power pricing: turn off');
+      if ((p.trial_period_days ?? 0) !== 0 || (p.trial_amount ?? 0) !== 0) fixes.push('Provider trial: set 0 days and 0 trial amount');
+    }
+    if (product.pricing_mode != null) fixes.push('Localized price rules: use the base INR price with currency conversion instead');
+    if (fixes.length) {
+      throw new AppError('DODO_PRODUCT_MISMATCH', `Checkout is paused because the saved Dodo product does not match this plan. The site owner needs to update: ${fixes.join('; ')}. Checkout cannot start until these settings match.`, 503);
     }
     return product;
   }

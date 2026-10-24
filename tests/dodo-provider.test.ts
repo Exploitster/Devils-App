@@ -105,3 +105,9 @@ describe('official Dodo SDK adapter', () => {
     expect(requests.map((r) => r.method)).toEqual(['PATCH', 'GET']);
   });
 });
+
+it('identifies the mismatched product settings without leaking provider data', async () => {
+  const { provider } = harness([{ ...product, name: 'private provider text', price: { ...price, price: 50000, subscription_period_count: 1 } }]);
+  await expect(provider.verifyProduct()).rejects.toMatchObject({ code: 'DODO_PRODUCT_MISMATCH', message: expect.stringContaining('Price: set INR 2,000') });
+  await expect(harness([{ ...product, price: { ...price, trial_period_days: 1 } }]).provider.verifyProduct()).rejects.toMatchObject({ message: expect.stringContaining('Provider trial: set 0 days') });
+});

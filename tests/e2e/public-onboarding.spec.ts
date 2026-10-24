@@ -83,3 +83,72 @@ test('a delayed onboarding account check cannot redirect after leaving the page'
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page).toHaveURL(/\/terms/);
 });
+
+test('homepage subscription entry survives email signup without requiring conversation onboarding', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: /Subscribe for ₹2,000/ }).click();
+  await expect(page).toHaveURL(/login\?next=%2Fbilling/);
+  await page.getByRole('link', { name: 'Create an account', exact: true }).click();
+  await expect(page).toHaveURL(/signup\?next=%2Fbilling/);
+  await page.getByLabel('Your name', { exact: true }).fill('Subscriber');
+  await page.getByLabel('Email address').fill(`subscriber-${Date.now()}@example.test`);
+  await page.getByLabel('Password', { exact: true }).fill('My long unique subscriber password');
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page).toHaveURL(/\/billing$/);
+  await expect(page.getByRole('heading', { name: 'Your subscription' })).toBeVisible();
+  await expect(page.getByText('₹2,000', { exact: true })).toBeVisible();
+  expect((await (await page.request.get('/api/auth')).json()).user.onboarded === true).toBe(false);
+  await expect(page.getByRole('button', { name: /Subscribe|checkout/ })).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('subscription sign-in preserves the plan and Google requests the billing return destination', async ({ page }) => {
+  await page.goto('/login?next=%2Fbilling');
+  await page.getByLabel('Email address').fill('sam@example.test');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/billing$/);
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.goto('/login?next=%2Fbilling');
+  await page.route('**/api/auth', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    await route.fulfill({ response, json: { ...body, config: { ...body.config, runtimeMode: 'services' } } });
+  });
+  await page.reload();
+  let requestBody: unknown;
+  await page.route('**/api/auth/account', async route => { requestBody = route.request().postDataJSON(); await route.fulfill({ status: 503, json: { error: { message: 'Test Google boundary' } } }); });
+  await page.getByRole('button', { name: 'Continue with Google' }).click();
+  await expect(page.locator('.notice[role=alert]')).toContainText('Test Google boundary');
+  expect(requestBody).toEqual({ action: 'google', next: '/billing' });
+});
+
+test('pricing is readable on desktop and mobile with a direct subscription link', async ({ page }) => {
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: 900 }); await page.goto('/');
+    const pricing = page.getByRole('region', { name: 'Invest in a clearer next step.' });
+    await expect(pricing).toContainText('₹2,000');
+    await expect(pricing).toContainText('once every month');
+    await expect(pricing).toContainText('no real payment is collected');
+    await expect(pricing.getByRole('link', { name: /Subscribe/ })).toHaveAttribute('href', '/billing');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: `.local/screenshots/pricing-${width}.png`, fullPage: true });
+  }
+});
+
+test('subscription intent survives switching accounts before the account check returns', async ({ page }) => {
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/auth', async route => {
+    await waiting;
+    await route.fulfill({ json: { user: null, config: { runtimeMode: 'local' } } });
+  });
+  try {
+    await page.goto('/login?next=%2Fbilling');
+    await expect(page.getByRole('link', { name: 'Create an account', exact: true })).toHaveAttribute('href', '/signup?next=%2Fbilling');
+    await page.getByRole('link', { name: 'Create an account', exact: true }).click();
+    await expect(page).toHaveURL(/signup\?next=%2Fbilling/);
+    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login?next=%2Fbilling');
+  } finally {
+    release();
+  }
+});

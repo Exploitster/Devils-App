@@ -36,3 +36,29 @@ While `DEVILS_PAYMENTS_ENABLED=false`, existing free AI access continues. A test
 6. Promote the verified production build to the main domain, inspect public/authenticated health and monitor payment/AI errors. Keep the previous deployment available for code rollback. Never reset Git or attempt to roll back customer data automatically.
 
 The repository's automated isolated-staging release workflow remains separate and blocked until a separate Vercel testing project, Supabase testing database and protected GitHub deployment credentials are configured. The temporary rehearsal is explicitly labeled as shared data; it does not pretend those requirements are satisfied.
+
+## Monthly product settings and checkout troubleshooting
+
+In Dodo **Test Mode**, edit the configured product (`pdt_0NqAtRm0gZXBQTwdAy6Br`):
+
+| Setting | Required value |
+| --- | --- |
+| Type | Recurring subscription |
+| Base currency | INR |
+| Price shown in dashboard | ₹2,000 (API uses 200000 paise) |
+| Payment frequency | Every 1 Month |
+| Subscription lifetime / total subscription duration | 20 Year, or 240 Month |
+| Discount | 0; no discount codes at checkout |
+| Purchasing-power parity | Off |
+| Provider trial duration and trial amount | 0 |
+| Localized fixed pricing rules | None; use the INR base price and supported currency conversion |
+
+Save changes. A 20-year **lifetime** keeps monthly renewals available; it does not change the **payment frequency**, collect an annual or 20-year charge, or prevent cancellation. The app checks the product again before checkout; no app redeployment is needed for a saved product change. An already-created checkout is not rewritten by changing the product. Do not retry an open or uncertain payment as a new subscription; use Billing refresh/reconciliation.
+
+The updated mismatch message identifies which fields fail the checks, using fixed setting names rather than provider response text. It does not silently modify the merchant product or relax price validation. This workspace has no authenticated Dodo management connection, so dashboard values still require owner verification.
+
+Homepage → Subscribe opens Billing for an existing signed-in account, or sign-in with the billing destination preserved. Google sign-in opens Billing directly; email signup/confirmation from this path also retains the destination. Conversation onboarding is not required to view the plan. Authentication remains required before checkout to bind the purchase to the correct verified account. No card is charged merely by selecting Subscribe or signing in.
+
+Post-deploy verification owner: application owner. During the first testing session after deployment, verify the homepage pricing, Google/email return to Billing, and successful Dodo Test Mode checkout/webhook and cancellation. Inspect sanitized Vercel error codes for `DODO_PRODUCT_MISMATCH`, auth callback errors and unexpected 5xx failures. A product mismatch requires correcting the listed dashboard settings; it is not a reason to disable validation. If a newly introduced redirect loop, missing price or unrelated 5xx regression appears, restore the previous preview alias while preserving accounts and data. Production remains unchanged until a separate verified release.
+
+Subscription intent uses a one-hour, Secure, HttpOnly, SameSite=Lax cookie scoped to `/auth/callback`, consumed and cleared on callback. The provider still receives the exact registered callback URL, with no additional query string requiring a new Supabase allowlist entry. The cookie is only a fixed navigation hint, never proof of payment or identity; normal PKCE/session verification remains required. Email confirmation must complete in the originating browser, as required by the existing PKCE flow. Recovery callbacks always take priority over subscription navigation.
