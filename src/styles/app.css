@@ -27,3 +27,19 @@ h1,h2,h3,p{margin-top:0}h1{font-size:clamp(2.3rem,4vw,3.5rem);line-height:1.09;l
 .pricing-answers summary { font-weight: 600; cursor: pointer; }
 .pricing-answers p { line-height: 1.65; }
 @media(max-width: 760px) { .pricing-grid { grid-template-columns: 1fr; gap: 18px; } .pricing-plan .button { white-space: normal; text-align: center; } }
+
+/* Additive public discovery flows use the existing theme tokens and components. */
+.sample-controls { flex-wrap: wrap; margin-block: 20px; }
+.sample-controls button { white-space: normal; text-align: left; }
+.sample-controls button[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 3px; }
+.sample-player { padding: clamp(20px, 4vw, 40px); text-align: left; }
+.sample-progress { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; padding: 0; margin: 24px 0; font-size: .85rem; }
+.sample-progress [aria-current="step"] { font-weight: 750; text-decoration: underline; text-underline-offset: 6px; }
+.sample-answer { border-inline-start: 2px solid currentColor; padding-inline-start: 16px; margin-block: 24px; }
+.sample-handback dt { font-weight: 700; margin-top: 20px; }
+.sample-handback dd { margin: 8px 0; }
+.sample-handback ul { padding-left: 20px; }
+.sample-walkthrough { margin-top: 32px; }
+.local-price { margin-block: 24px; }
+.local-price label { display: block; font-weight: 600; margin-bottom: 8px; }
+.local-price select { max-width: 100%; padding: 10px 16px; border: 1px solid currentColor; border-radius: 12px; color: inherit; background: inherit; }

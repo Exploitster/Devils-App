@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { LocalPrice } from "@/components/local-price";
 import { api, ErrorNotice, Icon, Shell } from "@/components/app";
 import type { AccessDecision } from "@/lib/contracts";
 interface Billing {
@@ -89,7 +90,7 @@ export default function BillingPage() {
             <p>
               <strong style={{ fontSize: "2.5rem" }}>₹2,000</strong> / month
             </p>
-            <p>One monthly payment. No annual plan.</p>
+            <p>One monthly payment. No annual plan.</p><LocalPrice/>
             <ul>
               <li>
                 Challenge business assumptions and explore practical

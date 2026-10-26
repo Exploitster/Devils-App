@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LocalPrice } from './local-price';
 import { Icon } from './app';
 
 export function Pricing({ paid }: { paid: boolean }) {
@@ -10,7 +11,7 @@ export function Pricing({ paid }: { paid: boolean }) {
       <article className="panel pricing-plan">
         <span className="pill">Devils Advocate membership</span>
         <h3><span className="plan-price">₹2,000</span><span className="muted"> / month</span></h3>
-        <p>Charged once every month. No annual plan or long-term commitment.</p>
+        <p>Charged once every month. No annual plan or long-term commitment.</p><LocalPrice/>
         <ul className="plan-benefits">
           <li><Icon name="check"/>Business validation: question demand, pricing and the assumptions behind your idea.</li>
           <li><Icon name="check"/>Philosophical reflection: explore values, obligations and the tradeoffs in a personal choice.</li>
