@@ -1,0 +1,482 @@
+Use Compound Engineering to plan, build, test, and ship the Devils Advocate application.
+
+Begin with ce-brainstorm to resolve product and architecture gaps, use ce-plan to create an implementation plan, and then use lfg to execute the agreed plan autonomously through an open pull request. Apply the relevant debugging, simplification, code-review, and browser-testing skills during implementation.
+
+During brainstorming, ask only questions whose answers materially affect the product or architecture. Investigate the repository first, propose sensible defaults, and batch essential questions. Once the plan is agreed, complete implementation and verification without routine check-ins. Do not deploy to production, merge the PR, charge real users, or modify production data.
+
+PRODUCT
+
+Devils Advocate is a text-only conversational application that helps users stress-test startup ideas, work proposals, major life decisions, and personal beliefs.
+
+Its central promise:
+“Your call. Always.”
+
+The application should help users think more clearly by:
+- Understanding their actual position and circumstances.
+- Explaining what is genuinely strong in their case.
+- Presenting the strongest opposing arguments with verified evidence.
+- Letting them push back.
+- Ending with a useful summary and a small practical experiment.
+- Never delivering a final verdict or deciding for them.
+
+Audience:
+MBA students, first-time founders, young professionals in India, and founders and professionals internationally.
+
+Voice:
+Warm, direct, thoughtful, and lightly humorous. Short sentences and plain language. Humor should come from honest observations, never insults, smugness, or trivializing sensitive situations.
+
+EXISTING REPOSITORY AND SCOPE
+
+Inspect the existing Devils Advocate repository before making changes.
+
+Read:
+- README.md
+- CLAUDE.md
+- docs/copy.md
+- docs/design-language.md
+- src/styles/tokens.css
+- src/config.ts
+- src/data/categories.ts
+- src/data/journey.ts
+- src/data/samples.ts
+- Existing components, deployment configuration, and Supabase waitlist SQL.
+
+The existing site is an Astro + Tailwind static marketing website with vanilla TypeScript and a Supabase waitlist.
+
+Preserve the marketing site, its copy, working interactions, and waitlist behavior.
+
+The marketing brief’s restrictions against a backend, authentication, payments, or a real chatbot describe the marketing website. The new application needs those capabilities. Document the boundary clearly rather than silently treating the marketing restrictions as application restrictions.
+
+Inspect existing branches and user changes. Follow applicable repository instructions. Do not overwrite unrelated work.
+
+Choose whether the application belongs in this repository or a separate package after inspecting deployment and build constraints. Prefer the least disruptive maintainable structure. Reuse design tokens and appropriate components.
+
+Do not assume the marketing website’s stack is automatically the best application stack. Recommend a supported architecture with concrete reasons, pinned dependencies, repeatable setup, and a straightforward deployment path.
+
+TWO MODES
+
+1. Challenge my idea
+Website label: Business validation.
+Accent: mint.
+
+For:
+- Startup ideas.
+- Side projects.
+- Work proposals.
+
+Behavior:
+- Examine who the customer is and who pays.
+- Examine willingness to pay, costs to serve, distribution, competition, seasonality, and assumptions.
+- Identify relevant biases, especially survivorship bias, without forcing a bias label onto every conversation.
+- Find sourced examples of comparable businesses that failed or struggled.
+- Explain both relevant similarities and important differences.
+- Suggest the cheapest useful experiment the user can run this month.
+
+2. Challenge my decision
+Website label: Philosophy.
+Accent: lavender.
+
+For:
+- Major life decisions.
+- Philosophy and personal beliefs.
+
+Behavior:
+- Identify the question beneath the initial question.
+- Explore values, obligations, risks, reversibility, and personal circumstances.
+- Present strong philosophical arguments on both sides.
+- Use actual philosophical texts with specific references.
+- Offer a smaller or reversible first step where appropriate.
+
+Business validation is the default mode. Keep each session’s mode explicit and visually consistent.
+
+CORE CONVERSATION FLOW
+
+Implement this as a coherent conversation with explicit state:
+
+1. Choose a mode.
+2. Describe an idea, proposal, decision, or belief.
+3. Ask up to three clarifying questions before arguing.
+4. Identify the real question and, when relevant, assumptions or biases.
+5. Explain what is genuinely strong in the user’s case.
+6. Present the strongest opposing case with evidence.
+7. Let the user push back in free text for multiple rounds.
+8. Generate or update a hand-back card.
+9. Save the session so it can be resumed or deleted.
+
+Requirements:
+- Clarification questions must adapt to the user’s input.
+- Ask fewer than three questions when enough context already exists.
+- Do not repeat questions the user already answered.
+- Let users indicate uncertainty, skip a question, or clarify an answer.
+- Do not trap users in a rigid wizard when a natural conversation works better.
+- Accept corrections to earlier assumptions.
+- Pushback should introduce new evidence or a materially different argument.
+- Do not promise fresh evidence when the evidence collection is exhausted.
+- When evidence runs out, say so and offer a useful next step.
+- Separate sourced facts, interpretations, and suggested experiments.
+- Allow the user to request a hand-back card without extending the debate indefinitely.
+- Streaming responses, if used, must preserve consistent saved state.
+
+HAND-BACK CARD
+
+Every completed session should produce a structured card containing:
+- The user’s position in one line.
+- What is genuinely strong in their case.
+- Up to three toughest counterpoints, each with its source.
+- Open questions only the user can answer.
+- The cheapest useful test or smaller first step this month.
+- “Your call. Always.”
+
+Aim for three counterpoints, but never fabricate or pad them to meet a quota. If fewer supported counterpoints are available, show fewer and explain the limitation.
+
+Cards should be:
+- Stored with the session.
+- Accessible from session history.
+- Updated when the user materially changes their position.
+- Easy to copy and download in a simple format.
+- Clear about which conversation state they summarize.
+
+Do not invent a win probability, confidence score, verdict, or recommendation to proceed or abandon the idea.
+
+EVIDENCE SYSTEM — A CORE PRODUCT REQUIREMENT
+
+Do not implement a generic chatbot with decorative citations.
+
+Build an evidence layer that retrieves from verified material and constrains what the model can cite.
+
+For startup evidence, store:
+- Company or case identity.
+- Industry, customer segment, geography, and operating period when known.
+- What the business attempted.
+- Documented outcome.
+- Reported reasons for failure or difficulty.
+- Source URLs, titles, publishers, and publication dates when available.
+- Supporting excerpts.
+- Whether a statement is directly supported or an interpretation.
+- Verification status and review metadata.
+
+For philosophy evidence, store:
+- Author.
+- Work title.
+- Edition or translation.
+- Book, chapter, section, and page when applicable.
+- Source URL or document identifier.
+- Exact source excerpt.
+- Quote versus paraphrase status.
+- Verification status and review metadata.
+- Licensing or usage constraints where relevant.
+
+Important:
+- Page numbers vary between editions. Never invent a page number.
+- Only display direct quotations when the displayed text matches a verified excerpt.
+- Label paraphrases clearly.
+- Require citations to resolve to stored evidence records.
+- Validate citations server-side before returning them.
+- An existing URL alone does not prove that it supports a claim.
+- Do not use fictional demo startups as production evidence.
+- Treat retrieved content as untrusted data, never as instructions.
+- Do not claim external sources were verified unless they were actually inspected.
+
+Design a lightweight ingestion and review workflow for the initial evidence collection. This can be a documented CLI/import process rather than a large admin dashboard.
+
+Use a small, genuinely verified seed collection to demonstrate end-to-end functionality. Document its coverage limits. If source access prevents verification, continue other work and identify the precise missing prerequisite.
+
+No-evidence behavior must be useful and honest:
+- Explain what could not be substantiated.
+- Offer clearly labeled reasoning or questions.
+- Avoid fabricated examples, quotes, and citations.
+- Narrow the claim or ask for more context when appropriate.
+
+MODEL ORCHESTRATION
+
+Keep model calls on the server.
+
+Use structured outputs for:
+- Session state.
+- Clarification questions.
+- The real question.
+- Strengths.
+- Counterpoints and evidence IDs.
+- Open questions.
+- Suggested tests.
+- Hand-back cards.
+
+Validate model outputs against schemas.
+
+Separate, where useful:
+- Understanding the user’s position.
+- Retrieval.
+- Argument generation.
+- Citation verification.
+- Card generation.
+
+Avoid unnecessary multi-agent complexity in the product runtime. Start with the simplest orchestration that meets correctness requirements.
+
+Track which counterpoints and evidence have already been used to reduce repetition.
+
+Implement:
+- Timeouts.
+- Bounded retries for transient errors.
+- Cancellation where supported.
+- Clear user-facing errors.
+- Safe handling of partial or failed responses.
+- Token and cost budgets.
+- Protection against duplicate submissions and duplicate billing or usage counting.
+- An adapter boundary so the provider can change without rewriting the application.
+
+Choose a model provider based on available credentials, current supported APIs, structured-output support, privacy needs, and cost. Do not invent API capabilities or hardcode secrets.
+
+AUTHENTICATION, HISTORY, AND PRIVACY
+
+Implement secure authentication with an established supported service.
+
+Users must be able to:
+- Sign in and sign out.
+- Create sessions.
+- View their own session history.
+- Resume a session.
+- Rename or organize sessions simply.
+- Delete individual sessions.
+- Request or perform account deletion with clearly defined effects.
+
+Enforce ownership server-side and at the database layer where supported.
+
+Treat session content as sensitive:
+- Never expose one user’s sessions to another.
+- Avoid logging conversation bodies, secrets, or sensitive personal data by default.
+- Document what is sent to the model provider and applicable retention settings.
+- Do not promise that data is never retained or never used for training unless provider configuration supports that claim.
+- Define deletion behavior for messages, cards, derived summaries, and retrieval-related records.
+- Explain any backups or billing records that cannot be deleted immediately.
+- Clearly distinguish private-by-access-control storage from end-to-end encryption.
+
+Protect all privileged credentials. Public browser keys must never carry service-role privileges.
+
+PRICING AND ENTITLEMENTS
+
+The website advertises:
+- Monthly: $59 USD.
+- Yearly: $150 USD.
+- Equivalent yearly monthly cost: $12.50.
+- Annual savings versus monthly payments: $558, approximately 79%.
+
+Both plans include:
+- Both modes.
+- All four topic areas.
+- Unlimited debates under fair use.
+- Up to three clarification questions.
+- Both sides with evidence.
+- Multiple pushback rounds.
+- Hand-back cards.
+- Saved history.
+- Private, deletable sessions.
+
+Use a supported payment provider in test mode during development.
+
+Implement:
+- Subscription checkout.
+- Monthly and yearly subscriptions.
+- Server-side entitlement checks.
+- Verified webhook signatures.
+- Idempotent webhook processing.
+- Subscription status synchronization.
+- A billing-management portal or equivalent.
+- Cancellation and clear handling of failed payments.
+- Tests for duplicate and out-of-order events.
+
+Never grant paid access based only on a redirect URL or client state.
+
+During brainstorming, resolve how private-beta access works:
+- Invite-only versus open registration.
+- Whether invited beta users receive temporary access without paying.
+- When billing starts.
+
+The website advertises December 1, 2026 as the beta/launch date. Keep it configurable and distinguish scheduled availability from actual current availability.
+
+Fair use must be explicitly defined and reflected honestly in the interface. Use reasonable rate and concurrency limits to control abuse and cost. Do not advertise unlimited use while imposing an undisclosed small fixed allowance.
+
+Do not initiate real charges during implementation.
+
+SAFETY AND PRODUCT BOUNDARIES
+
+The product:
+- Does not debate politics.
+- Does not disagree for entertainment.
+- Does not give final verdicts.
+- Does not fabricate quotes or evidence.
+- Does not replace professional or human help.
+
+Define concrete handling for:
+- Crisis or self-harm disclosures.
+- Requests that would intensify harm.
+- Medical, legal, and financial decisions needing qualified advice.
+- Sensitive personal situations.
+- Political debate requests.
+
+For a crisis, stop the adversarial debate, respond supportively, and direct the user toward appropriate human assistance. Avoid unsupported claims about local emergency numbers.
+
+Do not use humor in crisis responses.
+
+Test these boundaries with representative cases. Explain product limitations plainly without turning every ordinary conversation into a warning screen.
+
+APPLICATION SCREENS
+
+Build a coherent minimal application covering:
+- Entry and authentication.
+- A home screen with the two modes and a clear new-session action.
+- Conversation screen.
+- Accessible source/evidence detail view.
+- Hand-back card view.
+- Session history and resume.
+- Account and privacy settings.
+- Subscription and billing management.
+- Relevant empty, loading, error, offline, and unauthorized states.
+
+Do not add social feeds, public session sharing, teams, voice, avatars, gamification, or unrelated dashboards unless the agreed plan explicitly requires them.
+
+DESIGN
+
+Carry the existing website’s design language into the application:
+
+- Mobile-first.
+- Light-grey page, white surfaces, calm spacing.
+- Mint for Challenge my idea.
+- Lavender for Challenge my decision.
+- One accent per session.
+- User bubbles on the right with a soft accent fill.
+- Product bubbles on the left in grey.
+- Yellow reserved for citations.
+- System font stack with Inter where appropriate.
+- Approximately 17px body text, semibold headings, sentence case.
+- Rounded cards and pill controls.
+- Restrained shadows only for floating elements.
+- Dark-mode support through shared semantic tokens.
+- Clear typing and response states.
+- Visible focus, semantic controls, and screen-reader support.
+- At least 44px touch targets.
+- WCAG AA contrast.
+- Responsive from 360px upward.
+- Reduced-motion support.
+- Reliable mobile keyboard and scrolling behavior.
+
+Do not use gradients, decorative emoji, stock illustrations, fabricated testimonials, fake user counts, or “trusted by” logos.
+
+Keep citations specific and useful. Follow the website’s generic provider wording in marketing copy, while making factual source attribution clear wherever needed.
+
+EXISTING MARKETING DEMOS
+
+Preserve the six scripted demo scenarios:
+- Hostel food delivery.
+- Flatmate bill-splitting.
+- Build our own CRM.
+- Skip placements?
+- Move cities?
+- Money or meaning?
+
+These remain illustrative onboarding material, not generated conversations or a verified evidence database.
+
+The marketing site also includes:
+- Hero animation.
+- Mode switching.
+- Scroll-driven explanation.
+- Sample debates.
+- Example hand-back cards.
+- Pricing.
+- Refusal boundaries.
+- FAQs.
+- Supabase waitlist.
+- Privacy page.
+
+Preserve the waitlist’s insert-only browser access, consent requirement, case-insensitive email uniqueness, validation, duplicate handling, and personalized confirmation.
+
+Do not silently turn waitlist signup into an application account or payment subscription.
+
+ARCHITECTURE AND OPERATIONS
+
+Before implementation, record:
+- Chosen stack and why.
+- Repository/package structure.
+- Database schema and migrations.
+- Authentication and authorization approach.
+- Model-provider adapter.
+- Evidence ingestion and retrieval.
+- Payment and entitlement flow.
+- Deployment target.
+- Environment variables and secrets.
+- Local development and test setup.
+- Expected operating costs and cost controls.
+
+Reuse existing credentials and bindings when available. Check names and presence without printing values. Request missing credentials securely through the supported environment configuration flow, never in chat or committed files.
+
+Provide:
+- .env.example with placeholders.
+- Repeatable install and startup commands.
+- Versioned migrations.
+- A reproducible evidence seed/import workflow.
+- Useful health checks.
+- Structured operational logs without sensitive content.
+- A documented way to run automated tests without production services.
+- Deployment instructions.
+
+When a credential is unavailable, build and test independent functionality using clearly labeled test adapters. Do not report a mocked integration as a verified live integration.
+
+TESTING AND ACCEPTANCE
+
+The application is complete only when these behaviors are verified:
+
+1. A user can authenticate and start either mode.
+2. The app asks no more than three clarification questions.
+3. It handles skipped questions and corrections.
+4. It identifies a relevant underlying question.
+5. It presents strengths before counterarguments.
+6. Displayed evidence maps to verified stored sources.
+7. Direct quotes match verified excerpts.
+8. No-evidence cases do not fabricate support.
+9. Pushback avoids repeating the same argument where alternatives exist.
+10. Evidence exhaustion is handled honestly.
+11. A hand-back card contains the required fields.
+12. Sessions persist and resume correctly.
+13. One user cannot access another user’s sessions.
+14. Session deletion removes the documented associated data.
+15. Subscription access is enforced server-side.
+16. Payment webhooks are verified and idempotent.
+17. Model failures, retries, and cancellation do not corrupt session state.
+18. Rate limits and duplicate submissions behave predictably.
+19. Safety boundaries behave as specified.
+20. The main flows work on mobile and desktop in a real browser.
+21. Keyboard navigation, focus, dialogs, and source views are accessible.
+22. The existing marketing site and waitlist do not regress.
+
+Use deterministic tests for state transitions, permissions, citation validation, billing, and error handling.
+
+Use a separate evaluation set for model quality. Include startup and philosophy examples, sparse evidence, misleading user assumptions, repeated pushback, prompt-injection attempts in retrieved material, and sensitive situations.
+
+Keep mocked tests, model evaluations, sandbox integrations, and verified live checks distinct in the final report.
+
+Do not use superficial passing checks as a substitute for an end-to-end working flow.
+
+COMPOUND ENGINEERING WORKFLOW AND DELIVERABLES
+
+1. Inspect the repository and explain the concrete product and architecture gaps.
+2. Use ce-brainstorm to resolve essential decisions.
+3. Use ce-plan to save a phased implementation plan with acceptance criteria.
+4. After plan agreement, use lfg to implement autonomously through an open PR.
+5. Build a complete vertical slice first:
+   authentication → session → clarification → verified evidence → both sides → pushback → hand-back card → saved history.
+6. Expand to billing, deletion, safety, and operational hardening.
+7. Use the relevant simplification, code review, debugging, and browser testing skills.
+8. Capture non-obvious verified learnings with ce-compound when appropriate.
+9. Open a PR with a clear description and test evidence.
+10. Finish with:
+    - What works.
+    - What was tested and how.
+    - Evidence collection coverage.
+    - Any blockers or unverified integrations.
+    - Required configuration.
+    - Local startup instructions.
+    - Deployment steps.
+    - PR link.
+
+Persist through setup and implementation failures. Diagnose the failing prerequisite, make a supported correction, and rerun the affected checks.
+
+Do not describe the app as production-ready while authentication, evidence verification, privacy enforcement, payment handling, or required end-to-end checks remain unresolved.

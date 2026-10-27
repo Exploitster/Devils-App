@@ -1,0 +1,110 @@
+[
+  {
+    "evidenceId": "rethinkdb-shutdown-2016",
+    "sourcePath": "sources/2016-10-05-rethinkdb-shutdown.md",
+    "sourceSha256": "8fb6cbe3077f1292807167529c69a767df6df4ad970a551928683a5329bd12d8",
+    "licensePath": "sources/rethinkdb-LICENSE",
+    "licenseSha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/rethinkdb/www/blob/1be3fee3b171bbdba45e013001f9780b555c67bd/_posts/2016-10-05-rethinkdb-shutdown.md",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "mill-liberty-adversary",
+    "sourcePath": "sources/34901.txt",
+    "sourceSha256": "64d9d167fabefa7c625f6cf8952aeec9153235c5e1b7d24315f451d30259306b",
+    "licensePath": "sources/34901.txt.license.txt",
+    "licenseSha256": "4c9764ffadffc93ba28bb12d6164b07a3090353c8ded2bb0802802fca89b8df1",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/GITenberg/On-Liberty_34901/blob/5f5238d21f3be5cfc51f00344934c98fe801d7b2/34901.txt",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "mill-liberty-individuality",
+    "sourcePath": "sources/34901.txt",
+    "sourceSha256": "64d9d167fabefa7c625f6cf8952aeec9153235c5e1b7d24315f451d30259306b",
+    "licensePath": "sources/34901.txt.license.txt",
+    "licenseSha256": "4c9764ffadffc93ba28bb12d6164b07a3090353c8ded2bb0802802fca89b8df1",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/GITenberg/On-Liberty_34901/blob/5f5238d21f3be5cfc51f00344934c98fe801d7b2/34901.txt",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "aurelius-revisability",
+    "sourcePath": "sources/2680.txt",
+    "sourceSha256": "9997e73afcce91209ee554db83fb68d0b3b531459c64f9ec266afa9c1b139921",
+    "licensePath": "sources/2680.txt.license.txt",
+    "licenseSha256": "763e13c483cf9255b3d981c56d04a0471b4afb7fdb52b0c66804216fd0fba333",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/GITenberg/Meditations_2680/blob/f586bf5b5ac4ace02faf101904ad43d11170fdeb/2680.txt",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "mill-utility-consequences",
+    "sourcePath": "sources/11224.txt",
+    "sourceSha256": "15fb18e02075a181e5efabce710898b4cdd2e99ebcd68f5125833a6f9f55761c",
+    "licensePath": "sources/11224.txt.license.txt",
+    "licenseSha256": "54612e1b3c736dbc2b7b81086beacc5d131d17ec7bd454af13232a2c9e01333e",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/GITenberg/Utilitarianism_11224/blob/7417ae902febaa7fb3c1c1c83e5ea0d33bef0529/11224.txt",
+    "inspectedAt": "2026-10-14T08:18:05.526141Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "atom-product-retirement-2022",
+    "sourcePath": "sources/atom-readme.md",
+    "sourceSha256": "e1d811dd3a601c7758b6483e64e5717853059199907d18148f3fa4ee06ce5797",
+    "licensePath": "sources/atom-LICENSE.md",
+    "licenseSha256": "c12bd50daf08ccccc2f5471d396b576f10ffa263288506e3217e9e3c7a20e41b",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace otherwise unchanged",
+    "sourceUrl": "https://github.com/atom/atom/blob/1c3bd35ce238dc0491def9e1780d04748d8e18af/README.md",
+    "inspectedAt": "2026-10-14T08:19:26.287262Z",
+    "reviewedAt": "2026-10-14T08:44:32Z",
+    "reviewedBy": "Codex U3 implementation reviewer; source context, claims and licensing inspected"
+  },
+  {
+    "evidenceId": "google-adk-evaluation-objectives",
+    "sourcePath": "sources/google-adk-evaluation.md",
+    "sourceSha256": "ae64cc5c9c69e6601f8261e69d6e394d7e1f54f88f92f28828fc52c031019b75",
+    "licensePath": "sources/google-adk-LICENSE",
+    "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/index.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  },
+  {
+    "evidenceId": "google-adk-evaluation-metric-meaning",
+    "sourcePath": "sources/google-adk-evaluation-criteria.md",
+    "sourceSha256": "e33450dadb1b3a110ccf9889218bbec9e61fd6cb1639152d76a9d3500d953bf0",
+    "licensePath": "sources/google-adk-LICENSE",
+    "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/google/adk-docs/blob/3b0a93bb03031493735ac47b93547721c674b113/docs/evaluate/criteria.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  },
+  {
+    "evidenceId": "nist-dioptra-experiment-provenance",
+    "sourcePath": "sources/nist-dioptra-readme.md",
+    "sourceSha256": "e2d7b38ca802beef471bff3d02a65ab942fbc40ecd73e1dce65b0189af782ed7",
+    "licensePath": "sources/nist-dioptra-LICENSE",
+    "licenseSha256": "7cbbe8e239a276077609790a5bad284c8cf69709ca7ceca41102062e6202bdaa",
+    "normalization": "UTF-8; CRLF/CR converted to LF before snapshot and hash; excerpt whitespace and source spelling otherwise unchanged",
+    "sourceUrl": "https://github.com/usnistgov/Dioptra/blob/a31c15a4981c54a59a3649a701cd78380120e43e/README.md",
+    "inspectedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedAt": "2026-10-15T16:24:44.706Z",
+    "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  }
+]
