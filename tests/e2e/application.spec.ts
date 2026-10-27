@@ -84,7 +84,6 @@ test('earlier saved questions remain readable after pushback and reload', async 
   await expect(page.getByLabel('Your message')).toHaveValue('');
   await page.reload();
   const response = page.locator('.message.assistant').filter({hasText:earlier.text});
-  await response.getByText('Read full saved response', {exact:true}).click();
   await expect(response.locator('.preserve')).toHaveText(earlier.text);
   await expect(response.locator('.preserve')).toContainText(question);
 });

@@ -1,0 +1,62 @@
+/* Rhythm and alignment refinements; all colors come from the current theme. */
+.public-main { max-width: 1200px; padding-inline: clamp(20px, 4vw, 52px); }
+.landing-hero { min-height: 560px; padding-block: 56px; gap: 32px; }
+.landing-section { padding-block: 64px 24px; }
+.landing-section > h2 { max-width: 760px; margin-inline: auto; text-wrap: balance; }
+.section-description { max-width: 680px; margin: 20px auto 32px; }
+.landing-split { gap: 48px; padding-block: 64px; }
+.sample-controls { justify-content: center; gap: 12px; margin-block: 24px; }
+.sample-player { max-width: 840px; margin: 28px auto; padding: clamp(20px, 4vw, 36px); }
+.sample-player .sample-controls { justify-content: flex-start; }
+.sample-progress { padding-bottom: 20px; border-bottom: 1px solid var(--border); gap: 12px 20px; }
+.sample-walkthrough { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sample-walkthrough .feature-card { padding: 24px; }
+.sample-walkthrough .feature-card h3 { margin: 12px 0; }
+.sample-walkthrough .feature-card:last-child { grid-column: 1 / -1; }
+.pricing-grid, .perspectives-grid { gap: 24px; }
+.pricing-plan { padding: 32px; }
+.pricing-answers { line-height: 1.75; }
+.pricing-answers details { padding-block: 18px; margin: 0; border-bottom: 1px solid var(--border); }
+.pricing-answers summary { font-size: 15px; color: var(--text); font-weight: 600; }
+.pricing-answers details p { margin: 16px 0 0; }
+.public-header { height: auto; min-height: 80px; padding-inline: max(24px, calc((100% - 1120px)/2)); }
+.public-header nav { gap: 20px; }
+.site-menu { position: relative; margin: 0; }
+.site-menu summary { color: var(--text); font-size: 13px; padding: 10px 4px; }
+.site-menu > div { position: absolute; right: 0; top: 44px; width: 230px; padding: 12px; display: grid; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); z-index: 10; }
+.site-menu a { display: block; padding: 10px; font-size: 13px; text-decoration: none; color: var(--text); }
+.site-footer { align-items: flex-start; border-top: 1px solid var(--border); padding-block: 36px; font-size: 12px; gap: 32px; text-align: left; }
+.site-footer > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 28px; }
+.content-page { max-width: 880px; margin: 0 auto; padding-block: 64px; }
+.content-page > h1 { font-size: clamp(32px, 4vw, 48px); max-width: 780px; text-wrap: balance; }
+.content-page .lead { max-width: 740px; }
+.content-page .panel { margin: 24px 0; padding: clamp(24px, 4vw, 36px); }
+.content-page section { scroll-margin-top: 32px; }
+.content-page h2 { margin-top: 32px; }
+.content-page h2:first-child { margin-top: 0; }
+.content-page p, .content-page li { line-height: 1.85; }
+.content-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.content-grid .panel { margin: 0; }
+.content-page a { text-underline-offset: 4px; }
+.analytics-consent { position: fixed; bottom: 20px; left: 20px; z-index: 30; max-width: min(500px, calc(100vw - 40px)); padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 12px 45px #0002; }
+.analytics-consent p { font-size: 13px; margin-bottom: 12px; }
+.analytics-consent .actions { margin-top: 12px; }
+@media (min-width: 1000px) { .site-menu { display: none; } }
+@media (max-width: 999px) { .public-header .desktop-link { display: none; } }
+@media (max-width: 600px) {
+ .public-header { padding: 16px 20px; flex-wrap: wrap; gap: 16px; }
+ .public-header nav { gap: 16px; flex-wrap: wrap; width: 100%; justify-content: space-between; }
+ .landing-hero { padding-block: 40px 20px; gap: 12px; }
+ .landing-section { padding-block: 44px 20px; }
+ .landing-section > h2 { font-size: 30px; }
+ .sample-walkthrough, .content-grid { grid-template-columns: 1fr; }
+ .landing-split { padding-block: 40px; gap: 24px; }
+ .site-footer { flex-direction: column; padding: 28px 20px; }
+ .site-footer > div { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; }
+ .content-page { padding-block: 40px; }
+ .pricing-plan { padding: 24px; }
+}
+.analytics-settings { display: block; margin: 0 auto 20px; font-size: 12px; color: var(--muted); }
+.analytics-consent h2 { font-size: 18px; }
+.analytics-actions button { font-size: 12px; }
+@media (max-width: 600px) { .public-theme { display: block; } }
