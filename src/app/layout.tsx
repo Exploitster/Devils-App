@@ -11,5 +11,5 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image' },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" data-scroll-behavior="smooth"><body>{children}<AnalyticsConsent projectId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID}/></body></html>;
+  return <html lang="en" data-scroll-behavior="smooth"><body>{children}<AnalyticsConsent projectId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID} posthogKey={process.env.NEXT_PUBLIC_POSTHOG_KEY} posthogHost={process.env.NEXT_PUBLIC_POSTHOG_HOST}/></body></html>;
 }

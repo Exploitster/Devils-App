@@ -3,7 +3,8 @@
 The application integration is optional and consent-based. No project ID has
 been invented and this change does not create a Microsoft account or project.
 Until the owner adds the project ID, Clarity does not load and no consent banner
-is shown. The existing product works normally.
+is shown. The existing product works normally. The same consent choice also
+covers PostHog when it is configured; see [PostHog setup](posthog-setup.md).
 
 ## Owner dashboard steps
 
@@ -35,7 +36,11 @@ is shown. The existing product works normally.
 Mount once in the root layout:
 
 ```tsx
-<AnalyticsConsent projectId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID} />
+<AnalyticsConsent
+  projectId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID}
+  posthogKey={process.env.NEXT_PUBLIC_POSTHOG_KEY}
+  posthogHost={process.env.NEXT_PUBLIC_POSTHOG_HOST}
+/>
 ```
 
 The component supplies `.analytics-consent`, `.analytics-actions` and
