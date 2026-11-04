@@ -1,3 +1,5 @@
+> Current Dodo integration and ₹2,000 monthly setup: see [dodo-payments-setup.md](dodo-payments-setup.md). Public payments remain disabled. The Stripe USD/annual behavior documented below is retained only for legacy records and isolated tests; it is not the current advertised offer. The new signed Dodo endpoint can reconcile test events while public payments are off.
+
 # Billing integration point
 
 Payments are disconnected by default (`DEVILS_PAYMENTS_ENABLED=false`). The payment page can display the prepared plans, but checkout, portal, local confirmation, and webhook processing return `PAYMENTS_DISABLED` (503) before any provider or persistence call. Stripe bindings are needed only when this explicit integration flag is enabled. The following adapter behavior is retained for future integration and isolated tests; no external payment integration was exercised.

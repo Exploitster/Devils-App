@@ -4,6 +4,7 @@ import type { AccountAuthRequest, AuthService } from '../contracts';
 import type { RuntimeConfig } from '../config';
 import { AppError } from '../errors';
 import { json } from '../http';
+import { setBillingIntent } from './redirect';
 export interface SupabaseContext { client:SupabaseClient; admin:SupabaseClient; cookies: Array<{name:string;value:string;options:CookieOptions}>; headers:Record<string,string>; }
 export function createSupabaseContext(config:RuntimeConfig,request:Request):SupabaseContext {
  const context:SupabaseContext={client:null as unknown as SupabaseClient,admin:createClient(config.supabaseUrl,config.supabaseServiceRoleKey,{auth:{persistSession:false,autoRefreshToken:false}}),cookies:[],headers:{}};
@@ -30,6 +31,7 @@ export class SupabaseAuth implements AuthService {
   void _request;
   const client=this.context.client;
   const callback=this.config.appUrl+'/auth/callback';
+  const withIntent=(response:Response)=>setBillingIntent(response, 'next' in input && input.next==='/billing');
   if(input.action==='google') {
     try {
       const settings=await this.fetcher(this.config.supabaseUrl+'/auth/v1/settings',{headers:{apikey:this.config.supabaseAnonKey},signal:AbortSignal.timeout(8000)});
@@ -38,13 +40,13 @@ export class SupabaseAuth implements AuthService {
 
     const {data,error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:callback,skipBrowserRedirect:true,queryParams:{prompt:'select_account'}}});
     if(error||!data.url)throw new AppError('AUTH_UNAVAILABLE','Google sign-in is not available yet. Please use email and password.',503);
-    return json({url:data.url});
+    return withIntent(json({url:data.url}));
   }
   if(input.action==='signup') {
     const {data,error}=await client.auth.signUp({email:input.email,password:input.password,options:{emailRedirectTo:callback,data:{display_name:input.name}}});
     if(error)throw new AppError('SIGNUP_UNAVAILABLE',error.code==='over_email_send_rate_limit'?'Please wait before requesting another email.':error.code==='email_address_not_authorized'?'Account email delivery is not ready yet. You can use Google sign-in instead.':'We could not create this account. Try signing in, or try again shortly.',400);
     if(data.session)await this.getIdentity();
-    return json({signedIn:!!data.session,confirmationRequired:!data.session,message:'Check your email to confirm your account, then return here to sign in.'});
+    return withIntent(json({signedIn:!!data.session,confirmationRequired:!data.session,message:'Check your email to confirm your account, then return here to sign in.'}));
   }
   if(input.action==='signin') {
     const {error}=await client.auth.signInWithPassword({email:input.email,password:input.password});
@@ -54,12 +56,12 @@ export class SupabaseAuth implements AuthService {
   if(input.action==='reset') {
     const {error}=await client.auth.resetPasswordForEmail(input.email,{redirectTo:callback});
     if(error)throw new AppError('AUTH_UNAVAILABLE','A reset email could not be sent. Please wait a moment and try again.',503);
-    return json({message:'If an account uses this email, a password reset link is on its way. Check your inbox and spam folder.'});
+    return withIntent(json({message:'If an account uses this email, a password reset link is on its way. Check your inbox and spam folder.'}));
   }
   if(input.action==='resend') {
     const {error}=await client.auth.resend({type:'signup',email:input.email,options:{emailRedirectTo:callback}});
     if(error)throw new AppError('AUTH_UNAVAILABLE','Please wait before requesting another confirmation email.',503);
-    return json({message:'If confirmation is needed, a new email is on its way.'});
+    return withIntent(json({message:'If confirmation is needed, a new email is on its way.'}));
   }
   const {error}=input.action==='complete-onboarding'
     ?await client.auth.updateUser({data:{display_name:input.name,devils_onboarded:true}})

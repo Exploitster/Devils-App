@@ -30,11 +30,11 @@ export const RenameSessionSchema = z.object({ title: z.string().trim().min(1).ma
 const EmailSchema = z.string().trim().email().max(254).transform(v => v.toLowerCase());
 const PasswordSchema = z.string().min(10, 'Use at least 10 characters for your password.').max(128);
 export const AccountAuthSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('signup'), email: EmailSchema, password: PasswordSchema, name: z.string().trim().min(1).max(80) }).strict(),
+  z.object({ action: z.literal('signup'), email: EmailSchema, password: PasswordSchema, name: z.string().trim().min(1).max(80), next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('signin'), email: EmailSchema, password: z.string().min(1).max(128) }).strict(),
-  z.object({ action: z.literal('google') }).strict(),
+  z.object({ action: z.literal('google'), next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('reset'), email: EmailSchema }).strict(),
-  z.object({ action: z.literal('resend'), email: EmailSchema }).strict(),
+  z.object({ action: z.literal('resend'), email: EmailSchema, next: z.literal('/billing').optional() }).strict(),
   z.object({ action: z.literal('update-password'), password: PasswordSchema }).strict(),
   z.object({ action: z.literal('complete-onboarding'), name: z.string().trim().min(1).max(80) }).strict(),
 ]);
@@ -53,8 +53,8 @@ export interface Identity { id: string; email: string; name?: string; onboarded?
 export interface UserProfile { id: string; email: string; disabled: boolean; deletionState: 'none' | 'pending' | 'complete'; createdAt: string; name?: string; onboarded?: boolean; }
 export interface Invite { userId: string; expiresAt: string; enabled: boolean; }
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
-export interface Subscription { userId: string; customerId: string; subscriptionId: string; priceId: string; status: SubscriptionStatus; currentPeriodEnd: string; cancelAtPeriodEnd: boolean; updatedAt: string; }
-export interface AccessDecision { allowed: boolean; reason: 'free' | 'beta' | 'paid' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
+export interface Subscription { provider?: 'dodo'|'stripe'; environment?: 'test_mode'|'live_mode'; verifiedPaymentId?: string; userId: string; customerId: string; subscriptionId: string; priceId: string; status: SubscriptionStatus; currentPeriodEnd: string; cancelAtPeriodEnd: boolean; updatedAt: string; }
+export interface AccessDecision { allowed: boolean; reason: 'free' | 'beta' | 'trial' | 'paid' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
 export interface UsageEvent { operationId: string; userId: string; sessionId: string; committedAt: string; inputTokens: number; outputTokens: number; costMicros: number; }
 export interface SpendAttempt { id: string; operationId: string; userId: string; reservedMicros: number; actualMicros?: number; createdAt: string; }
 export interface TurnOperation { id: string; userId: string; sessionId: string; fingerprint: string; expectedRevision: number; status: 'pending' | 'committed' | 'failed' | 'cancelled'; leaseExpiresAt: string; createdAt: string; resultRevision?: number; errorCode?: string; }
