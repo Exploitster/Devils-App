@@ -1,0 +1,47 @@
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { LocalStore } from '../src/lib/store/local';
+import { deleteAccount } from '../src/lib/privacy/deletion';
+let dir:string;let store:LocalStore;
+const now='2026-10-14T15:00:00.000Z';
+beforeEach(async()=>{dir=mkdtempSync(join(tmpdir(),'devils-privacy-'));store=new LocalStore(join(dir,'test.sqlite'));for(const id of ['a','b'])await store.putProfile({id,email:`${id}@example.test`,disabled:false,deletionState:'none',createdAt:now});});
+afterEach(()=>{store.close();rmSync(dir,{recursive:true,force:true});});
+it('blocks pending writes on cancellation failure, then retries deletion without losing provider accounting',async()=>{
+ const s=await store.createSession('a',{mode:'business',topic:'startup'},now);
+ const r={userId:'a',sessionId:s.id,operationId:'pending',expectedRevision:0,fingerprint:'private prompt',now,leaseExpiresAt:'2026-10-14T15:01:00.000Z'};
+ await store.reserveTurn(r);await store.reserveSpend({id:'provider',operationId:r.operationId,userId:'a',reservedMicros:10,createdAt:now},10);
+ await store.putInvite({userId:'a',enabled:true,expiresAt:'2027-01-01T00:00:00.000Z'});
+ await store.putSubscription({userId:'a',subscriptionId:'sub',customerId:'cus',priceId:'price',status:'active',currentPeriodEnd:'2027-01-01T00:00:00.000Z',cancelAtPeriodEnd:false,updatedAt:now});
+ let fails=true;let removed=false;
+ const options={store,cancelRenewal:async()=>{if(fails)throw Error('secret provider payload');},deleteIdentity:async()=>{removed=true;}};
+ await expect(deleteAccount('a',options)).rejects.toMatchObject({code:'DELETION_PENDING',status:503});
+ expect(await store.getProfile('a')).toMatchObject({disabled:true,deletionState:'pending'});expect((await store.getOperation('a',s.id,r.operationId))?.status).toBe('cancelled');expect(removed).toBe(false);
+ fails=false;await deleteAccount('a',options);expect(removed).toBe(true);
+ expect(await store.getProfile('a')).toMatchObject({email:'',deletionState:'complete'});expect(await store.getInvite('a')).toBeNull();expect(await store.listUsage('a',now)).toEqual([]);
+ await expect(store.getSession('a',s.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+ await expect(store.commitTurn({...r,state:s.state,messages:[],usage:{inputTokens:1,outputTokens:1,costMicros:1}})).rejects.toMatchObject({code:'NOT_FOUND'});
+ await expect(store.reserveSpend({id:'new',operationId:'other',userId:'b',reservedMicros:1,createdAt:now},10)).rejects.toMatchObject({code:'SPEND_LIMIT'});
+ expect(await store.getSubscription('a')).toMatchObject({subscriptionId:'sub'});expect(await store.getProfile('b')).toMatchObject({disabled:false,email:'b@example.test'});
+});
+it('keeps identity failures pending, retries without subscription, and removes all session children',async()=>{
+ const s=await store.createSession('a',{mode:'philosophy',topic:'life'},now);
+ const r={userId:'a',sessionId:s.id,operationId:'done',expectedRevision:0,fingerprint:'fp',now,leaseExpiresAt:'2026-10-14T15:01:00.000Z'};
+ await store.reserveTurn(r);await store.commitTurn({...r,state:{...s.state,summary:'private summary'},messages:[{id:'m',role:'user',text:'private message',createdAt:now,citations:[]}],usage:{inputTokens:1,outputTokens:2,costMicros:3}});
+ let fails=true;let billingChecks=0;const options={store,cancelRenewal:async()=>{billingChecks++;},deleteIdentity:async()=>{if(fails)throw Error('private identity error');}};
+ await expect(deleteAccount('a',options)).rejects.toMatchObject({code:'DELETION_PENDING'});expect(await store.getProfile('a')).toMatchObject({disabled:true,deletionState:'pending'});
+ fails=false;await deleteAccount('a',options);expect(billingChecks).toBe(2);store.close();store=new LocalStore(join(dir,'test.sqlite'));
+ expect(await store.listSessions('a')).toEqual([]);expect(await store.listUsage('a',now)).toEqual([]);expect(await store.getProfile('a')).toMatchObject({email:'',deletionState:'complete'});
+});
+it('session deletion erases embedded cards, summaries, evidence associations, messages, operations and usage',async()=>{
+ const s=await store.createSession('a',{mode:'business',topic:'work'},now);
+ const r={userId:'a',sessionId:s.id,operationId:'card',expectedRevision:0,fingerprint:'private context',now,leaseExpiresAt:'2026-10-14T15:01:00.000Z'};
+ await store.reserveTurn(r);
+ await store.commitTurn({...r,state:{...s.state,summary:'private summary',usedEvidenceIds:['shared-public-evidence']},messages:[{id:'m',role:'assistant',text:'private message',createdAt:now,citations:[]}],card:{id:'c',version:1,sessionRevision:1,position:'private card',strengths:[],counterpoints:[],openQuestions:[],nextStep:'Consider',closing:'Your call. Always.',createdAt:now},usage:{inputTokens:2,outputTokens:3,costMicros:4}});
+ await expect(store.deleteSession('b',s.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+ expect((await store.getSession('a',s.id)).cards).toHaveLength(1);
+ await store.deleteSession('a',s.id);expect(await store.listSessions('a')).toEqual([]);expect(await store.listUsage('a',now)).toEqual([]);
+ await expect(store.getOperation('a',s.id,'card')).rejects.toMatchObject({code:'NOT_FOUND'});
+ await expect(store.commitTurn({...r,state:s.state,messages:[],usage:{inputTokens:0,outputTokens:0,costMicros:0}})).rejects.toMatchObject({code:'NOT_FOUND'});
+});

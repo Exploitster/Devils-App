@@ -1,0 +1,10 @@
+/** Conservative lexical safety layer. It is not a clinical risk assessment; the
+ * provider is additionally instructed to classify paraphrases before debate. */
+export function assessSafety(text: string): { kind: 'crisis' | 'harm' | 'political' | 'qualified' | 'ordinary'; response?: string } {
+ const t=text.toLowerCase();
+ if(/suicid|kill myself|end my life|never wake up|better off without me|want to die|hurt myself|not want to live|don't want to live|no reason to live|disappear forever|can(?:not|'t) (?:keep myself|stay) safe|can(?:not|'t) go on|not (?:be|being) here anymore/.test(t))return {kind:'crisis',response:'I am sorry you are carrying this. Your safety matters more than debating this decision. If you might act on these feelings, contact local emergency services or go to the nearest emergency department now. Reach out to someone you trust and ask them to stay with you. A qualified crisis counselor or mental health professional can help you through this moment.'};
+ if(/(?:how|help|plan|teach|convince).*(?:kill|poison|bomb|attack|hurt someone|stalk|blackmail)|(?:more effective|better way).*(?:harm|weapon|violence)/.test(t))return {kind:'harm',response:'I cannot help intensify harm or plan violence. Step away from the situation and seek help from a trusted person or qualified professional. We can discuss a safe, nonviolent way to address the underlying problem.'};
+ if(/\b(election|political|vote for|politician|republican|democrat|bjp|congress party|campaign for)\b/.test(t))return {kind:'political',response:'I do not conduct political debates or persuasion. I can help you examine a nonpolitical personal decision or business assumption.'};
+ if(/\b(medication|diagnos|medical|doctor|treatment|lawsuit|legal advice|lawyer|invest|stocks|financial advice|loan|debt)\b/.test(t))return {kind:'qualified',response:'This touches medical, legal, or financial matters. I can help examine assumptions and questions, but a qualified professional who knows your circumstances should guide specialized decisions. Avoid making irreversible changes based on this conversation.'};
+ return {kind:'ordinary'};
+}

@@ -1,0 +1,20 @@
+import { expect, test } from '@playwright/test';
+test('account confirmation is accessible and cancellation preserves the account',async({page})=>{
+ await page.goto('/login');
+ await page.getByLabel('Email address').fill('sam@example.test');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.waitForURL('**/home');
+ await page.goto('/account');
+ await expect(page.getByRole('heading',{name:'Privacy, in plain language'})).toBeVisible();
+ await page.getByRole('button',{name:'Delete account',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Permanently delete your account?'});
+ await expect(dialog).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Keep account'})).toBeFocused();
+ const submit=dialog.getByRole('button',{name:'Delete account permanently'});
+ await expect(submit).toBeDisabled();
+ await page.getByLabel('Confirmation').fill('delete');await expect(submit).toBeDisabled();
+ await page.getByLabel('Confirmation').fill('DELETE');await expect(submit).toBeEnabled();
+ await dialog.getByRole('button',{name:'Keep account'}).click();await expect(dialog).not.toBeVisible();
+ const response=await page.request.get('/api/account');expect(response.status()).toBe(200);
+ expect((await response.json()).profile).toMatchObject({disabled:false,deletionState:'none'});
+});
