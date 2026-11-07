@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { AnalyticsConsent } from '@/components/analytics-consent';
 import '../styles/tokens.css';
 import '../styles/app.css';
-import '../styles/refinements.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.devils-advocate.app'),
   title: { default: 'Devils Advocate — Business Validation & Philosophical Reflection', template: '%s | Devils Advocate' },
