@@ -1,6 +1,5 @@
 import type { Page } from '@playwright/test';
 
-/** Opens the conversation drawer when the layout hides the sidebar behind the menu button. */
 export async function openNavigation(page: Page) {
   const menu = page.getByRole('button', { name: 'Open menu', exact: true });
   if (await menu.isVisible()) await menu.click();
@@ -19,7 +18,6 @@ export async function openAccountMenu(page: Page) {
   await page.getByRole('button', { name: 'Account menu', exact: true }).click();
 }
 
-/** Creates an empty conversation the way the app does and opens it. */
 export async function startConversation(page: Page, options: { mode?: 'business' | 'philosophy'; title?: string } = {}) {
   await page.waitForURL(/\/home/);
   const mode = options.mode ?? 'business';

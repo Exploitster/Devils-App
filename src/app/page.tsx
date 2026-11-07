@@ -5,7 +5,6 @@ import { SampleDebate, ProductQuestions } from '@/components/sample-debate';
 import { Pricing } from '@/components/pricing';
 import { Icon, IdeaVisual, Shell } from '@/components/app';
 
-// The page tells one story: you bring an idea, meet the hard questions, and keep the call.
 export default function Landing() {
   const paid = process.env.DEVILS_PAYMENTS_ENABLED === 'true';
   return <Shell>

@@ -37,7 +37,6 @@ export function Brand({ href = '/' }: { href?: string }) { return <Link classNam
 export function ErrorNotice({ error, retry }: { error: string; retry?: () => void }) { return <div className="notice error-notice" role="alert"><p>{error}</p>{retry && <button onClick={retry}>Try again</button>}</div>; }
 function subscribeTheme(listener: () => void) { window.addEventListener('storage', listener); window.addEventListener('devils-theme', listener); return () => { window.removeEventListener('storage', listener); window.removeEventListener('devils-theme', listener); }; }
 function storedDark() { try { return localStorage.getItem('devils-theme') === 'dark'; } catch { return false; } }
-/** Applies the stored theme wherever the shell renders, even when no theme button is mounted. */
 function useAppliedTheme() {
   const dark = useSyncExternalStore(subscribeTheme, storedDark, () => false);
   useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
@@ -53,7 +52,6 @@ export function Shell({ children, mode = 'business' }: { children: ReactNode; mo
   useAppliedTheme();
   const publicPage = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/privacy', '/terms', '/onboarding', '/about', '/features', '/business-validation', '/philosophical-reflection', '/how-it-works', '/pricing', '/faq', '/help', '/contact', '/security', '/sources', '/subscription-and-cancellation', '/refunds', '/accessibility'].includes(path);
   const recovery = path === '/reset-password';
-  // The drawer belongs to the page it was opened on, so navigating closes it.
   const [drawerPath, setDrawerPath] = useState<string | null>(null); const drawer = drawerPath === path; const toggle = useRef<HTMLButtonElement>(null);
   const closeDrawer = useCallback(() => { setDrawerPath(null); toggle.current?.focus(); }, []);
   const signOut = async () => { try { await api('/api/auth', 'DELETE'); router.push('/login'); } catch (e) { setError((e as Error).message); } };

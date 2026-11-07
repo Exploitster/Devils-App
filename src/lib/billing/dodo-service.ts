@@ -12,7 +12,7 @@ import {
   type BillingContext,
   type BillingPersistence,
 } from "./context";
-import { dodoConfig } from "./dodo-config";
+import { checkoutAllowed, dodoConfig } from "./dodo-config";
 import {
   DodoProvider,
   type DodoProviderConfig,
@@ -69,12 +69,7 @@ export class DodoBilling implements BillingService {
     return (this._persistence ??= billingPersistence(this.config));
   }
   private enabled(userId: string) {
-    // While payments are off, only allowlisted accounts may check out: test
-    // accounts in test mode, and the owner's verification payment in live mode.
-    if (
-      !this.config.paymentsEnabled &&
-      !this.config.dodoTestUserIds?.includes(userId)
-    )
+    if (!checkoutAllowed(this.config, userId))
       throw new AppError(
         "PAYMENTS_DISABLED",
         "Payments are not available yet. Your current access is unchanged.",

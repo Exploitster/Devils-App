@@ -6,14 +6,12 @@ import { api, Brand, Icon, ThemeButton } from './app';
 
 const RECENT_LIMIT = 15;
 
-/** Recent conversations, newest first; History holds the rest. */
 function RecentConversations({ path }: { path: string }) {
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
     api<{ sessions: Session[] }>('/api/sessions').then(data => { setSessions(data.sessions); setFailed(false); }).catch(() => setFailed(true));
   }, []);
-  // Reload on navigation so a conversation started a moment ago appears.
   useEffect(() => { load(); }, [load, path]);
   return <section className="recent" aria-labelledby="recent-title">
     <h2 id="recent-title" className="recent-title">Recent</h2>
@@ -55,7 +53,6 @@ function AccountMenu({ user, onSignOut }: { user: Identity; onSignOut: () => voi
   </div>;
 }
 
-/** Desktop sidebar; below 1024px the same panel opens as a drawer from the top bar. */
 export function AppSidebar({ user, path, open, onClose, onSignOut }: { user?: Identity | null; path: string; open: boolean; onClose: () => void; onSignOut: () => void }) {
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {

@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, type RefObject } from 'react';
 import { Icon } from './app';
+import { MESSAGE_LIMIT } from '@/lib/limits';
 
-export const MESSAGE_LIMIT = 12000;
 const COUNTER_FROM = 10000;
 
 export interface ComposerProps {
@@ -20,9 +20,7 @@ export interface ComposerProps {
   sticky?: boolean;
 }
 
-/** One minimal input shared by the new-conversation screen and the chat. */
 export function Composer({ value, onChange, onSubmit, inputRef, placeholder, disabled, busy, onCancel, tag, onClearTag, status, sticky }: ComposerProps) {
-  // Grow with the text up to a comfortable height, then scroll.
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;

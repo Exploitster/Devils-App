@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { HandBackCard, Session, Counterpoint, Evidence } from '@/lib/contracts';
+import type { HandBackCard, Session, Counterpoint, Evidence, TurnAction } from '@/lib/contracts';
 import Link from 'next/link';
 import { api, ApiError, ErrorNotice, Shell } from './app';
 import { Composer } from './composer';
@@ -68,7 +68,7 @@ export function SessionView({ id }: {
     const [error, setError] = useState('');
     const [stale, setStale] = useState(false);
     const [text, setText] = useState('');
-    const [action, setAction] = useState('message');
+    const [action, setAction] = useState<Exclude<TurnAction, 'skip'>>('message');
     const [busy, setBusy] = useState(false);
     const [sending, setSending] = useState('');
     const [title, setTitle] = useState('');
@@ -90,8 +90,6 @@ export function SessionView({ id }: {
             // A load whose page effect was already cleaned up must not overwrite newer state.
             if (!isCurrent()) return;
             setSession(data.session); setTitle(data.session.title); setStale(false); setError('');
-            // A first message typed on the new-conversation screen is sent from here,
-            // so it gets the same thread, Cancel and failure handling as any turn.
             const first = takeFirstMessage(id);
             if (first && data.session.messages.length === 0) { setText(first); void generate('turns', false, { session: data.session, text: first }); }
         }).catch((e: Error) => { if (isCurrent()) setError(e.message); });
@@ -167,12 +165,13 @@ export function SessionView({ id }: {
     const messages = session?.messages ?? [];
     const latest = messages[messages.length - 1];
     const latestIsReply = latest?.role === 'assistant' && !busy;
-    // The engine's closing reflection already carries the summary's content (KTD4).
-    const showSummary = Boolean(latestIsReply && state && state.phase !== 'support' && state.strengths.length > 0 && !latest.text.trimStart().startsWith('Underlying question:'));
-    // A pending question is shown once: as the reply itself, or under it when the reply says something else (KTD5).
-    const questionText = question && latestIsReply && latest.text.trim() !== question.question.trim() ? question.question : '';
-    const tags: Record<string, string> = { pushback: 'Pushing back', correction: 'Correcting my position' };
+    const replyIsClosingReflection = Boolean(latest?.text.trimStart().startsWith('Underlying question:'));
+    const showSummary = Boolean(latestIsReply && state && state.phase !== 'support' && state.strengths.length > 0 && !replyIsClosingReflection);
+    const replyIsTheQuestion = Boolean(question && latest?.text.trim() === question.question.trim());
+    const questionText = question && latestIsReply && !replyIsTheQuestion ? question.question : '';
+    const tags: Partial<Record<TurnAction, string>> = { pushback: 'Pushing back', correction: 'Correcting my position' };
     function frame(next: 'pushback' | 'correction') { setAction(next); composer.current?.focus(); }
+    function closeMenu(event: React.MouseEvent<HTMLElement>) { (event.currentTarget.closest('details') as HTMLDetailsElement).open = false; }
     async function rename(event: React.FormEvent) {
         event.preventDefault();
         if (!session) return;
@@ -190,8 +189,8 @@ export function SessionView({ id }: {
         {session && !renaming && <details className="chat-menu">
           <summary aria-label="Conversation options">⋯</summary>
           <div className="chat-menu-list">
-            <button type="button" onClick={e => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setRenaming(true); }}>Rename</button>
-            <button type="button" className="danger-text" onClick={e => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setConfirm(true); }}>Delete conversation</button>
+            <button type="button" onClick={e => { closeMenu(e); setRenaming(true); }}>Rename</button>
+            <button type="button" className="danger-text" onClick={e => { closeMenu(e); setConfirm(true); }}>Delete conversation</button>
           </div>
         </details>}
       </header>

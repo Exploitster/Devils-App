@@ -2585,12 +2585,10 @@ p {
   }
 }
 
-/* Decorative hero orbits must never widen the page. */
 .landing-hero {
   overflow-x: clip;
 }
 
-/* ===== App shell: sidebar, account menu and mobile drawer ===== */
 .app {
   min-height: 100vh;
   display: flex;
@@ -2834,7 +2832,6 @@ p {
   }
 }
 
-/* Sample walkthrough: one compact numbered story instead of seven cards. */
 .story-steps {
   counter-reset: step;
   list-style: none;
@@ -2874,7 +2871,6 @@ p {
   color: var(--muted);
 }
 
-/* Public header on phones: one slim row; Pricing lives in the menu. */
 @media (max-width: 600px) {
   .public-header {
     min-height: 64px;
@@ -2919,7 +2915,6 @@ p {
     display: none;
   }
 }
-/* Smallest phones: the logo carries the brand; the name stays for screen readers. */
 @media (max-width: 379px) {
   .public-header .wordmark > span:last-child {
     position: absolute;

@@ -1,6 +1,10 @@
 import type { RuntimeConfig, Environment } from "../config";
 import { AppError } from "../errors";
 import type { DodoProviderConfig } from "./dodo-provider";
+/** While payments are off, only allowlisted accounts may check out (test mode, or the owner's live verification payment). */
+export function checkoutAllowed(config: RuntimeConfig, userId: string) {
+  return config.paymentsEnabled || Boolean(config.dodoTestUserIds?.includes(userId));
+}
 export function dodoConfig(
   config: RuntimeConfig,
   env: Environment = process.env,

@@ -13,7 +13,6 @@ function origin(value) {
 }
 const env = process.env;
 const role = env.DEVILS_DEPLOYMENT_ENV;
-// Payments may be switched on only in production, with live Dodo and a past paid-access start.
 const livePayments = role === 'production' && env.DEVILS_PAYMENTS_ENABLED === 'true' && env.DEVILS_BILLING_PROVIDER === 'dodo' && env.DEVILS_DODO_ENVIRONMENT === 'live_mode' && /(Z|[+-]\d{2}:\d{2})$/.test(env.DEVILS_PAID_ACCESS_START ?? '') && Date.parse(env.DEVILS_PAID_ACCESS_START) <= Date.now();
 if (!['staging', 'production','rehearsal'].includes(role) || !env.VERCEL_PROJECT_ID?.startsWith('prj_') || (env.DEVILS_PAYMENTS_ENABLED !== 'false' && !livePayments)) blocked();
 const database = origin(env.DEVILS_SUPABASE_URL);

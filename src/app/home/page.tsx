@@ -37,7 +37,6 @@ function NewConversation() {
     const topic: Topic = starter?.mode === mode ? starter.topic : mode === 'business' ? 'startup' : 'life';
     try {
       const data = await api<{ session: Session }>('/api/sessions', 'POST', { mode, topic, ...(starter?.title && starter.mode === mode ? { title: starter.title } : {}) });
-      // The conversation page sends it, so the first reply gets the normal thread and Cancel.
       handOverFirstMessage(data.session.id, text);
       router.push(`/sessions/${data.session.id}`);
     } catch (e) { setError((e as Error).message); setBusy(false); }
