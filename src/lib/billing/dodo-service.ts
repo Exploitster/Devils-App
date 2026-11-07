@@ -69,12 +69,11 @@ export class DodoBilling implements BillingService {
     return (this._persistence ??= billingPersistence(this.config));
   }
   private enabled(userId: string) {
+    // While payments are off, only allowlisted accounts may check out: test
+    // accounts in test mode, and the owner's verification payment in live mode.
     if (
       !this.config.paymentsEnabled &&
-      !(
-        this.settings.environment === "test_mode" &&
-        this.config.dodoTestUserIds?.includes(userId)
-      )
+      !this.config.dodoTestUserIds?.includes(userId)
     )
       throw new AppError(
         "PAYMENTS_DISABLED",

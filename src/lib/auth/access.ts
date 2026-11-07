@@ -7,6 +7,7 @@ export async function accessDecision(store:Store,userId:string,config:RuntimeCon
  const subscription=await store.getSubscription(userId);
  if(config.billingProvider==='dodo') {
   if(subscription?.provider==='dodo' && subscription.environment==='live_mode' && subscription.verifiedPaymentId && ['active','canceled'].includes(subscription.status) && Date.parse(subscription.currentPeriodEnd)>now.getTime())return {allowed:true,reason:'paid',expiresAt:subscription.currentPeriodEnd};
+  if(config.paidAccessStart && Date.parse(profile.createdAt)<Date.parse(config.paidAccessStart))return {allowed:true,reason:'member'};
   const trialEnd=Date.parse(profile.createdAt)+86400000;
   if(Number.isFinite(trialEnd) && now.getTime()>=Date.parse(profile.createdAt) && trialEnd>now.getTime())return {allowed:true,reason:'trial',expiresAt:new Date(trialEnd).toISOString()};
   return {allowed:false,reason:'expired'};

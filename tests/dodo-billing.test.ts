@@ -476,3 +476,49 @@ describe("Dodo monthly billing and access", () => {
     });
   });
 });
+
+describe("existing members and owner verification at go-live", () => {
+  const start = "2026-11-01T00:00:00.000Z";
+  async function aged(createdAt: string) {
+    const x = await setup();
+    x.config.paymentsEnabled = true;
+    x.config.paidAccessStart = start;
+    const p = (await x.store.getProfile(x.user.id))!;
+    p.createdAt = createdAt;
+    await x.store.putProfile(p);
+    return x;
+  }
+  const now = new Date("2026-11-10T00:00:00.000Z");
+  it("keeps an account created before the paid-access start free with no expiry", async () => {
+    const x = await aged("2026-10-31T00:00:00.000Z");
+    const access = await accessDecision(x.store, x.user.id, x.config, now);
+    expect(access).toMatchObject({ allowed: true, reason: "member" });
+    expect(access.expiresAt).toBeUndefined();
+  });
+  it("requires a subscription from an account created after the start once its trial ends", async () => {
+    const x = await aged("2026-11-03T00:00:00.000Z");
+    expect(await accessDecision(x.store, x.user.id, x.config, now)).toMatchObject({ allowed: false, reason: "expired" });
+  });
+  it("gives an account created after the start its 24-hour trial", async () => {
+    const x = await aged("2026-11-09T12:00:00.000Z");
+    expect(await accessDecision(x.store, x.user.id, x.config, now)).toMatchObject({ allowed: true, reason: "trial" });
+  });
+  it("still blocks a disabled account created before the start", async () => {
+    const x = await aged("2026-10-31T00:00:00.000Z");
+    await x.store.beginAccountDeletion(x.user.id);
+    expect(await accessDecision(x.store, x.user.id, x.config, now)).toMatchObject({ allowed: false, reason: "disabled" });
+  });
+  it("keeps everyone free while payments are disabled", async () => {
+    const x = await aged("2026-11-03T00:00:00.000Z");
+    x.config.paymentsEnabled = false;
+    expect(await accessDecision(x.store, x.user.id, x.config, now)).toMatchObject({ allowed: true, reason: "free" });
+  });
+  it("lets only the allowlisted owner start a live checkout while payments are disabled", async () => {
+    const x = await setup();
+    x.settings.environment = "live_mode";
+    x.config.paymentsEnabled = false;
+    await expect(x.service.checkout(x.user, "monthly")).resolves.toBeTruthy();
+    x.config.dodoTestUserIds = [];
+    await expect(x.service.checkout(x.user, "monthly")).rejects.toMatchObject({ code: "PAYMENTS_DISABLED" });
+  });
+});

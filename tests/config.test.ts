@@ -13,8 +13,18 @@ describe('runtime configuration', () => {
     expect(readConfig(bindings).billingProvider).toBe('dodo');
     expect(()=>readConfig({...bindings,DEVILS_PAYMENTS_ENABLED:'true',DEVILS_DODO_ENVIRONMENT:'test_mode'})).toThrow('test payments');
     expect(()=>readConfig({...bindings,DEVILS_PAYMENTS_ENABLED:'true',DEVILS_DODO_ENVIRONMENT:'live_mode'})).toThrow('DEVILS_DODO_WEBHOOK_SECRET');
-    const config=readConfig({...bindings,DEVILS_PAYMENTS_ENABLED:'true',DEVILS_DODO_ENVIRONMENT:'live_mode',DEVILS_DODO_API_KEY:'private-dodo-key',DEVILS_DODO_WEBHOOK_SECRET:'private-dodo-signature',DEVILS_DODO_MONTHLY_PRODUCT_ID:'pdt_month'});
+    const config=readConfig({...bindings,DEVILS_PAYMENTS_ENABLED:'true',DEVILS_DODO_ENVIRONMENT:'live_mode',DEVILS_DODO_API_KEY:'private-dodo-key',DEVILS_DODO_WEBHOOK_SECRET:'private-dodo-signature',DEVILS_DODO_MONTHLY_PRODUCT_ID:'pdt_month',DEVILS_PAID_ACCESS_START:'2026-11-01T00:00:00Z'});
     expect(config.paymentsEnabled).toBe(true);expect(JSON.stringify(publicConfig(config))).not.toContain('private-dodo');
+  });
+  it('requires a past, offset-qualified paid-access start whenever Dodo payments are enabled',()=>{
+    const live={...services,DEVILS_BILLING_PROVIDER:'dodo',DEVILS_PAYMENTS_ENABLED:'true',DEVILS_DODO_ENVIRONMENT:'live_mode',DEVILS_DODO_API_KEY:'private-dodo-key',DEVILS_DODO_WEBHOOK_SECRET:'private-dodo-signature',DEVILS_DODO_MONTHLY_PRODUCT_ID:'pdt_month'};
+    expect(()=>readConfig(live)).toThrow('DEVILS_PAID_ACCESS_START');
+    expect(()=>readConfig({...live,DEVILS_DODO_ENVIRONMENT:'test_mode'})).toThrow();
+    expect(()=>readConfig({...live,DEVILS_PAID_ACCESS_START:'not-a-date'})).toThrow('DEVILS_PAID_ACCESS_START');
+    expect(()=>readConfig({...live,DEVILS_PAID_ACCESS_START:'2026-11-01T00:00:00'})).toThrow('DEVILS_PAID_ACCESS_START');
+    expect(()=>readConfig({...live,DEVILS_PAID_ACCESS_START:new Date(Date.now()+3600000).toISOString()})).toThrow('DEVILS_PAID_ACCESS_START');
+    expect(readConfig({...live,DEVILS_PAID_ACCESS_START:'2026-11-01T05:30:00+05:30'}).paidAccessStart).toBe('2026-11-01T00:00:00.000Z');
+    expect(readConfig({...services,DEVILS_BILLING_PROVIDER:'dodo',DEVILS_PAYMENTS_ENABLED:'false'}).paidAccessStart).toBeUndefined();
   });
   it('selects OpenRouter explicitly without replacing or requiring the Gemini key', () => {
     const config = readConfig({ ...services, DEVILS_MODEL_PROVIDER: 'openrouter', DEVILS_OPENROUTER_API_KEY: 'router-secret', DEVILS_GEMINI_API_KEY: undefined });

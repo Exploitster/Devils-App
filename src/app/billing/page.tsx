@@ -163,7 +163,9 @@ export default function BillingPage() {
                   ? "Your 24-hour trial is active. No payment details are needed for the trial."
                   : data.access.reason === "paid"
                     ? "Your monthly subscription is active."
-                    : "Your trial or subscription is not active. Your saved history remains available."}
+                    : data.access.reason === "member"
+                      ? "You joined before subscriptions opened, so your access stays free. You can still subscribe to support the service."
+                      : "Your trial or subscription is not active. Your saved history remains available."}
             </p>
             {data.access.expiresAt && (
               <p>
