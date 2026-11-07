@@ -11,8 +11,7 @@ function RecentConversations({ path }: { path: string }) {
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
-    setFailed(false);
-    api<{ sessions: Session[] }>('/api/sessions').then(data => setSessions(data.sessions)).catch(() => setFailed(true));
+    api<{ sessions: Session[] }>('/api/sessions').then(data => { setSessions(data.sessions); setFailed(false); }).catch(() => setFailed(true));
   }, []);
   // Reload on navigation so a conversation started a moment ago appears.
   useEffect(() => { load(); }, [load, path]);
