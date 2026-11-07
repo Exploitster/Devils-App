@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { goToHistory } from './support/navigation';
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('alex@example.test');
@@ -21,7 +22,7 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download Markdown' })).toBeVisible();
   const url = page.url();
-  await page.getByRole('link', { name: 'History', exact: true }).click();
+  await goToHistory(page);
   await page.locator(`a[href="${new URL(url).pathname}"]`).click();
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
 });
@@ -29,7 +30,7 @@ test('expired legacy invites retain free access without a paywall', async ({ pag
   await page.goto('/login'); await page.getByLabel('Email address').fill('expired@example.test'); await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start a conversation', exact:true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Subscribe|test checkout/ })).toHaveCount(0);
-  await page.getByRole('link', { name: 'History', exact: true }).click(); await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await goToHistory(page); await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 });
 test('stale revisions and offline submission keep the unsent message', async ({ page, context }) => {
   await login(page); await page.getByRole('button', { name: 'Start a conversation' }).click();
