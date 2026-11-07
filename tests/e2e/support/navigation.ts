@@ -18,3 +18,15 @@ export async function openAccountMenu(page: Page) {
   await openNavigation(page);
   await page.getByRole('button', { name: 'Account menu', exact: true }).click();
 }
+
+/** Creates an empty conversation the way the app does and opens it. */
+export async function startConversation(page: Page, options: { mode?: 'business' | 'philosophy'; title?: string } = {}) {
+  await page.waitForURL(/\/home/);
+  const mode = options.mode ?? 'business';
+  const id = await page.evaluate(async body => {
+    const response = await fetch('/api/sessions', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!response.ok) throw new Error(`create failed: ${response.status}`);
+    return (await response.json()).session.id as string;
+  }, { mode, topic: mode === 'business' ? 'startup' : 'life', ...(options.title ? { title: options.title } : {}) });
+  await page.goto(`/sessions/${id}`);
+}

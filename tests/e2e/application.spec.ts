@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { goToHistory } from './support/navigation';
+import { goToHistory, startConversation } from './support/navigation';
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('alex@example.test');
@@ -10,7 +10,7 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
   await login(page);
   await page.getByRole('button', { name: new RegExp(`^${mode}`) }).click();
   const loaded = page.waitForResponse(response => /\/api\/sessions\/[^/?]+$/.test(new URL(response.url()).pathname) && response.request().method() === 'GET' && response.status() === 200, {timeout:30000});
-  await page.getByRole('button', { name: 'Start a conversation' }).click();
+  await startConversation(page, { mode: mode === 'Business' ? 'business' : 'philosophy' });
   await loaded;
   await expect(page.getByLabel('Your message')).toBeVisible();
   await page.getByLabel('Your message').fill(mode === 'Business' ? 'I want to build an open source database startup because developer tools customers will pay for support but serving costs may be high.' : 'I am deciding whether to leave my work because I value freedom and have obligations to my family.');
@@ -23,17 +23,17 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
   await expect(page.getByRole('button', { name: 'Download Markdown' })).toBeVisible();
   const url = page.url();
   await goToHistory(page);
-  await page.locator(`a[href="${new URL(url).pathname}"]`).click();
+  await page.locator("main").locator(`a[href="${new URL(url).pathname}"]`).click();
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
 });
 test('expired legacy invites retain free access without a paywall', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Email address').fill('expired@example.test'); await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Start a conversation', exact:true })).toBeVisible();
+  await expect(page.getByLabel('Your message')).toBeVisible();
   await expect(page.getByRole('button', { name: /Subscribe|test checkout/ })).toHaveCount(0);
   await goToHistory(page); await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 });
 test('stale revisions and offline submission keep the unsent message', async ({ page, context }) => {
-  await login(page); await page.getByRole('button', { name: 'Start a conversation' }).click();
+  await login(page); await startConversation(page);
   await expect(page.getByLabel('Your message')).toBeVisible();
   const id = new URL(page.url()).pathname.split('/').pop();
   const current = await (await page.request.get(`/api/sessions/${id}`)).json();
@@ -69,7 +69,7 @@ test('billing shows the INR monthly plan while payment collection stays disabled
 
 test('earlier saved questions remain readable after pushback and reload', async ({ page }) => {
   await login(page);
-  await page.getByRole('button', {name:'Start a conversation'}).click();
+  await startConversation(page);
   await expect(page.getByLabel('Your message')).toBeVisible();
   await page.getByLabel('Your message').fill('I want to build an open source database because developer tools customers will pay for support, but serving costs may be high.');
   await page.getByRole('button', {name:'Send', exact:true}).click();

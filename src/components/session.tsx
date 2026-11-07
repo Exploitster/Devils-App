@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { HandBackCard, Session, Counterpoint, Evidence } from '@/lib/contracts';
 import { api, ApiError, ErrorNotice, Icon, Shell } from './app';
 import { SourceButton } from './source';
+import { takeFirstMessage } from '@/lib/pending-message';
 import '@/styles/chat.css';
 function Points({ points }: {
     points: Counterpoint[];
@@ -67,6 +68,7 @@ export function SessionView({ id }: {
     const [text, setText] = useState('');
     const [action, setAction] = useState('message');
     const [busy, setBusy] = useState(false);
+    const [sending, setSending] = useState('');
     const [title, setTitle] = useState('');
     const [confirm, setConfirm] = useState(false);
     const dialog = useRef<HTMLDialogElement>(null);
@@ -79,12 +81,18 @@ export function SessionView({ id }: {
         operationId: string;
         expectedRevision: number;
     } | null>(null);
-    function load() {
+    function load(isCurrent: () => boolean = () => true) {
         return api<{session: Session}>(`/api/sessions/${id}`).then(data => {
+            // A load whose page effect was already cleaned up must not overwrite newer state.
+            if (!isCurrent()) return;
             setSession(data.session); setTitle(data.session.title); setStale(false); setError('');
-        }).catch((e: Error) => setError(e.message));
+            // A first message typed on the new-conversation screen is sent from here,
+            // so it gets the same thread, Cancel and failure handling as any turn.
+            const first = takeFirstMessage(id);
+            if (first && data.session.messages.length === 0) { setText(first); void generate('turns', false, { session: data.session, text: first }); }
+        }).catch((e: Error) => { if (isCurrent()) setError(e.message); });
     }
-    useEffect(() => { void load(); return () => abort.current?.abort(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { let current = true; void load(() => current); return () => { current = false; abort.current?.abort(); }; }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (confirm)
         dialog.current?.showModal(); }, [confirm]);
     useEffect(() => {
@@ -101,11 +109,11 @@ export function SessionView({ id }: {
         window.addEventListener('scroll', stopFollowing, { passive: true });
         return () => window.removeEventListener('scroll', stopFollowing);
     }, [busy]);
-    async function generate(kind: 'turns' | 'card', skip = false) { if (!session || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !text.trim()))
-        return; const submittedText = text; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setStale(false); const body = { operationId: crypto.randomUUID(), expectedRevision: session.revision }; operation.current = body; abort.current = new AbortController(); try {
+    async function generate(kind: 'turns' | 'card', skip = false, first?: { session: Session; text: string }) { const current = first?.session ?? session; const submittedText = first?.text ?? text; if (!current || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !submittedText.trim()))
+        return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController(); try {
         const data = await api<{
             session: Session;
-        }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? 'I am not sure' : text, action: skip ? 'skip' : action } : {}) }, abort.current.signal);
+        }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? 'I am not sure' : submittedText, action: skip ? 'skip' : first ? 'message' : action } : {}) }, abort.current.signal);
         setSession(data.session);
         if (kind === 'turns')
             setText(current => current === submittedText ? '' : current);
@@ -118,6 +126,7 @@ export function SessionView({ id }: {
     }
     finally {
         if (!cancelling.current) setBusy(false);
+        setSending('');
         operation.current = null;
     } }
     async function cancel() { cancelling.current = true; const body = operation.current; abort.current?.abort(); if (body) {
@@ -130,7 +139,7 @@ export function SessionView({ id }: {
         catch (e) {
             setError((e as Error).message);
         }
-    } cancelling.current = false; setBusy(false); }
+    } cancelling.current = false; setBusy(false); setSending(''); }
     const state = session?.state;
     const question = state?.clarifications.find(q => q.answer === undefined && !q.skipped);
     const pricing = session?.mode === 'business' && /pricing/i.test(session.title);
@@ -152,7 +161,7 @@ export function SessionView({ id }: {
       <div>
       <p className="eyebrow">{session?.mode ?? 'Your conversation'} · {session?.topic}</p>
       <h1>{session?.title ?? 'Loading conversation…'}</h1>
-      </div>{session && <button onClick={() => setConfirm(true)}>Delete conversation</button>}</div>{error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={load}/>}<p className="session-tip"><Icon name="shield"/>Your conversation is saved to your account. Share only what you’re comfortable sending to an AI provider.</p>{session && <>
+      </div>{session && <button onClick={() => setConfirm(true)}>Delete conversation</button>}</div>{error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={() => void load()}/>}<p className="session-tip"><Icon name="shield"/>Your conversation is saved to your account. Share only what you’re comfortable sending to an AI provider.</p>{session && <>
       <details className="chat-rename">
       <summary>Rename conversation</summary>
       <form className="actions" onSubmit={async (e) => { e.preventDefault(); try {
@@ -176,7 +185,7 @@ export function SessionView({ id }: {
       <p className="fine">The example contains fictional details. Edit the draft to describe your own situation before sending. Nothing is sent automatically.</p>
       </section>}
       <section className="conversation" aria-label="Conversation" aria-live="polite" aria-busy={busy}>{session.messages.map(message => <article key={message.id} className={`message ${message.role}`}>
-      <span className="eyebrow">{message.role === 'user' ? 'You' : 'Devils Advocate'}</span><p className="preserve">{message.text}</p>{message.citations.map((citation, index) => <SourceButton citation={citation} key={index}/>)}</article>)}</section>{state && state.phase !== 'support' && state.strengths.length > 0 && <section className="reflection chat-snapshot" aria-label="Current decision snapshot">
+      <span className="eyebrow">{message.role === 'user' ? 'You' : 'Devils Advocate'}</span><p className="preserve">{message.text}</p>{message.citations.map((citation, index) => <SourceButton citation={citation} key={index}/>)}</article>)}{busy && sending && <article className="message user pending"><span className="eyebrow">You · sending</span><p className="preserve">{sending}</p></article>}</section>{state && state.phase !== 'support' && state.strengths.length > 0 && <section className="reflection chat-snapshot" aria-label="Current decision snapshot">
       <h2>The underlying question</h2>
       <p>{state.underlyingQuestion}</p>
       <h2>Strengths</h2>

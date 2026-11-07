@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { goToHistory, signOut } from './support/navigation';
+import { goToHistory, signOut, startConversation } from './support/navigation';
 import AxeBuilder from '@axe-core/playwright';
 test('public signup, guided onboarding, free conversation, history search, and password sign-in work together', async ({ page }, testInfo) => {
   const email = `public-${Date.now()}@example.test`;
@@ -18,7 +18,7 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await page.getByRole('button', { name: 'Let’s think it through' }).click();
   await expect(page).toHaveURL(/\/home\?perspective=philosophy/);
   await expect(page.getByRole('button', { name: /^Philosophy:/ })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page, { mode: 'philosophy' });
   await page.getByLabel('Your message').fill('I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Strengths', exact: true })).toBeVisible();

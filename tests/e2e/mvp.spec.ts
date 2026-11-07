@@ -1,12 +1,12 @@
 import { test, expect, type Locator } from '@playwright/test';
+import { startConversation } from './support/navigation';
 
 test('pricing decision starts with relevant clarification and keeps pushback and cards after reload', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('sam@example.test');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
-  await page.getByRole('button', { name: 'Pricing decision', exact: true }).click();
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page, { title: 'Pricing decision' });
   await expect(page.getByRole('heading', { name: 'Pricing decision', exact: true })).toBeVisible();
   await expect(page.getByText(/current and proposed prices/i)).toBeVisible();
   const endpoint = `/api/sessions/${new URL(page.url()).pathname.split('/').pop()}`;
