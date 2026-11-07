@@ -1,6 +1,6 @@
 .main:has(.chat-workspace) {
   max-width: 1060px;
-  padding: 28px 40px 0;
+  padding: var(--space-6) var(--space-8) 0;
 }
 .chat-workspace {
   min-height: calc(100dvh - 110px);
@@ -12,35 +12,35 @@
 .chat-workspace .chat-heading {
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 12px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-3);
 }
 .chat-heading h1 {
-  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+  font-size: var(--text-2xl);
   line-height: 1.3;
   margin: 0;
   overflow-wrap: anywhere;
 }
 .chat-heading .eyebrow {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1);
 }
 .chat-heading button {
   flex-shrink: 0;
-  font-size: 12px;
-  padding: 8px 12px;
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
 }
 .chat-workspace .session-tip {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   line-height: 1.6;
 }
 .chat-rename {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
-  margin-bottom: 18px;
+  margin-bottom: var(--space-4);
 }
 .chat-rename .actions {
   flex-wrap: wrap;
-  padding-top: 12px;
+  padding-top: var(--space-3);
 }
 .chat-rename input {
   flex: 1;
@@ -50,43 +50,43 @@
   background: 0 0;
   border: 0;
   box-shadow: none;
-  padding: 36px 12px;
+  padding: var(--space-7) var(--space-3);
   margin: auto 0;
   text-align: center;
 }
 .chat-workspace .starter-panel h2 {
-  font-size: 1.8rem;
+  font-size: var(--text-2xl);
 }
 .chat-workspace .starter-panel p {
   max-width: 580px;
-  margin: 0 auto 18px;
+  margin: 0 auto var(--space-4);
 }
 .chat-workspace .starter-panel .fine {
-  margin-top: 16px;
-  font-size: 11px;
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
 }
 .chat-workspace .conversation {
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--space-6);
 }
 .chat-workspace .message {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border: 0;
   border-radius: 0;
   background: 0 0;
   box-shadow: none;
   line-height: 1.85;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 .chat-workspace .message .eyebrow {
   display: block;
-  font-size: 11px;
-  margin-bottom: 10px;
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-2);
 }
 .chat-workspace .message.user {
   width: fit-content;
@@ -95,10 +95,10 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 22px;
-  padding: 16px 22px;
+  padding: var(--space-4) var(--space-5);
 }
 .chat-workspace .message p {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .chat-workspace .message p:last-child {
   margin-bottom: 0;
@@ -108,98 +108,98 @@
 }
 .chat-workspace .chat-snapshot {
   border-top: 1px solid var(--border);
-  margin: 28px 0 8px;
-  padding: 24px 4px 0;
+  margin: var(--space-6) 0 var(--space-2);
+  padding: var(--space-6) var(--space-1) 0;
   background: 0 0;
   box-shadow: none;
 }
 .chat-snapshot h2 {
-  font-size: 15px;
-  margin: 20px 0 10px;
+  font-size: var(--text-base);
+  margin: var(--space-5) 0 var(--space-2);
 }
 .chat-snapshot h2:first-child {
   margin-top: 0;
 }
 .chat-snapshot li,
 .chat-snapshot p {
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.8;
 }
 .chat-snapshot .counterpoint {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   background: 0 0;
   border: 0;
 }
 .chat-snapshot .interpretation {
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .chat-workspace .chat-question {
-  margin: 22px 0;
-  padding: 20px 24px;
+  margin: var(--space-5) 0;
+  padding: var(--space-5) var(--space-6);
 }
 .chat-question h2 {
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 .chat-question p {
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .chat-workspace .handback {
-  margin: 24px 0;
+  margin: var(--space-6) 0;
 }
 .chat-workspace .composer {
   position: sticky;
   bottom: 0;
   z-index: 3;
-  margin: 28px 0 0;
-  padding: 16px 18px 10px;
+  margin: var(--space-6) 0 0;
+  padding: var(--space-4) var(--space-4) var(--space-2);
   border-radius: 22px 22px 0 0;
   background: var(--surface);
   box-shadow: 0-10px 30px var(--background);
 }
 .chat-workspace .composer form > label {
-  font-size: 12px;
-  margin: 0 0 8px;
+  font-size: var(--text-xs);
+  margin: 0 0 var(--space-2);
 }
 .chat-workspace .composer textarea {
   min-height: 76px;
   max-height: 230px;
   border: 0;
-  padding: 6px 2px;
+  padding: var(--space-1) 2px;
   background: 0 0;
   resize: vertical;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 .chat-workspace .composer-options {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 8px 0 12px;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-3);
 }
 .chat-workspace .composer-options select {
   width: auto;
   min-width: 0;
   max-width: 75%;
-  font-size: 12px;
+  font-size: var(--text-xs);
   min-height: 40px;
-  padding: 7px 10px;
+  padding: var(--space-2) var(--space-2);
 }
 .chat-workspace .composer-options .fine {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 .chat-workspace .composer .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .chat-workspace .composer .actions button {
-  font-size: 12px;
+  font-size: var(--text-xs);
   min-height: 42px;
 }
 .chat-workspace .composer > .fine {
-  margin: 10px 0 0;
-  font-size: 10px;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
   text-align: center;
 }
 .chat-latest {
@@ -211,60 +211,60 @@
 }
 @media (max-width: 760px) {
   .main:has(.chat-workspace) {
-    padding: 22px 16px 0;
+    padding: var(--space-5) var(--space-4) 0;
   }
   .chat-workspace {
     min-height: calc(100dvh - 140px);
   }
   .chat-workspace .chat-heading {
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--space-3);
   }
   .chat-heading button {
-    font-size: 10px;
+    font-size: var(--text-xs);
     max-width: 110px;
     margin: 0;
-    padding: 8px;
+    padding: var(--space-2);
   }
   .chat-workspace .session-tip {
     align-items: flex-start;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .chat-workspace .starter-panel {
-    padding: 24px 8px;
+    padding: var(--space-6) var(--space-2);
   }
   .chat-workspace .starter-panel h2 {
-    font-size: 1.5rem;
+    font-size: var(--text-xl);
   }
   .chat-workspace .message {
-    font-size: 14px;
+    font-size: var(--text-sm);
     line-height: 1.8;
   }
   .chat-workspace .message.user {
     max-width: 92%;
-    padding: 14px 17px;
+    padding: var(--space-3) var(--space-4);
   }
   .chat-workspace .composer {
     padding: 12px 12px max(10px, env(safe-area-inset-bottom));
-    margin-top: 20px;
+    margin-top: var(--space-5);
   }
   .chat-workspace .composer textarea {
-    font-size: 16px;
+    font-size: var(--text-base);
     min-height: 66px;
   }
   .chat-workspace .composer .actions button {
     flex: 1 1 auto;
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
   .chat-workspace .composer-options {
-    gap: 6px;
+    gap: var(--space-1);
   }
   .chat-workspace .composer-options select {
-    font-size: 11px;
+    font-size: var(--text-xs);
     max-width: 76%;
   }
   .chat-workspace .chat-question {
-    padding: 18px;
+    padding: var(--space-4);
   }
 }
 .home-chat-start {
@@ -274,14 +274,14 @@
 .home-chat-start .page-heading {
   justify-content: center;
   text-align: center;
-  margin: 20px 0 30px;
+  margin: var(--space-5) 0 var(--space-7);
 }
 .home-chat-start .page-heading h1 {
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-size: var(--text-4xl);
   line-height: 1.18;
 }
 .home-chat-start .page-heading .lead {
-  font-size: 14px;
+  font-size: var(--text-sm);
   max-width: 540px;
   margin-inline: auto;
 }
@@ -290,41 +290,41 @@
 }
 .home-chat-start .home-start {
   margin-top: 0;
-  padding: 24px;
+  padding: var(--space-6);
 }
 .home-chat-start .home-start .mode-card {
   min-height: 170px;
-  padding: 22px;
+  padding: var(--space-5);
 }
 .home-chat-start .home-start .mode-card strong {
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 .home-chat-start .home-start .mode-card > span:not(.icon-tile) {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .home-chat-start .section-heading {
-  margin-top: 30px;
+  margin-top: var(--space-7);
 }
 .home-chat-start .start-footer {
-  padding-top: 20px;
-  margin-top: 20px;
+  padding-top: var(--space-5);
+  margin-top: var(--space-5);
 }
 @media (max-width: 480px) {
   .home-chat-start .home-start {
-    padding: 18px;
+    padding: var(--space-4);
   }
   .home-chat-start .mode-grid {
     grid-template-columns: 1fr;
   }
   .home-chat-start .home-start .mode-card {
     min-height: 0;
-    padding: 18px;
+    padding: var(--space-4);
   }
   .home-chat-start .mode-card .icon-tile {
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2);
   }
   .home-chat-start .page-heading h1 {
-    font-size: 28px;
+    font-size: var(--text-2xl);
   }
   .home-chat-start .desktop-break {
     display: none;
