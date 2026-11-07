@@ -53,7 +53,7 @@ function AccountMenu({ user, onSignOut }: { user: Identity; onSignOut: () => voi
   </div>;
 }
 
-export function AppSidebar({ user, path, open, onClose, onSignOut }: { user?: Identity | null; path: string; open: boolean; onClose: () => void; onSignOut: () => void }) {
+export function AppSidebar({ user, path, open, onClose, onNavigate, onSignOut }: { user?: Identity | null; path: string; open: boolean; onClose: () => void; onNavigate: () => void; onSignOut: () => void }) {
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -64,7 +64,7 @@ export function AppSidebar({ user, path, open, onClose, onSignOut }: { user?: Id
   }, [open, onClose]);
   return <>
     {open && <div className="drawer-backdrop" aria-hidden="true" onClick={onClose}/>}
-    <aside ref={panel} id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`} aria-label="Conversations and account">
+    <aside ref={panel} id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`} aria-label="Conversations and account" onClick={event => { if (open && (event.target as Element).closest('a')) onNavigate(); }}>
       <Brand href="/home"/>
       <Link className="button primary new-conversation" href="/home"><Icon name="plus"/>New conversation</Link>
       <RecentConversations path={path}/>

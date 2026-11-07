@@ -102,7 +102,7 @@ test('an expired trial shows a subscribe line and keeps the typed text', async (
   await page.route('**/api/sessions/*/turns', route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { code: 'ACCESS_EXPIRED', message: 'Generation access has expired. Your history remains available.' } }) }));
   await composer(page).fill('Should I open a second location?');
   await composer(page).press('Enter');
-  await expect(page.getByText('Your free trial has ended.')).toBeVisible();
+  await expect(page.getByText('Your trial or subscription has ended.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Subscribe', exact: true })).toHaveAttribute('href', '/billing');
   await expect(composer(page)).toHaveValue('Should I open a second location?');
 });

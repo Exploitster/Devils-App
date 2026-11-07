@@ -112,7 +112,7 @@ export function SessionView({ id }: {
         return () => window.removeEventListener('scroll', stopFollowing);
     }, [busy]);
     async function generate(kind: 'turns' | 'card', skip = false, first?: { session: Session; text: string }) { const current = first?.session ?? session; const submittedText = first?.text ?? text; if (!current || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !submittedText.trim()))
-        return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController(); try {
+        return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setExpired(false); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController(); try {
         const data = await api<{
             session: Session;
         }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? 'I am not sure' : submittedText, action: skip ? 'skip' : first ? 'message' : action } : {}) }, abort.current.signal);
@@ -228,7 +228,7 @@ export function SessionView({ id }: {
           <button type="button" aria-pressed={action === 'correction'} onClick={() => frame('correction')}>Correct my position</button>
           <button type="button" disabled={stale} onClick={() => void generate('card')}>Make a hand-back card</button>
         </div>}
-        {expired && <div className="notice access-ended" role="status">Your free trial has ended. Subscribe to keep going; your history stays here. <Link href="/billing">Subscribe</Link></div>}
+        {expired && <div className="notice access-ended" role="status">Your trial or subscription has ended. Subscribe to keep going; your history stays here. <Link href="/billing">Subscribe</Link></div>}
       </section>
       <div ref={latestReply} className="chat-latest"/>
       {session.cards.map((card, index) => <Card key={card.id} card={card} latest={index === session.cards.length - 1}/>)}

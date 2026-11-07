@@ -37,7 +37,7 @@ Confirm each of these once. They are owner decisions, not settings.
 
 ## If something fails after step 9
 
-Set `DEVILS_PAYMENTS_ENABLED=false` in Vercel → Production and redeploy. Everyone returns to free access straight away; recorded subscriptions are kept.
+Set `DEVILS_PAYMENTS_ENABLED=false` in Vercel → Production and redeploy. Everyone returns to free access straight away; recorded subscriptions are kept, and they keep renewing until canceled. Subscribers still see **Cancel renewal** on the Billing page; to stop all renewals yourself, cancel them in Dodo → Subscriptions.
 Fix the failing step, then repeat steps 9–11.
 
 ## Why the order matters

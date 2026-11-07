@@ -111,7 +111,7 @@ export default function BillingPage() {
               taxes before payment. Payment methods and recurring payment
               support depend on your country and provider.
             </p>
-            {!data.paymentsEnabled && (
+            {!data.paymentsEnabled && !existing && (
               <p className="notice">
                 Subscriptions are being prepared. Your current free access
                 continues; no payment is required now.
@@ -198,15 +198,17 @@ export default function BillingPage() {
                 </p>
               </>
             )}
-            {data.checkoutAvailable && (
+            {(data.checkoutAvailable || existing) && (
               <div className="actions">
-                <button
-                  disabled={busy}
-                  onClick={() => void action("/api/billing/refresh")}
-                >
-                  Refresh payment status
-                </button>
-                {sub && (
+                {data.checkoutAvailable && (
+                  <button
+                    disabled={busy}
+                    onClick={() => void action("/api/billing/refresh")}
+                  >
+                    Refresh payment status
+                  </button>
+                )}
+                {data.checkoutAvailable && sub && (
                   <button
                     disabled={busy}
                     onClick={() => void action("/api/billing/portal", true)}

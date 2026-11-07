@@ -77,6 +77,23 @@ test('on a phone the sidebar opens as a drawer and closes on Escape or navigatio
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('the drawer closes on a link to the current page and when the window widens to desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 760 });
+  await signUp(page);
+  await page.goto('/history');
+  const menu = page.locator('.menu-button');
+  await menu.click();
+  await sidebar(page).getByRole('link', { name: 'All conversations', exact: true }).click();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert', '');
+  await menu.click();
+  await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
+  await page.setViewportSize({ width: 1280, height: 760 });
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert', '');
+  await page.locator('main').getByRole('link', { name: 'New conversation', exact: true }).click();
+  await expect(page).toHaveURL(/\/home/);
+});
+
 test('the signed-in shell has no accessibility violations', async ({ page }) => {
   await signUp(page);
   await page.goto('/history');
