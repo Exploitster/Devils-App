@@ -62,7 +62,7 @@ Under the current access rule, turning payments on would immediately block every
 **Public site**
 
 - R4. The homepage keeps all current sections in their current order, with spacing, alignment and type corrected and copy trimmed per R2.
-- R5. The other public pages (features, how it works, business validation, philosophical reflection, pricing, FAQ, help, contact, security, sources, subscription and cancellation, refunds, accessibility, privacy, terms) and the sign-in, sign-up and password screens follow R1 and R2.
+- R5. The other public pages (features, how it works, business validation, philosophical reflection, pricing, FAQ, help, contact, security, sources, subscription and cancellation, refunds, accessibility, privacy, terms) and the sign-in, sign-up and password screens follow R1 and R2; the legal pages (privacy, terms, refunds, subscription and cancellation) keep their wording and get layout fixes only.
 
 **App shell**
 
@@ -72,11 +72,11 @@ Under the current access rule, turning payments on would immediately block every
 
 **Chat**
 
-- R9. A conversation reads as a plain message thread; the assistant's guidance (underlying question, strengths, counterpoints, next step) stays inside the reply as light prose sections, not separate panels.
+- R9. A conversation reads as a plain message thread; the conversation's guidance (underlying question, strengths, counterpoints, next step) appears as light prose sections directly under the latest assistant reply, not as separate panels.
 - R10. A clarifying question appears once, as the assistant's reply, with quick replies to answer or skip it.
 - R11. Sources appear as small inline chips in the reply that open the existing source detail.
 - R12. Push back, correct my position and make a decision card are quiet actions on the latest reply, replacing the mode dropdown and the separate card button.
-- R13. One composer stays pinned at the bottom with only a text box and send; the character count appears only near the limit, and a single short line replaces the two-line disclaimer.
+- R13. One composer stays pinned at the bottom with a text box and send, plus the active action tag from R12 when one is set; the character count appears only near the limit, and a single short line replaces the two-line disclaimer.
 - R14. Conversation title, rename and delete live in a compact header menu instead of an always-visible delete button and rename disclosure.
 
 **Payments**
@@ -133,7 +133,7 @@ On phones the sidebar sits behind a menu button and the main column fills the sc
 - AE3. Covers R17.
   - **Given:** The owner has not yet completed the live Dodo setup, migration 004 and their own real payment.
   - **When:** Any user opens Billing or sends a message.
-  - **Then:** Access stays free as today and no live charge can be started.
+  - **Then:** Access stays free as today, and no live charge can be started except the owner's own verification payment that R17 requires.
 - AE4. Covers R3, R6.
   - **Given:** A 375px-wide phone in dark theme.
   - **When:** A user opens a long conversation.
@@ -172,9 +172,6 @@ This plan covers the UI simplification and payments go-live. The areas below are
 **Deferred to Planning**
 
 - Exact copy for each section and empty state, within R2.
-- Which three or four starter prompts the new-conversation screen offers (R7).
-- How the go-live moment is recorded so R16 can tell older accounts from newer ones.
-- How many recent conversations the sidebar lists before pointing to History (R6, R8).
 
 ### Sources / Research
 
@@ -184,7 +181,7 @@ This plan covers the UI simplification and payments go-live. The areas below are
 - Browser tests that reference current labels: `tests/e2e/`.
 - Screenshots and grounding notes (machine-local, best effort): `/tmp/claude-0/-home-user-Devils-App/53a81fd6-08ac-5393-80e9-cdb45bd60262/scratchpad/shots/` and `/tmp/compound-engineering-0/ce-brainstorm/ui-simplify/grounding.md`.
 
-**Product Contract preservation:** Product Contract unchanged.
+**Product Contract preservation:** changed: R5, R9, R13, AE3 — wording aligned with choices the owner confirmed at plan scoping (legal pages keep their wording; one guidance block under the latest reply; the composer shows the action tag) and with R17's owner verification payment; Outstanding Questions answered by KTD7, KTD8 and U4 removed. No scope change.
 
 ---
 
@@ -193,14 +190,15 @@ This plan covers the UI simplification and payments go-live. The areas below are
 ### Key Technical Decisions
 
 - KTD1. **Restyle in two passes: consolidate, then apply the system.** `src/styles/app.css` (about 35KB, minified) redefines the same selectors many times (for example `.lead` ten times), which is the source of the inconsistent spacing. U1 merges duplicate rules with no visual change; U2 adds spacing, type, radius and width tokens to `src/styles/tokens.css` and rewrites component rules against them. Colour tokens and the light/dark theme mechanism stay as they are (R1).
-- KTD2. **One-step start reuses the existing APIs.** The new-conversation screen creates the session (`POST /api/sessions`) and then sends the first turn (`POST /api/sessions/[id]/turns`) before navigating; no new endpoint. If the turn fails after the session exists, the app opens that session with the typed text restored in the composer (R7, F1).
+- KTD2. **One-step start reuses the existing APIs and the chat's turn handling.** On send, the new-conversation screen creates the session (`POST /api/sessions`), navigates to it at once, and hands the typed text to the conversation page in memory (no URL or browser storage, matching the Account page's promise that unsent drafts stay in page memory). The conversation page sends it once through its existing turn submission, so the first reply gets the same thread, Cancel generation, stale-revision and failure handling as every other turn (R7, F1). Chosen over sending the first turn before navigating, which left the user on the start screen with no thread or Cancel for the full generation time.
 - KTD3. **One shared composer component** serves the new-conversation screen and the chat, so both get the same pinned, minimal input, keyboard behaviour (Enter sends, Shift+Enter adds a line) and near-limit counter (R13).
-- KTD4. **The thinking summary stays conversation-level state.** It is the existing session `state` (underlying question, strengths, counterpoints, next step); it renders as light prose directly under the latest assistant message instead of as a separate block after the thread (R9).
-- KTD5. **A pending clarifying question is shown once.** When a clarification is pending, the latest assistant message already carries the question; the separate panel is removed and a quick-reply row (answer focuses the composer, skip sends the existing skip action) sits under that message (R10).
+- KTD4. **The thinking summary stays conversation-level state.** It is the existing session `state` (underlying question, strengths, counterpoints, next step); it renders as light prose directly under the latest assistant message instead of as a separate block after the thread (R9). It renders only when that message is the last item in the thread and no reply is generating, and it is not rendered when that message is the engine's own reflection reply (text beginning "Underlying question:", produced when clarification ends), which already carries the same content.
+- KTD5. **A pending clarifying question is shown once.** The separate panel is removed. When a clarification is pending and the latest assistant message's text is that question (the clarifying phase), only a quick-reply row (answer focuses the composer, skip sends the existing skip action) sits under it; when a reply in another phase adds a pending clarification, the question text appears once under that reply with the same quick replies, because the user's next message is recorded as its answer (R10, AE1).
 - KTD6. **Reply actions map to the existing turn actions.** Push back and Correct my position set the existing `pushback` / `correction` action and show a removable tag on the composer; Make a decision card calls the existing card generation. No API change (R12).
-- KTD7. **Existing accounts are identified by a paid-access start date.** A new setting `DEVILS_PAID_ACCESS_START` (ISO date-time) is required whenever payments are enabled with Dodo; configuration refuses to start without it. An account whose profile `createdAt` is before that moment is allowed with a new access reason `member` and no expiry; everyone else follows today's trial/paid rules (R16, R17). Chosen over a database flag because it needs no migration and the owner sets it in the same step that turns payments on.
+- KTD7. **Existing accounts are identified by a paid-access start date.** A new setting `DEVILS_PAID_ACCESS_START` (ISO date-time) is required whenever payments are enabled with Dodo; configuration refuses to start without it. An account whose profile `createdAt` is before that moment is allowed with a new access reason `member` and no expiry; everyone else follows today's trial/paid rules (R16, R17). Chosen over a database flag because it needs no migration and the owner sets it in the same step that turns payments on. The value must carry an explicit UTC offset or `Z` and must not be later than the current time, so a mistyped or future date cannot silently grant indefinite free access to accounts created after go-live.
 - KTD8. **The sidebar lists recent conversations from the existing list endpoint.** It shows the 15 most recent by `updatedAt`, with a link to History for the rest (R6, R8).
 - KTD9. **Legal pages keep their wording.** Privacy, Terms, Refunds and Subscription & cancellation get layout fixes only; trimming legal text for brevity could change what it promises (R2, R5).
+- KTD11. **The owner verifies with a real live payment before the public switch.** Today only accounts in `DEVILS_DODO_TEST_USER_IDS` may check out while payments are off, and only in test mode. That allowance extends to live mode, so the owner's own account can complete the R17 real payment while `DEVILS_PAYMENTS_ENABLED=false` (everyone, including the owner, keeps free access because the access rule returns early). The release preflight in `scripts/verify-release-environment.mjs` currently blocks every build with payments on; it will allow `DEVILS_PAYMENTS_ENABLED=true` only for the production role with Dodo live mode and a valid `DEVILS_PAID_ACCESS_START`, and keep staging and rehearsal blocked (R17, AE3).
 - KTD10. **Browser tests change with the wording, never by removal.** Selectors that target renamed labels are updated; a new layout suite covers widths and themes (R19).
 
 ### High-Level Technical Design
@@ -231,12 +229,12 @@ otherwise                   -> denied (expired; history stays readable)
 
 ### Assumptions
 
-- Profile `createdAt` reliably reflects when an account first reached the app; accounts created before the paid-access start therefore stay free.
+- Profile `createdAt` is set on an account's first signed-in request, not at Supabase sign-up. Someone who registered before go-live but first signs in afterwards is treated as a new account. This is accepted for the current user base; the owner can move `DEVILS_PAID_ACCESS_START` only backwards, never forwards, under KTD7.
 - The existing sessions list endpoint is fast enough to serve the sidebar for current conversation volumes.
 
 ### Sequencing
 
-U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at any point.
+U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at any point. U8's checklist orders the owner's verification payment before the public switch (KTD11).
 
 ---
 
@@ -252,7 +250,7 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 1. Unminify the stylesheets into readable, one-rule-per-block form.
 2. Merge repeated selectors so each selector's final computed declarations are preserved, keeping media-query and dark-theme rules in their own blocks.
 3. Fold `refinements.css` overrides into the rules they override where that preserves the cascade.
-**Execution note:** Prove no visual change by comparing before/after screenshots of the homepage, new-conversation screen and a conversation at 375px and 1440px.
+**Execution note:** Prove no visual change by comparing before/after screenshots of the homepage, the current Home perspective-card screen and a conversation at 375px and 1440px.
 **Patterns to follow:** Existing token usage in `src/styles/tokens.css`.
 **Test scenarios:** Test expectation: none -- styling-only refactor with no behaviour change; proven by screenshot comparison and the existing browser suite staying green.
 **Verification:** Screenshots match before/after; existing unit and browser tests pass unchanged.
@@ -283,7 +281,8 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 **Approach:**
 1. Replace the Home/History/Billing/Account nav and the sidebar tagline with New conversation, a recent-conversations list (15 most recent, current one marked) and an "All conversations" link to History.
 2. Move Account, Billing, the theme toggle and Sign out into one account menu at the bottom, opened from the user's name.
-3. On narrow screens, hide the sidebar behind a menu button in a slim top bar; the drawer closes on navigation and on Escape.
+3. Below 1024px wide, hide the sidebar behind a menu button in a slim top bar; the drawer closes on navigation and on Escape and returns focus to the menu button.
+4. Give the conversation list loading (a few placeholder rows), empty ("Your conversations will appear here") and error (a short line with Retry) states that never block New conversation or the account menu.
 **Patterns to follow:** Existing `api()` helper and auth fetch in `Shell`; existing `details.site-menu` disclosure pattern on public pages.
 **Test scenarios:**
 - A signed-in user with three conversations sees all three titles in the sidebar, newest first, and the open conversation is marked as current.
@@ -291,6 +290,8 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 - The account menu opens and contains Account, Billing, theme toggle and Sign out; Sign out returns to the sign-in page.
 - At 375px the sidebar is hidden, the menu button opens it, and pressing Escape or choosing a conversation closes it.
 - Keyboard users can reach the menu button, conversation links and account menu items in order, and axe reports no violations on the new-conversation screen.
+- A brand-new account with no conversations sees the empty-state line in the sidebar.
+- After opening the drawer at 375px and pressing Escape, focus returns to the menu button.
 **Verification:** Browser tests above pass; History remains reachable.
 
 ### U4. New-conversation screen with one-step start
@@ -298,25 +299,26 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 **Goal:** Home becomes a calm start screen where typing and sending starts the conversation.
 **Requirements:** R2, R7, F1, KTD2, KTD3.
 **Dependencies:** U3.
-**Files:** `src/app/home/page.tsx`, `src/components/composer.tsx` (new), `src/styles/chat.css`, `tests/e2e/mvp.spec.ts`, `tests/e2e/public-onboarding.spec.ts`, `tests/e2e/chat-ux.spec.ts`.
+**Files:** `src/app/home/page.tsx`, `src/components/composer.tsx` (new), `src/components/session.tsx` (picks up the handed-over first message), `src/styles/chat.css`, `tests/e2e/mvp.spec.ts`, `tests/e2e/public-onboarding.spec.ts`, `tests/e2e/chat-ux.spec.ts`.
 **Approach:**
 1. Create the shared composer: auto-growing text box, send button with an accessible "Send" name, Enter to send, Shift+Enter for a new line, counter shown only near the 12,000-character limit, an optional removable mode tag, one short disclaimer line.
 2. Replace the perspective cards, topic chips, topic disclosure, inspiration cards and start button with: greeting, composer, a Business / Personal toggle, and three or four starter prompts that fill the composer (including a pricing starter that creates a "Pricing decision" conversation).
-3. On send, create the session with the chosen perspective and starter title, send the first turn, then open the conversation; on a failed turn, open the session with the text restored (KTD2).
+3. On send, disable the composer and starters, create the session with the chosen perspective and starter title, open it at once and hand over the typed text for the conversation page to send (KTD2); a second Enter while creating is ignored.
 **Patterns to follow:** Session creation in the current `src/app/home/page.tsx`; turn submission in `generate()` in `src/components/session.tsx`.
 **Test scenarios:**
-- Typing a message on the new-conversation screen and pressing Enter opens a new conversation that already shows the user's message and the reply.
+- Typing a message on the new-conversation screen and pressing Enter opens a new conversation that shows the user's message at once, offers Cancel generation while the reply is produced, and then shows the reply.
+- Pressing Enter twice quickly creates only one conversation.
 - Choosing Personal before sending creates a philosophy conversation.
 - Choosing the pricing starter creates a conversation titled "Pricing decision" with the business perspective.
 - Shift+Enter inserts a new line instead of sending; an empty composer cannot send.
-- When the first turn fails after the session is created, the user lands in that conversation with their text still in the composer and an error notice.
+- When the first turn fails, the user stays in the new conversation with their text still in the composer and the existing error notice.
 - The character counter is hidden for a short message and appears when the text is near the limit.
 **Verification:** Browser tests above pass, and existing flows in `mvp.spec.ts` and `public-onboarding.spec.ts` pass with updated selectors.
 
 ### U5. Chat thread redesign
 
 **Goal:** A clean message thread with guidance inline, a single question, quiet actions and a pinned composer.
-**Requirements:** R9, R10, R11, R12, R13, R14, AE1, KTD3, KTD4, KTD5, KTD6.
+**Requirements:** R9, R10, R11, R12, R13, R14, AE1, F2, KTD3, KTD4, KTD5, KTD6.
 **Dependencies:** U4.
 **Files:** `src/components/session.tsx`, `src/components/source.tsx`, `src/styles/chat.css`, `tests/e2e/chat-ux.spec.ts`, `tests/e2e/mvp.spec.ts`.
 **Approach:**
@@ -324,11 +326,16 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 2. Render messages as a plain thread; render source citations as small chips that open the existing source detail.
 3. Render the conversation's thinking summary as light prose sections under the latest assistant message (KTD4).
 4. Remove the clarifying-question panel; when a clarification is pending, show answer/skip quick replies under the latest assistant message (KTD5).
-5. Add quiet actions under the latest assistant reply: Push back, Correct my position, Make a decision card (KTD6); keep decision cards in the thread with their copy and download actions.
+5. Add quiet actions under the latest assistant reply: Push back, Correct my position, Make a decision card (KTD6). They are always visible as low-emphasis buttons (no hover-only reveal) with at least 44px touch targets, hidden while a reply is generating, and replaced by the Answer/Skip row while a clarification is pending. Keep decision cards in the thread with their copy and download actions.
 6. Use the shared composer pinned to the bottom; keep the empty-conversation starter as one line of guidance plus the existing example button.
+7. When a turn is refused because access has expired, show one line under the thread saying generation needs a subscription, with a Subscribe link to Billing; keep the typed text and history readable (F2).
 **Patterns to follow:** Existing `generate()`, `cancel()` and stale-revision handling in `src/components/session.tsx`; `SourceButton` in `src/components/source.tsx`.
 **Test scenarios:**
 - Covers AE1. After a vague first message, the clarifying question appears exactly once in the page, with Answer and Skip quick replies under it.
+- A later reply that adds a pending clarification outside the clarifying phase shows that question exactly once with Answer and Skip.
+- After a clarifying question is answered or skipped, the underlying question text appears once on the page.
+- While a reply is generating, the quiet actions are hidden; at 375px they are visible without hovering.
+- Covers F2. When a turn is refused for expired access, the subscribe line and Billing link appear and the typed text stays in the composer.
 - Choosing Skip sends the existing skip turn and the next reply appears.
 - Choosing Push back shows a "Pushing back" tag on the composer; sending saves a turn with the pushback action and clears the tag; removing the tag returns to a normal message.
 - Make a decision card produces a card in the thread, and Copy card / Download Markdown still work.
@@ -361,13 +368,15 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 ### U7. Existing-member access rule and go-live guard
 
 **Goal:** When payments are switched on, accounts created before the paid-access start keep free access; payments cannot be switched on without that date.
-**Requirements:** R16, R17, AE2, AE3, F2, KTD7.
+**Requirements:** R16, R17, AE2, AE3, F2, KTD7, KTD11.
 **Dependencies:** None.
-**Files:** `src/lib/config.ts`, `src/lib/auth/access.ts`, `src/lib/contracts.ts`, `src/app/billing/page.tsx`, `.env.example`, `tests/config.test.ts`, `tests/dodo-billing.test.ts`.
+**Files:** `src/lib/config.ts`, `src/lib/auth/access.ts`, `src/lib/contracts.ts`, `src/lib/billing/dodo-service.ts`, `src/app/billing/page.tsx`, `scripts/verify-release-environment.mjs`, `.env.example`, `tests/config.test.ts`, `tests/dodo-billing.test.ts`, `tests/release-environment.test.ts`.
 **Approach:**
 1. Read `DEVILS_PAID_ACCESS_START` as an ISO date-time; when payments are enabled with Dodo, missing or invalid values stop configuration with a clear error.
 2. In the Dodo access path, after the paid-subscription check and before the trial check, allow accounts whose profile `createdAt` is before the start with reason `member` and no expiry.
 3. Show members on the Billing page as having free access as an existing member, with Subscribe still available.
+4. Let accounts listed in `DEVILS_DODO_TEST_USER_IDS` start checkout in live mode while payments are disabled (KTD11).
+5. Change the release preflight to allow payments on only for the production role with Dodo live mode and a valid start date; staging and rehearsal stay blocked (KTD11).
 **Execution note:** Implement the access rule test-first; it controls who can use the product once payments are live.
 **Patterns to follow:** Existing Dodo branch and trial calculation in `src/lib/auth/access.ts`; existing validation style in `src/lib/config.ts`.
 **Test scenarios:**
@@ -377,20 +386,25 @@ U1 → U2 → (U3, U6 in parallel) → U4 → U5 → U9. U7 → U8 can run at an
 - An account with a verified live subscription is allowed with reason `paid` regardless of creation date.
 - A disabled profile is denied even if created before the start.
 - Covers AE3. With payments disabled, every active account is allowed with reason `free` and the start date is not required.
-- Enabling payments with Dodo live mode but no start date fails configuration with a message naming `DEVILS_PAID_ACCESS_START`.
+- Enabling payments with Dodo, in test or live mode, with no start date fails configuration with a message naming `DEVILS_PAID_ACCESS_START`.
 - An unparseable start date fails configuration.
+- A start date without a UTC offset or `Z`, or one later than the current time, fails configuration.
+- With payments disabled in live mode, an allowlisted account can start checkout and a non-allowlisted account still gets the payments-disabled error.
+- The release preflight allows a production build with payments on, live mode and a valid start date; it blocks the same build in test mode or without a start date, and blocks any staging or rehearsal build with payments on (existing preflight cases are updated, none removed).
 **Verification:** Unit tests above pass; the existing billing and Dodo test suites stay green.
 
 ### U8. Payments go-live checklist
 
 **Goal:** The owner can turn on live payments step by step and confirm each step worked.
-**Requirements:** R18.
+**Requirements:** R18, R17, KTD11.
 **Dependencies:** U7.
 **Files:** `docs/payments-go-live.md` (new), `docs/integrations.md`, `docs/dodo-payments-setup.md`, `README.md`.
 **Approach:**
-1. List the owner steps in order: live Dodo product (₹2,000 monthly), live API key, webhook endpoint and signing secret, migration 004 via the Supabase setup file, Vercel settings (`DEVILS_DODO_ENVIRONMENT=live_mode`, live product ID, `DEVILS_PAID_ACCESS_START`, then `DEVILS_PAYMENTS_ENABLED=true`), redeploy, and one real payment by the owner.
-2. For each step, say where it is done and how to confirm it (for example a 200 webhook delivery, a paid status on the Billing page, an existing account still able to chat).
-3. Link the checklist from `docs/integrations.md`, `docs/dodo-payments-setup.md` and the README.
+1. List the owner steps in order: live Dodo product (₹2,000 monthly), live API key, webhook endpoint and signing secret, migration 004 via the Supabase setup file, Vercel settings with payments still off (`DEVILS_DODO_ENVIRONMENT=live_mode`, live product ID, the owner's account in `DEVILS_DODO_TEST_USER_IDS`), redeploy, the owner's real payment with its webhook and paid-status checks, and only then `DEVILS_PAYMENTS_ENABLED=true` with `DEVILS_PAID_ACCESS_START` set to the current UTC time ending in `Z`, and a final redeploy.
+2. Include the paid-launch confirmations already required by `docs/dodo-payments-setup.md`: daily AI spend limit and capacity, hosted Google and email sign-in, support and refund contact, purchase terms, and cancellation and entitlement checks.
+3. Add a rollback step: if a post-switch check fails, set `DEVILS_PAYMENTS_ENABLED=false` and redeploy.
+4. For each step, say where it is done and how to confirm it (for example a 200 webhook delivery, a paid status on the Billing page, an existing account still able to chat).
+5. Replace the setup guide's statement that the release guard requires payments to stay off with a link to the checklist, and link the checklist from `docs/integrations.md`, `docs/dodo-payments-setup.md` and the README.
 **Test scenarios:** Test expectation: none -- documentation only.
 **Verification:** Each R17 step appears with a location and a confirmation check; links resolve.
 
