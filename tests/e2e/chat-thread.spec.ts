@@ -1,11 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 import { startConversation } from './support/navigation';
 
+// Each test gets its own account: these tests send many turns, and sharing one
+// account would trip the per-account submission limit for the specs that follow.
 async function signIn(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email address').fill('alex@example.test');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page).toHaveURL(/\/home/);
+  await page.goto('/signup');
+  await page.getByLabel('Your name', { exact: true }).fill('Jordan');
+  await page.getByLabel('Email address').fill(`thread-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`);
+  await page.getByLabel('Password', { exact: true }).fill('My long unique test password');
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding/);
+  await page.goto('/home');
 }
 const composer = (page: Page) => page.getByLabel('Your message', { exact: true });
 const sessionPath = (page: Page) => `/api/sessions/${new URL(page.url()).pathname.split('/').pop()}`;
