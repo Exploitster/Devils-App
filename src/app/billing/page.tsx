@@ -7,6 +7,7 @@ interface Billing {
   access: AccessDecision;
   paymentsEnabled: boolean;
   checkoutAvailable: boolean;
+  verificationCheckout?: boolean;
   testMode: boolean;
   subscription: null | {
     status: string;
@@ -114,6 +115,12 @@ export default function BillingPage() {
               <p className="notice">
                 Subscriptions are being prepared. Your current free access
                 continues; no payment is required now.
+              </p>
+            )}
+            {data.verificationCheckout && (
+              <p className="notice">
+                Owner verification checkout. This is a real payment in live
+                mode; payments are still closed to everyone else.
               </p>
             )}
             {data.testMode && data.checkoutAvailable && (

@@ -2833,3 +2833,100 @@ p {
     background: #00000052;
   }
 }
+
+/* Sample walkthrough: one compact numbered story instead of seven cards. */
+.story-steps {
+  counter-reset: step;
+  list-style: none;
+  margin: var(--space-7) auto 0;
+  padding: 0;
+  max-width: var(--wide);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.story-steps li {
+  counter-increment: step;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+.story-steps li::before {
+  content: counter(step);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.story-steps span {
+  color: var(--muted);
+}
+
+/* Public header on phones: one slim row; Pricing lives in the menu. */
+@media (max-width: 600px) {
+  .public-header {
+    min-height: 64px;
+    flex-wrap: nowrap;
+    padding-block: var(--space-2);
+  }
+  .public-header .brand-caption,
+  .public-header .pricing-link {
+    display: none;
+  }
+  .public-header nav {
+    gap: var(--space-2);
+    flex-wrap: nowrap;
+    width: auto;
+    justify-content: flex-end;
+  }
+  .public-header .wordmark {
+    flex: 1;
+    min-width: 0;
+  }
+  .public-header .button.small {
+    padding-inline: var(--space-3);
+  }
+}
+@media (max-width: 400px) {
+  .public-header {
+    padding-inline: var(--space-4);
+  }
+  .public-header nav {
+    flex-shrink: 0;
+  }
+  .public-header .wordmark > span:last-child {
+    white-space: nowrap;
+  }
+  .public-header .button.small svg {
+    display: none;
+  }
+  .public-header .site-menu summary {
+    list-style: none;
+  }
+  .public-header .site-menu summary::-webkit-details-marker {
+    display: none;
+  }
+}
+/* Smallest phones: the logo carries the brand; the name stays for screen readers. */
+@media (max-width: 379px) {
+  .public-header .wordmark > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
