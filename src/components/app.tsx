@@ -4,11 +4,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppSidebar, AppTopBar } from './sidebar';
 import type { AccessDecision, Identity } from '@/lib/contracts';
-export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
+export class ApiError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } }
 export async function api<T>(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { method, credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal });
   const data = await response.json();
-  if (!response.ok) throw new ApiError(data.error?.message ?? 'The request could not complete.', response.status);
+  if (!response.ok) throw new ApiError(data.error?.message ?? 'The request could not complete.', response.status, data.error?.code);
   return data;
 }
 export interface AuthData { user: Identity | null; access?: AccessDecision; config: { runtimeMode: string; sharedDataRehearsal?:boolean; paymentsEnabled?: boolean; betaActive: boolean; launchDate: string; }; }

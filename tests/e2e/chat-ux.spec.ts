@@ -40,7 +40,7 @@ test('an edited draft survives a response arriving for the preceding message', a
   try {
     await input.fill('I want to build a database tool because developers pay for support, but costs may be high.');
     await input.press('Enter');
-    await expect(page.getByRole('button', { name: 'Thinking…', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel generation', exact: true })).toBeVisible();
     await input.fill('A follow-up I am still composing.');
     release();
     await expect(page.locator('.message.assistant').first()).toBeVisible();

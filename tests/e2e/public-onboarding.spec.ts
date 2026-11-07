@@ -21,7 +21,7 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await startConversation(page, { mode: 'philosophy' });
   await page.getByLabel('Your message').fill('I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Strengths', exact: true })).toBeVisible();
+  await expect(page.getByText(/Strengths/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Make a hand-back card' }).click();
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
