@@ -1,12 +1,12 @@
 import { test, expect, type Locator } from '@playwright/test';
+import { startConversation } from './support/navigation';
 
 test('pricing decision starts with relevant clarification and keeps pushback and cards after reload', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('sam@example.test');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
-  await page.getByRole('button', { name: 'Pricing decision', exact: true }).click();
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page, { title: 'Pricing decision' });
   await expect(page.getByRole('heading', { name: 'Pricing decision', exact: true })).toBeVisible();
   await expect(page.getByText(/current and proposed prices/i)).toBeVisible();
   const endpoint = `/api/sessions/${new URL(page.url()).pathname.split('/').pop()}`;
@@ -27,16 +27,16 @@ test('pricing decision starts with relevant clarification and keeps pushback and
   expect((await (await page.request.get(endpoint)).json()).session.messages).toHaveLength(0);
   await page.getByLabel('Your message').fill('I am considering changing the price of my subscription product.');
   await saveTurn(page.getByRole('button', { name: 'Send', exact: true }));
-  const question = page.locator('.panel').filter({has:page.getByRole('heading', {name:'One question before we go further'})});
+  const question = page.locator('.message.assistant').last();
   await expect(question).toContainText(/price|customer|cost/i);
   await page.getByLabel('Your message').fill('Our current price is $20 per month and the proposed price is $25. We have 100 small business customers, variable costs of $5 per customer, and want to improve margins. We do not know churn yet.');
   await saveTurn(page.getByRole('button', { name: 'Send', exact: true }));
   for (let i = 0; i < 3; i++) {
-    if (!(await page.getByRole('button', {name:'I’m not sure — skip this question'}).count())) break;
-    await saveTurn(page.getByRole('button', {name:'I’m not sure — skip this question'}));
+    if (!(await page.getByRole('button', {name:'Skip question', exact:true}).count())) break;
+    await saveTurn(page.getByRole('button', {name:'Skip question', exact:true}));
   }
-  await expect(page.getByRole('heading', { name: 'Strengths', exact: true })).toBeVisible();
-  await page.getByLabel('How to frame it').selectOption('pushback');
+  await expect(page.getByText(/Strengths/).first()).toBeVisible();
+  await page.getByRole('button', {name:'Push back', exact:true}).click();
   await page.getByLabel('Your message').fill('I disagree: a staged price test with existing customers could reduce the risk. What would challenge that approach?');
   await saveTurn(page.getByRole('button', {name:'Send', exact:true}));
   await page.getByRole('button', {name:'Make a hand-back card'}).click();

@@ -1,13 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { AppSidebar, AppTopBar } from './sidebar';
 import type { AccessDecision, Identity } from '@/lib/contracts';
-export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
+export class ApiError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } }
 export async function api<T>(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { method, credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal });
   const data = await response.json();
-  if (!response.ok) throw new ApiError(data.error?.message ?? 'The request could not complete.', response.status);
+  if (!response.ok) throw new ApiError(data.error?.message ?? 'The request could not complete.', response.status, data.error?.code);
   return data;
 }
 export interface AuthData { user: Identity | null; access?: AccessDecision; config: { runtimeMode: string; sharedDataRehearsal?:boolean; paymentsEnabled?: boolean; betaActive: boolean; launchDate: string; }; }
@@ -28,27 +29,46 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     chat: <path d="M21 11a8 8 0 0 1-8 8H7l-5 3V11a9 9 0 0 1 19 0Z"/>,
     card: <><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 8h10M7 12h7M7 16h5"/></>,
     lock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
+    menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.spark}</svg>;
 }
 export function Brand({ href = '/' }: { href?: string }) { return <Link className="wordmark" href={href}><span className="brand-symbol"><Icon name="spark" size={23}/></span><span>Devils Advocate<span className="brand-caption">Your call. Always.</span></span></Link>; }
 export function ErrorNotice({ error, retry }: { error: string; retry?: () => void }) { return <div className="notice error-notice" role="alert"><p>{error}</p>{retry && <button onClick={retry}>Try again</button>}</div>; }
 function subscribeTheme(listener: () => void) { window.addEventListener('storage', listener); window.addEventListener('devils-theme', listener); return () => { window.removeEventListener('storage', listener); window.removeEventListener('devils-theme', listener); }; }
-export function ThemeButton() {
-  const dark = useSyncExternalStore(subscribeTheme, () => { try { return localStorage.getItem('devils-theme') === 'dark'; } catch { return false; } }, () => false);
+function storedDark() { try { return localStorage.getItem('devils-theme') === 'dark'; } catch { return false; } }
+function useAppliedTheme() {
+  const dark = useSyncExternalStore(subscribeTheme, storedDark, () => false);
   useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
+  return dark;
+}
+export function ThemeButton() {
+  const dark = useAppliedTheme();
   return <button className="quiet theme-button" aria-label={`${dark ? 'Light' : 'Dark'} theme`} onClick={() => { try { localStorage.setItem('devils-theme', dark ? 'light' : 'dark'); } catch { /* Browser storage may be disabled. */ } window.dispatchEvent(new Event('devils-theme')); }}><Icon name={dark ? 'sun' : 'moon'}/><span>{dark ? 'Light' : 'Dark'} theme</span></button>;
 }
 export function IdeaVisual({ compact = false }: { compact?: boolean }) { return <div className={`idea-visual ${compact ? 'compact' : ''}`} aria-hidden="true"><div className="idea-orbit orbit-one"/><div className="idea-orbit orbit-two"/><div className="idea-core"><Icon name="spark" size={50}/></div><div className="idea-float float-one"><span className="icon-tile teal"><Icon name="check"/></span>Find what holds up.</div><div className="idea-float float-two"><span className="icon-tile violet"><Icon name="chat"/></span>See another angle.</div><div className="idea-float float-three"><span className="icon-tile blue"><Icon name="arrow"/></span>Choose your next step.</div></div>; }
 export function Shell({ children, mode = 'business' }: { children: ReactNode; mode?: string }) {
   const path = usePathname(); const router = useRouter(); const [auth, setAuth] = useState<AuthData>(); const [error, setError] = useState('');
+  useAppliedTheme();
   const publicPage = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/privacy', '/terms', '/onboarding', '/about', '/features', '/business-validation', '/philosophical-reflection', '/how-it-works', '/pricing', '/faq', '/help', '/contact', '/security', '/sources', '/subscription-and-cancellation', '/refunds', '/accessibility'].includes(path);
   const recovery = path === '/reset-password';
+  const [drawerPath, setDrawerPath] = useState<string | null>(null); const drawer = drawerPath === path; const toggle = useRef<HTMLButtonElement>(null);
+  const closeDrawer = useCallback(() => { setDrawerPath(null); toggle.current?.focus(); }, []);
+  const leaveDrawer = useCallback(() => setDrawerPath(null), []);
+  useEffect(() => {
+    if (!drawer) return;
+    // Past the drawer breakpoint the sidebar is permanent, so an open drawer must not keep the page inert.
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const close = () => { if (desktop.matches) setDrawerPath(null); };
+    desktop.addEventListener('change', close);
+    return () => desktop.removeEventListener('change', close);
+  }, [drawer]);
+  const signOut = async () => { try { await api('/api/auth', 'DELETE'); router.push('/login'); } catch (e) { setError((e as Error).message); } };
   useEffect(() => { let active = true; api<AuthData>('/api/auth').then(data => { if (active) { setAuth(data); setError(''); if (!publicPage && !data.user) router.replace(path === '/billing' ? '/login?next=%2Fbilling' : '/login'); else if (!publicPage && data.access?.reason === 'disabled' && path !== '/account') router.replace('/account'); } }).catch(() => { if (active) setError('We couldn’t load your account. Check your connection and try again.'); }); return () => { active = false; }; }, [path, publicPage, router]);
   return <div className={`app ${publicPage ? 'public-app' : ''}`} data-mode={mode}>
     <nav aria-label="Skip navigation"><a href="#main" className="skip">Skip to content</a></nav>
-    {publicPage ? <header className="public-header"><Brand/><nav aria-label="Main navigation">{!['/login', '/signup', '/forgot-password', '/reset-password', '/onboarding'].includes(path) && <><Link className="desktop-link" href="/features">Features</Link><Link className="desktop-link" href="/how-it-works">How it works</Link><Link href="/pricing">Pricing</Link><Link className="desktop-link" href="/help">Help</Link><Link className="desktop-link" href="/login">Sign in</Link><Link className="button primary small" href="/signup">Get started <Icon name="arrow" size={16}/></Link><details className="site-menu"><summary>Menu</summary><div>{[['/features','Features'],['/how-it-works','How it works'],['/business-validation','Business validation'],['/philosophical-reflection','Philosophy'],['/faq','FAQ'],['/help','Help'],['/login','Sign in']].map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</div></details></>}<div className="public-theme"><ThemeButton/></div></nav></header> : <aside className="sidebar"><Brand href="/home"/><Link className="button primary new-conversation" href="/home"><Icon name="plus"/>New conversation</Link><nav aria-label="Main navigation">{['Home', 'History', 'Billing', 'Account'].map(label => <Link key={label} href={`/${label.toLowerCase()}`} aria-current={path.startsWith(`/${label.toLowerCase()}`) ? 'page' : undefined}><Icon name={label.toLowerCase()}/><span>{label}</span></Link>)}</nav><div className="sidebar-note"><span className="availability-dot"/>A little space to think.<p>Another perspective.<br/>The decision stays yours.</p></div><div className="sidebar-bottom"><ThemeButton/>{auth?.user && <><div className="sidebar-profile"><span className="avatar">{(auth.user.name || auth.user.email).slice(0, 1).toUpperCase()}</span><div><strong>{auth.user.name || 'Your account'}</strong><span>{auth.user.email}</span></div></div><button className="quiet" aria-label="Sign out" onClick={async () => { try { await api('/api/auth', 'DELETE'); router.push('/login'); } catch (e) { setError((e as Error).message); } }}><Icon name="logout"/><span>Sign out</span></button></>}</div></aside>}
-    <div className="workspace">{auth?.config.sharedDataRehearsal&&<section className="runtime" aria-label="Temporary test site">Temporary test site · Shares your existing account and saved data. Dodo test payments only.</section>}{auth?.config.runtimeMode === 'local' && <section className="runtime" aria-label="Development mode">Local demo · simulated AI responses · no emails sent</section>}<main id="main" className={`main ${publicPage ? 'public-main' : ''}`}>
+    {publicPage ? <header className="public-header"><Brand/><nav aria-label="Main navigation">{!['/login', '/signup', '/forgot-password', '/reset-password', '/onboarding'].includes(path) && <><Link className="desktop-link" href="/features">Features</Link><Link className="desktop-link" href="/how-it-works">How it works</Link><Link className="pricing-link" href="/pricing">Pricing</Link><Link className="desktop-link" href="/help">Help</Link><Link className="desktop-link" href="/login">Sign in</Link><Link className="button primary small" href="/signup">Get started <Icon name="arrow" size={16}/></Link><details className="site-menu"><summary>Menu</summary><div>{[['/features','Features'],['/how-it-works','How it works'],['/pricing','Pricing'],['/business-validation','Business validation'],['/philosophical-reflection','Philosophy'],['/faq','FAQ'],['/help','Help'],['/login','Sign in']].map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</div></details></>}<div className="public-theme"><ThemeButton/></div></nav></header> : <><AppTopBar open={drawer} onToggle={() => setDrawerPath(drawer ? null : path)} toggleRef={toggle}/><AppSidebar user={auth?.user} path={path} open={drawer} onClose={closeDrawer} onNavigate={leaveDrawer} onSignOut={signOut}/></>}
+    <div className="workspace" inert={drawer || undefined}>{auth?.config.sharedDataRehearsal&&<section className="runtime" aria-label="Temporary test site">Temporary test site · Shares your existing account and saved data. Dodo test payments only.</section>}{auth?.config.runtimeMode === 'local' && <section className="runtime" aria-label="Development mode">Local demo · simulated AI responses · no emails sent</section>}<main id="main" className={`main ${publicPage ? 'public-main' : ''}`}>
       {error && !recovery && <ErrorNotice error={error} retry={() => window.location.reload()}/>}
       {!publicPage && !auth ? <div className="page-loading" role="status"><span className="loading-orb"/>Preparing your space…</div> : !publicPage && !auth?.user ? <p role="status">Taking you to sign in…</p> : <>{auth?.access && !auth.access.allowed && !publicPage && <div className="notice" role="status">Your account currently cannot create AI responses. Your history and account controls remain available. <Link href={auth.config.paymentsEnabled?"/billing":"/account"}>{auth.config.paymentsEnabled?'View subscription':'View account'}</Link></div>}{children}</>}
     </main><footer className={publicPage ? 'site-footer' : ''}><span>Devils Advocate. Your call. Always.</span><div>{(publicPage ? [['/about','About'],['/features','Features'],['/pricing','Pricing'],['/faq','FAQ'],['/help','Help'],['/contact','Contact'],['/sources','Sources'],['/security','Security'],['/accessibility','Accessibility'],['/subscription-and-cancellation','Subscription & cancellation'],['/refunds','Refunds'],['/privacy','Privacy'],['/terms','Terms']] : [['/help','Help'],['/privacy','Privacy'],['/terms','Terms']]).map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</div></footer></div>

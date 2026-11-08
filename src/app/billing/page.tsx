@@ -7,6 +7,7 @@ interface Billing {
   access: AccessDecision;
   paymentsEnabled: boolean;
   checkoutAvailable: boolean;
+  verificationCheckout?: boolean;
   testMode: boolean;
   subscription: null | {
     status: string;
@@ -110,10 +111,16 @@ export default function BillingPage() {
               taxes before payment. Payment methods and recurring payment
               support depend on your country and provider.
             </p>
-            {!data.paymentsEnabled && (
+            {!data.paymentsEnabled && !existing && (
               <p className="notice">
                 Subscriptions are being prepared. Your current free access
                 continues; no payment is required now.
+              </p>
+            )}
+            {data.verificationCheckout && (
+              <p className="notice">
+                Owner verification checkout. This is a real payment in live
+                mode; payments are still closed to everyone else.
               </p>
             )}
             {data.testMode && data.checkoutAvailable && (
@@ -163,7 +170,9 @@ export default function BillingPage() {
                   ? "Your 24-hour trial is active. No payment details are needed for the trial."
                   : data.access.reason === "paid"
                     ? "Your monthly subscription is active."
-                    : "Your trial or subscription is not active. Your saved history remains available."}
+                    : data.access.reason === "member"
+                      ? "You joined before subscriptions opened, so your access stays free. You can still subscribe to support the service."
+                      : "Your trial or subscription is not active. Your saved history remains available."}
             </p>
             {data.access.expiresAt && (
               <p>
@@ -189,15 +198,17 @@ export default function BillingPage() {
                 </p>
               </>
             )}
-            {data.checkoutAvailable && (
+            {(data.checkoutAvailable || existing) && (
               <div className="actions">
-                <button
-                  disabled={busy}
-                  onClick={() => void action("/api/billing/refresh")}
-                >
-                  Refresh payment status
-                </button>
-                {sub && (
+                {data.checkoutAvailable && (
+                  <button
+                    disabled={busy}
+                    onClick={() => void action("/api/billing/refresh")}
+                  >
+                    Refresh payment status
+                  </button>
+                )}
+                {data.checkoutAvailable && sub && (
                   <button
                     disabled={busy}
                     onClick={() => void action("/api/billing/portal", true)}

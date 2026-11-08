@@ -83,7 +83,7 @@ The test checkout itself is genuine provider integration. Automated unit tests u
 
 After merchant approval, create the matching **Live Mode** monthly product and live webhook. Keep test and live keys/products/signing secrets separately recorded; do not discard test configuration. Bind the approved live Dodo values privately to the production deployment. Test and live customers are separate; the app archives test context when a user starts live billing and never repurposes a live customer as a test customer.
 
-Do not change `DEVILS_PAYMENTS_ENABLED` to true yet. The current release guard deliberately requires it to remain false. The maintainer must verify the real live product, signed webhook delivery, owner-controlled real payment, cancellation and entitlement flow before making a reviewed release that enables paid access. The app-wide AI budget/capacity, hosted Google/email login, support/refund contact and applicable purchase terms also need confirmation before a paid public launch. Existing Gemini citation/schema regression tests and offline evaluations must pass; live AI availability is a separate check.
+To switch paid access on, follow the [payments go-live checklist](payments-go-live.md). The release guard allows `DEVILS_PAYMENTS_ENABLED=true` only for production in live mode with a past `DEVILS_PAID_ACCESS_START`; the owner's real verification payment happens before that switch. The checklist also covers the app-wide AI budget/capacity, hosted Google/email login, support/refund contact and purchase terms that need confirmation before a paid public launch. Existing Gemini citation/schema regression tests and offline evaluations must pass; live AI availability is a separate check.
 
 ## How it works
 

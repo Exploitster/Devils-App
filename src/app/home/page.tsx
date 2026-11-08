@@ -1,16 +1,62 @@
 'use client';
-import Link from 'next/link';
 import '@/styles/chat.css';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, type AuthData, ErrorNotice, Icon, Shell } from '@/components/app';
+import { Composer } from '@/components/composer';
+import { handOverFirstMessage } from '@/lib/pending-message';
 import type { Mode, Session, Topic } from '@/lib/contracts';
-export default function Home() { return <Suspense fallback={<Shell><p role="status">Preparing your space…</p></Shell>}><HomeContent/></Suspense>; }
-function HomeContent() {
-  const search = useSearchParams();
-  const [mode, setMode] = useState<Mode>(search.get('perspective') === 'philosophy' ? 'philosophy' : 'business'); const [topic, setTopic] = useState<Topic>(search.get('perspective') === 'philosophy' ? 'life' : 'startup'); const [pricing, setPricing] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState(''); const [sessions, setSessions] = useState<Session[]>(); const [historyError, setHistoryError] = useState(''); const router = useRouter();
-  useEffect(() => { api<AuthData>('/api/auth').then(data => setName(data.user?.name?.split(' ')[0] || '')).catch(() => {}); api<{ sessions: Session[] }>('/api/sessions').then(data => setSessions(data.sessions)).catch(() => setHistoryError('Your recent conversations couldn’t load. You can try again in History.')); }, []);
-  function choose(value: Mode) { setMode(value); setTopic(value === 'business' ? 'startup' : 'life'); setPricing(false); }
-  async function start() { setBusy(true); setError(''); try { const data = await api<{ session: Session }>('/api/sessions', 'POST', { mode, topic, ...(pricing ? { title: 'Pricing decision' } : {}) }); router.push(`/sessions/${data.session.id}`); } catch (e) { setError((e as Error).message); setBusy(false); } }
-  return <Shell mode={mode}><div className="home-chat-start"><p className="home-welcome"><Icon name="spark"/>{name ? `Good to see you, ${name}.` : 'A little distance. A clearer view.'}</p><div className="page-heading"><div><h1>What would you like<br className="desktop-break"/> to think through?</h1><p className="lead">Bring an idea you believe in, or a decision you’re still making. Let’s look at it from another angle.</p></div></div><section className="panel home-start"><p className="eyebrow">CHOOSE YOUR PERSPECTIVE</p><div className="mode-grid">{(['business', 'philosophy'] as const).map(value => <button key={value} className={`mode-card ${mode === value ? 'selected' : ''}`} aria-pressed={mode === value} onClick={() => choose(value)} aria-label={value === 'business' ? 'Business: test an idea or plan' : 'Philosophy: think through a personal decision'}><span className={`icon-tile ${value === 'business' ? 'blue' : 'violet'}`}><Icon name={value === 'business' ? 'business' : 'personal'}/></span><span className="mode-check"><Icon name="check" size={15}/></span><strong>{value === 'business' ? 'Business & ideas' : 'Life & decisions'}</strong><span>{value === 'business' ? 'Test your assumptions with real-world comparisons. Find what’s strong and what needs a closer look.' : 'Examine your options through philosophical perspectives. Make room for your values and the tradeoffs.'}</span></button>)}</div><div className="topics" role="group" aria-label="Decision type"><button aria-pressed={mode === 'business' && !pricing} onClick={() => choose('business')}>Explore an idea</button><button aria-pressed={pricing} onClick={() => { setMode('business'); setTopic('startup'); setPricing(true); }}>Pricing decision</button><button aria-pressed={mode === 'philosophy'} onClick={() => choose('philosophy')}>Personal decision</button></div>{pricing && <p className="fine" style={{ marginTop: 14 }}>Explore a price change, its effect on customers, and what you need to test before deciding.</p>}<details className="more-options"><summary>Choose a more specific topic</summary><div className="topics" role="group" aria-label="Topic">{(['startup', 'work', 'life', 'beliefs'] as const).map(value => <button key={value} aria-pressed={topic === value} onClick={() => { setTopic(value); setMode(value === 'startup' || value === 'work' ? 'business' : 'philosophy'); if (value !== 'startup') setPricing(false); }}>{({ startup: 'Startup & business', work: 'Work & career', life: 'Life & decisions', beliefs: 'Beliefs & values' })[value]}</button>)}</div></details><div className="start-footer"><p>You don’t need a perfect question. We’ll start with your situation and take it one step at a time.</p><button className="primary" disabled={busy} onClick={start}>{busy ? 'Starting…' : 'Start a conversation'}<Icon name="arrow" size={17}/></button></div>{error && <div style={{ marginTop: 20 }}><ErrorNotice error={error}/></div>}</section><div className="section-heading"><h2>A little inspiration</h2><span className="fine">Select a starting point</span></div><div className="quick-prompts">{[{ icon: 'business', title: 'Is this idea worth pursuing?', text: 'Look at what to validate first.', pick: () => choose('business') }, { icon: 'card', title: 'Am I pricing this right?', text: 'Examine the assumptions.', pick: () => { setMode('business'); setTopic('startup'); setPricing(true); } }, { icon: 'personal', title: 'Should I make a change?', text: 'Think through what matters.', pick: () => choose('philosophy') }].map(item => <button className="prompt-card" key={item.title} onClick={item.pick}><Icon name={item.icon}/><span><strong>{item.title}</strong><span>{item.text}</span></span></button>)}</div><div className="section-heading"><h2>Pick up a thought</h2><Link href="/history">View history →</Link></div>{historyError ? <p className="fine">{historyError}</p> : !sessions ? <p className="fine" role="status">Loading recent conversations…</p> : sessions.length ? <div className="history-list">{sessions.slice(0, 3).map(session => <Link className="panel history-item" key={session.id} href={`/sessions/${session.id}`}><div><p className="eyebrow">{session.mode === 'business' ? 'Business & ideas' : 'Life & decisions'}</p><h2>{session.title}</h2><p className="muted">{new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {session.messages.length} messages</p></div><Icon name="arrow" size={17}/></Link>)}</div> : <p className="fine">Your first conversation is a fresh start. Your saved thoughts will appear here.</p>}<p className="subtle-note">AI can miss things. Inspect the sources, question the framing, and keep your own judgment.</p></div></Shell>;
+
+interface Starter { label: string; mode: Mode; topic: Topic; title?: string; draft: string }
+const starters: Starter[] = [
+  { label: 'Test a business idea', mode: 'business', topic: 'startup', draft: 'I want to test this idea: ' },
+  { label: 'Pricing decision', mode: 'business', topic: 'startup', title: 'Pricing decision', draft: 'I’m thinking of changing my price from … to … because ' },
+  { label: 'Personal decision', mode: 'philosophy', topic: 'life', draft: 'I’m deciding whether to … What matters most to me is ' },
+];
+
+export default function Home() { return <Suspense fallback={<Shell><p role="status">Preparing your space…</p></Shell>}><NewConversation/></Suspense>; }
+
+function NewConversation() {
+  const search = useSearchParams(); const router = useRouter();
+  const [mode, setMode] = useState<Mode>(search.get('perspective') === 'philosophy' ? 'philosophy' : 'business');
+  const [starter, setStarter] = useState<Starter>();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [name, setName] = useState('');
+  const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { api<AuthData>('/api/auth').then(data => setName(data.user?.name?.split(' ')[0] || '')).catch(() => {}); }, []);
+  function choose(next: Mode) { setMode(next); if (starter && starter.mode !== next) setStarter(undefined); }
+  function pickStarter(next: Starter) {
+    setStarter(next); setMode(next.mode); setText(next.draft);
+    requestAnimationFrame(() => { const field = input.current; if (field) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); } });
+  }
+  async function start() {
+    if (busy || !text.trim()) return;
+    setBusy(true); setError('');
+    const topic: Topic = starter?.mode === mode ? starter.topic : mode === 'business' ? 'startup' : 'life';
+    try {
+      const data = await api<{ session: Session }>('/api/sessions', 'POST', { mode, topic, ...(starter?.title && starter.mode === mode ? { title: starter.title } : {}) });
+      handOverFirstMessage(data.session.id, text);
+      router.push(`/sessions/${data.session.id}`);
+    } catch (e) { setError((e as Error).message); setBusy(false); }
+  }
+  return <Shell mode={mode}><div className="new-chat">
+    <div className="new-chat-heading">
+      <p className="home-welcome"><Icon name="spark"/>{name ? `Good to see you, ${name}.` : 'A little distance. A clearer view.'}</p>
+      <h1>What would you like to think through?</h1>
+      <p className="lead">Bring an idea or a decision. We’ll ask the hard questions. The call stays yours.</p>
+    </div>
+    <div className="perspective-toggle" role="group" aria-label="Perspective">
+      <button type="button" aria-pressed={mode === 'business'} aria-label="Business: test an idea or plan" onClick={() => choose('business')}><Icon name="business" size={16}/>Business idea</button>
+      <button type="button" aria-pressed={mode === 'philosophy'} aria-label="Philosophy: think through a personal decision" onClick={() => choose('philosophy')}><Icon name="personal" size={16}/>Personal decision</button>
+    </div>
+    <Composer value={text} onChange={setText} onSubmit={() => void start()} inputRef={input} disabled={busy}
+      placeholder={mode === 'business' ? 'Describe your idea or plan in a few sentences…' : 'Describe the choice in front of you…'}
+      status={busy ? 'Starting your conversation…' : undefined}/>
+    <div className="starters" role="group" aria-label="Starting points">
+      {starters.map(item => <button key={item.label} type="button" aria-pressed={starter === item} onClick={() => pickStarter(item)}>{item.label}</button>)}
+    </div>
+    {error && <ErrorNotice error={error}/>}
+  </div></Shell>;
 }

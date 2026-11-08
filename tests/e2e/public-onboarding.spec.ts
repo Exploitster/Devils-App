@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { goToHistory, signOut, startConversation } from './support/navigation';
 import AxeBuilder from '@axe-core/playwright';
 test('public signup, guided onboarding, free conversation, history search, and password sign-in work together', async ({ page }, testInfo) => {
   const email = `public-${Date.now()}@example.test`;
@@ -17,10 +18,10 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await page.getByRole('button', { name: 'Let’s think it through' }).click();
   await expect(page).toHaveURL(/\/home\?perspective=philosophy/);
   await expect(page.getByRole('button', { name: /^Philosophy:/ })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page, { mode: 'philosophy' });
   await page.getByLabel('Your message').fill('I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Strengths', exact: true })).toBeVisible();
+  await expect(page.getByText(/Strengths/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Make a hand-back card' }).click();
   await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -32,12 +33,12 @@ test('public signup, guided onboarding, free conversation, history search, and p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath('conversation-mobile.png'), fullPage: true, animations: 'disabled' });
-  await page.getByRole('link', { name: 'History', exact: true }).click();
+  await goToHistory(page);
   await page.getByLabel('Search conversations').fill('something that is not here');
   await expect(page.getByRole('heading', { name: 'No thoughts found here.' })).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(page.locator('.history-item')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await signOut(page);
   await expect(page).toHaveURL(/\/login/);
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('My long unique test password');
@@ -107,7 +108,7 @@ test('subscription sign-in preserves the plan and Google requests the billing re
   await page.getByLabel('Email address').fill('sam@example.test');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/billing$/);
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await signOut(page);
   await page.goto('/login?next=%2Fbilling');
   await page.route('**/api/auth', async route => {
     const response = await route.fetch(); const body = await response.json();

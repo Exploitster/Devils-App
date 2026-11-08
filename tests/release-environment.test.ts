@@ -27,6 +27,21 @@ describe('deployment isolation preflight', () => {
   it.each([production, staging])('allows the correctly isolated $DEVILS_DEPLOYMENT_ENV project', env => {
     const result = run(env); expect(result.status, result.stderr).toBe(0);
   });
+  const livePaid = { ...production, DEVILS_PAYMENTS_ENABLED: 'true', DEVILS_BILLING_PROVIDER: 'dodo', DEVILS_DODO_ENVIRONMENT: 'live_mode', DEVILS_PAID_ACCESS_START: '2026-11-01T00:00:00Z' };
+  it('allows production to enable live Dodo payments with a paid-access start', () => {
+    const result = run(livePaid); expect(result.status, result.stderr).toBe(0);
+  });
+  it.each([
+    { ...livePaid, DEVILS_DODO_ENVIRONMENT: 'test_mode' },
+    { ...livePaid, DEVILS_PAID_ACCESS_START: '' },
+    { ...livePaid, DEVILS_PAID_ACCESS_START: '2026-11-01T00:00:00' },
+    { ...livePaid, DEVILS_PAID_ACCESS_START: '2999-01-01T00:00:00Z' },
+    { ...livePaid, DEVILS_BILLING_PROVIDER: 'stripe' },
+    { ...livePaid, DEVILS_PAYMENTS_ENABLED: 'yes' },
+  ])('blocks an unsafe production payments switch %#', env => {
+    const result = run(env); expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('RELEASE_ENVIRONMENT_BLOCKED');
+  });
   it.each([
     { ...staging, DEVILS_SUPABASE_URL: production.DEVILS_SUPABASE_URL },
     { ...staging, VERCEL_PROJECT_ID: production.VERCEL_PROJECT_ID },

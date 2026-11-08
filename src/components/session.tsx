@@ -1,9 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { HandBackCard, Session, Counterpoint, Evidence } from '@/lib/contracts';
-import { api, ApiError, ErrorNotice, Icon, Shell } from './app';
+import type { HandBackCard, Session, Counterpoint, Evidence, TurnAction } from '@/lib/contracts';
+import Link from 'next/link';
+import { api, ApiError, ErrorNotice, Shell } from './app';
+import { Composer } from './composer';
 import { SourceButton } from './source';
+import { takeFirstMessage } from '@/lib/pending-message';
 import '@/styles/chat.css';
 function Points({ points }: {
     points: Counterpoint[];
@@ -65,10 +68,13 @@ export function SessionView({ id }: {
     const [error, setError] = useState('');
     const [stale, setStale] = useState(false);
     const [text, setText] = useState('');
-    const [action, setAction] = useState('message');
+    const [action, setAction] = useState<Exclude<TurnAction, 'skip'>>('message');
     const [busy, setBusy] = useState(false);
+    const [sending, setSending] = useState('');
     const [title, setTitle] = useState('');
     const [confirm, setConfirm] = useState(false);
+    const [renaming, setRenaming] = useState(false);
+    const [expired, setExpired] = useState(false);
     const dialog = useRef<HTMLDialogElement>(null);
     const composer = useRef<HTMLTextAreaElement>(null);
     const latestReply = useRef<HTMLDivElement>(null);
@@ -79,12 +85,16 @@ export function SessionView({ id }: {
         operationId: string;
         expectedRevision: number;
     } | null>(null);
-    function load() {
+    function load(isCurrent: () => boolean = () => true) {
         return api<{session: Session}>(`/api/sessions/${id}`).then(data => {
+            // A load whose page effect was already cleaned up must not overwrite newer state.
+            if (!isCurrent()) return;
             setSession(data.session); setTitle(data.session.title); setStale(false); setError('');
-        }).catch((e: Error) => setError(e.message));
+            const first = takeFirstMessage(id);
+            if (first && data.session.messages.length === 0) { setText(first); void generate('turns', false, { session: data.session, text: first }); }
+        }).catch((e: Error) => { if (isCurrent()) setError(e.message); });
     }
-    useEffect(() => { void load(); return () => abort.current?.abort(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { let current = true; void load(() => current); return () => { current = false; abort.current?.abort(); }; }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (confirm)
         dialog.current?.showModal(); }, [confirm]);
     useEffect(() => {
@@ -101,23 +111,28 @@ export function SessionView({ id }: {
         window.addEventListener('scroll', stopFollowing, { passive: true });
         return () => window.removeEventListener('scroll', stopFollowing);
     }, [busy]);
-    async function generate(kind: 'turns' | 'card', skip = false) { if (!session || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !text.trim()))
-        return; const submittedText = text; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setStale(false); const body = { operationId: crypto.randomUUID(), expectedRevision: session.revision }; operation.current = body; abort.current = new AbortController(); try {
+    async function generate(kind: 'turns' | 'card', skip = false, first?: { session: Session; text: string }) { const current = first?.session ?? session; const submittedText = first?.text ?? text; if (!current || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !submittedText.trim()))
+        return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(true); setError(''); setExpired(false); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController(); try {
         const data = await api<{
             session: Session;
-        }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? 'I am not sure' : text, action: skip ? 'skip' : action } : {}) }, abort.current.signal);
+        }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? 'I am not sure' : submittedText, action: skip ? 'skip' : first ? 'message' : action } : {}) }, abort.current.signal);
         setSession(data.session);
-        if (kind === 'turns')
+        if (kind === 'turns') {
             setText(current => current === submittedText ? '' : current);
+            setAction('message');
+        }
     }
     catch (e) {
         if ((e as Error).name !== 'AbortError') {
-            setError((e as Error).message);
+            const accessEnded = e instanceof ApiError && e.code === 'ACCESS_EXPIRED';
+            setExpired(accessEnded);
+            if (!accessEnded) setError((e as Error).message);
             setStale(e instanceof ApiError && e.status === 409);
         }
     }
     finally {
         if (!cancelling.current) setBusy(false);
+        setSending('');
         operation.current = null;
     } }
     async function cancel() { cancelling.current = true; const body = operation.current; abort.current?.abort(); if (body) {
@@ -130,7 +145,7 @@ export function SessionView({ id }: {
         catch (e) {
             setError((e as Error).message);
         }
-    } cancelling.current = false; setBusy(false); }
+    } cancelling.current = false; setBusy(false); setSending(''); }
     const state = session?.state;
     const question = state?.clarifications.find(q => q.answer === undefined && !q.skipped);
     const pricing = session?.mode === 'business' && /pricing/i.test(session.title);
@@ -147,88 +162,88 @@ export function SessionView({ id }: {
         example: 'Example only — replace these details with your own: I want to build a scheduling tool for independent tutors. I think they lose time coordinating lessons, but I have not interviewed customers or tested willingness to pay. I want to decide what to validate first.',
         label: 'Use business idea example',
     };
-    return <Shell mode={session?.mode}><div className="chat-workspace" data-clarity-mask="true">
-      <div className="session-heading chat-heading">
-      <div>
-      <p className="eyebrow">{session?.mode ?? 'Your conversation'} · {session?.topic}</p>
-      <h1>{session?.title ?? 'Loading conversation…'}</h1>
-      </div>{session && <button onClick={() => setConfirm(true)}>Delete conversation</button>}</div>{error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={load}/>}<p className="session-tip"><Icon name="shield"/>Your conversation is saved to your account. Share only what you’re comfortable sending to an AI provider.</p>{session && <>
-      <details className="chat-rename">
-      <summary>Rename conversation</summary>
-      <form className="actions" onSubmit={async (e) => { e.preventDefault(); try {
-        const data = await api<{
-            session: Session;
-        }>(`/api/sessions/${id}`, 'PATCH', { title, expectedRevision: session.revision });
-        setSession(data.session);
+    const messages = session?.messages ?? [];
+    const latest = messages[messages.length - 1];
+    const latestIsReply = latest?.role === 'assistant' && !busy;
+    const replyIsClosingReflection = Boolean(latest?.text.trimStart().startsWith('Underlying question:'));
+    const showSummary = Boolean(latestIsReply && state && state.phase !== 'support' && state.strengths.length > 0 && !replyIsClosingReflection);
+    const replyIsTheQuestion = Boolean(question && latest?.text.trim() === question.question.trim());
+    const questionText = question && latestIsReply && !replyIsTheQuestion ? question.question : '';
+    const tags: Partial<Record<TurnAction, string>> = { pushback: 'Pushing back', correction: 'Correcting my position' };
+    function frame(next: 'pushback' | 'correction') { setAction(next); composer.current?.focus(); }
+    function closeMenu(event: React.MouseEvent<HTMLElement>) { (event.currentTarget.closest('details') as HTMLDetailsElement).open = false; }
+    async function rename(event: React.FormEvent) {
+        event.preventDefault();
+        if (!session) return;
+        try { const data = await api<{ session: Session }>(`/api/sessions/${id}`, 'PATCH', { title, expectedRevision: session.revision }); setSession(data.session); setRenaming(false); }
+        catch (e) { setError((e as Error).message); }
     }
-    catch (e) {
-        setError((e as Error).message);
-    } }}>
-      <label htmlFor="session-title">Title</label>
-      <input id="session-title" maxLength={120} value={title} onChange={e => setTitle(e.target.value)} required/>
-      <button>Save title</button>
-      </form>
-      </details>
-      {session.messages.length === 0 && <section className="panel starter-panel" aria-labelledby="starting-point">
-      <span className="icon-tile blue" style={{ marginBottom: 20 }}><Icon name="chat" size={24}/></span><h2 id="starting-point">Start with your situation</h2>
-      <p>{starter.guidance}</p>
-      <button type="button" onClick={() => { setText(starter.example); composer.current?.focus(); }}>{starter.label}</button>
-      <p className="fine">The example contains fictional details. Edit the draft to describe your own situation before sending. Nothing is sent automatically.</p>
+    return <Shell mode={session?.mode}><div className="chat-page" data-clarity-mask="true">
+      <header className="chat-header">
+        {renaming && session ? <form className="chat-rename" onSubmit={rename}>
+          <label htmlFor="session-title" className="sr-only">Title</label>
+          <input id="session-title" maxLength={120} value={title} onChange={e => setTitle(e.target.value)} required autoFocus/>
+          <button className="primary small">Save title</button>
+          <button type="button" className="quiet small" onClick={() => { setTitle(session.title); setRenaming(false); }}>Cancel</button>
+        </form> : <h1>{session?.title ?? 'Loading conversation…'}</h1>}
+        {session && !renaming && <details className="chat-menu">
+          <summary aria-label="Conversation options">⋯</summary>
+          <div className="chat-menu-list">
+            <button type="button" onClick={e => { closeMenu(e); setRenaming(true); }}>Rename</button>
+            <button type="button" className="danger-text" onClick={e => { closeMenu(e); setConfirm(true); }}>Delete conversation</button>
+          </div>
+        </details>}
+      </header>
+      {error && <ErrorNotice error={`${error}${stale ? ' Your unsent text is preserved. Refresh the saved conversation before sending again.' : ''}`} retry={() => void load()}/>}
+      {session && <>
+      {messages.length === 0 && !busy && <section className="chat-empty" aria-labelledby="starting-point">
+        <h2 id="starting-point">Start with your situation</h2>
+        <p>{starter.guidance} Share only what you’re comfortable sending to an AI provider.</p>
+        <button type="button" className="quiet small" onClick={() => { setText(starter.example); composer.current?.focus(); }}>{starter.label}</button>
       </section>}
-      <section className="conversation" aria-label="Conversation" aria-live="polite" aria-busy={busy}>{session.messages.map(message => <article key={message.id} className={`message ${message.role}`}>
-      <span className="eyebrow">{message.role === 'user' ? 'You' : 'Devils Advocate'}</span><p className="preserve">{message.text}</p>{message.citations.map((citation, index) => <SourceButton citation={citation} key={index}/>)}</article>)}</section>{state && state.phase !== 'support' && state.strengths.length > 0 && <section className="reflection chat-snapshot" aria-label="Current decision snapshot">
-      <h2>The underlying question</h2>
-      <p>{state.underlyingQuestion}</p>
-      <h2>Strengths</h2>
-      <ul>{state.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>{state.counterpoints.length > 0 && <>
-      <h2>Counterpoints</h2>
-      <Points points={state.counterpoints}/>
-      </>}{state.coverageNote && <p className="muted">{state.coverageNote}</p>}{state.openQuestions.map((q, i) => <p key={i}>
-      <strong>{q}</strong>
-      </p>)}{state.nextStep && <>
-      <h3>A next step</h3>
-      <p>{state.nextStep}</p>
-      </>}</section>}{question && <div className="panel chat-question">
-      <h2>One question before we go further</h2>
-      <p>{question.question}</p>
-      <button disabled={busy} onClick={() => generate('turns', true)}>I’m not sure — skip this question</button>
-      </div>}<div ref={latestReply} className="chat-latest"/>{session.cards.map((card, index) => <Card key={card.id} card={card} latest={index === session.cards.length - 1}/>)}<section className="composer panel">
-      <form onSubmit={event => { event.preventDefault(); void generate('turns'); }}>
-      <label htmlFor="message">Your message</label>
-      <textarea ref={composer} id="message" maxLength={12000} rows={2} onKeyDown={event => {
-        if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-            event.preventDefault();
-            if (!busy && !stale && text.trim()) event.currentTarget.form?.requestSubmit();
-        }
-      }} value={text} onChange={e => setText(e.target.value)} placeholder={session.messages.length ? 'What would you push back on, or change?' : 'Describe your idea or decision in your own words.'} required/>
-      <div className="composer-options">
-      <label htmlFor="action" className="sr-only">How to frame it</label>
-      <select id="action" value={action} onChange={e => setAction(e.target.value)}>
-      <option value="message">Continue the conversation</option>
-      <option value="correction">Correct my position</option>
-      <option value="pushback">Push back on the response</option>
-      </select>
-      <span className="fine">{text.length.toLocaleString()} / 12,000</span>
-      </div>
-      <div className="actions">
-      <button className="primary" disabled={busy || stale || !text.trim()}>{busy ? 'Thinking…' : 'Send'}</button>{busy ? <button type="button" onClick={cancel}>Cancel generation</button> : <button type="button" disabled={!session.messages.length || stale} onClick={() => generate('card')}>Make a hand-back card</button>}</div>
-      </form>
-      <p className="fine" role="status">{busy ? 'Preparing a checked response. Your message stays here until it is saved.' : 'AI can make mistakes. Inspect sources and keep your own judgment. Fair-use limits apply. Enter to send · Shift + Enter for a new line.'}</p>
+      <section className="conversation thread" aria-label="Conversation" aria-live="polite" aria-busy={busy}>
+        {messages.map(message => <article key={message.id} className={`message ${message.role}`}>
+          <span className="sr-only">{message.role === 'user' ? 'You said:' : 'Devils Advocate said:'}</span>
+          <p className="preserve">{message.text}</p>
+          {message.citations.length > 0 && <div className="citations">{message.citations.map((citation, index) => <SourceButton citation={citation} key={index}/>)}</div>}
+        </article>)}
+        {busy && sending && <article className="message user pending"><span className="eyebrow">You · sending</span><p className="preserve">{sending}</p></article>}
+        {busy && <p className="thinking" role="status">Thinking it through…</p>}
+        {showSummary && state && <section className="reply-summary" aria-label="Where your thinking stands">
+          <h2>The underlying question</h2>
+          <p>{state.underlyingQuestion}</p>
+          <h2>Strengths</h2>
+          <ul>{state.strengths.map((item, index) => <li key={index}>{item}</li>)}</ul>
+          {state.counterpoints.length > 0 && <><h2>Counterpoints</h2><Points points={state.counterpoints}/></>}
+          {state.coverageNote && <p className="muted">{state.coverageNote}</p>}
+          {state.openQuestions.map((item, index) => <p key={index}><strong>{item}</strong></p>)}
+          {state.nextStep && <><h2>A next step</h2><p>{state.nextStep}</p></>}
+        </section>}
+        {question && latestIsReply ? <div className="reply-actions" role="group" aria-label="Answer the question">
+          {questionText && <p className="reply-question">{questionText}</p>}
+          <button type="button" onClick={() => composer.current?.focus()}>Answer</button>
+          <button type="button" onClick={() => void generate('turns', true)}>Skip question</button>
+        </div> : latestIsReply && <div className="reply-actions" role="group" aria-label="Reply actions">
+          <button type="button" aria-pressed={action === 'pushback'} onClick={() => frame('pushback')}>Push back</button>
+          <button type="button" aria-pressed={action === 'correction'} onClick={() => frame('correction')}>Correct my position</button>
+          <button type="button" disabled={stale} onClick={() => void generate('card')}>Make a hand-back card</button>
+        </div>}
+        {expired && <div className="notice access-ended" role="status">Your trial or subscription has ended. Subscribe to keep going; your history stays here. <Link href="/billing">Subscribe</Link></div>}
       </section>
-      </>}<dialog ref={dialog} aria-labelledby="delete-title" onClose={() => setConfirm(false)}>
-      <h2 id="delete-title">Delete this conversation?</h2>
-      <p>This removes its messages and cards. This action cannot be undone.</p>
-      <div className="actions">
-      <button autoFocus onClick={() => dialog.current?.close()}>Keep conversation</button>
-      <button className="danger" onClick={async () => { try {
-        await api(`/api/sessions/${id}`, 'DELETE');
-        router.push('/history');
-    }
-    catch (e) {
-        setError((e as Error).message);
-        dialog.current?.close();
-    } }}>Delete permanently</button>
-      </div>
-      </dialog></div>
-      </Shell>;
+      <div ref={latestReply} className="chat-latest"/>
+      {session.cards.map((card, index) => <Card key={card.id} card={card} latest={index === session.cards.length - 1}/>)}
+      <Composer sticky value={text} onChange={setText} onSubmit={() => void generate('turns')} inputRef={composer} disabled={stale}
+        busy={busy} onCancel={cancel} tag={tags[action]} onClearTag={() => setAction('message')}
+        placeholder={messages.length ? 'Reply, push back or add detail…' : 'Describe your idea or decision in your own words.'}
+        status={busy ? 'Preparing a checked response. Your message stays here until it is saved.' : undefined}/>
+      </>}
+      <dialog ref={dialog} aria-labelledby="delete-title" onClose={() => setConfirm(false)}>
+        <h2 id="delete-title">Delete this conversation?</h2>
+        <p>This removes its messages and cards. This action cannot be undone.</p>
+        <div className="actions">
+          <button autoFocus onClick={() => dialog.current?.close()}>Keep conversation</button>
+          <button className="danger" onClick={async () => { try { await api(`/api/sessions/${id}`, 'DELETE'); router.push('/history'); } catch (e) { setError((e as Error).message); dialog.current?.close(); } }}>Delete permanently</button>
+        </div>
+      </dialog>
+    </div></Shell>;
 }

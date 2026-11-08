@@ -16,19 +16,18 @@ export function SampleDebate() {
   return <section className="landing-section" id="try-sample" aria-labelledby="sample-title">
     <p className="eyebrow blue-text">TRY IT BEFORE YOU SIGN UP</p>
     <h2 id="sample-title">Bring an idea. Meet the other side.</h2>
-    <p className="section-description">Startup ideas, work proposals, life decisions or beliefs. Explore a sample without an account.</p>
+    <p className="section-description">Play a sample through. No account needed.</p>
     <div className="actions sample-controls" aria-label="Choose your perspective">
       {['business', 'philosophy'].map(value => <button key={value} aria-pressed={mode === value} className={mode === value ? 'primary' : 'quiet'} onClick={() => { setMode(value); reset(samples.find(s => s.mode === value)!.id); }}>{value === 'business' ? 'Business validation' : 'Philosophy'}</button>)}
     </div>
-    <p>{mode === 'business' ? 'Challenge my idea — for startup ideas, side projects and work proposals.' : 'Challenge my decision — for life choices and beliefs you want to examine.'}</p>
-    <div className="actions sample-controls" aria-label="Choose a sample">{samples.filter(s => s.mode === mode).map(s => <button key={s.id} aria-pressed={id === s.id} onClick={() => reset(s.id)}>{s.tab}</button>)}</div>
+        <div className="actions sample-controls" aria-label="Choose a sample">{samples.filter(s => s.mode === mode).map(s => <button key={s.id} aria-pressed={id === s.id} onClick={() => reset(s.id)}>{s.tab}</button>)}</div>
     <div className="panel sample-player">
-      <p className="fine">Scripted demonstration, not live AI or researched advice. Sample replies and philosophical paraphrases illustrate the experience. Business examples are hypothetical.</p>
+      <p className="fine">A scripted demo, not live AI. Examples are hypothetical.</p>
       <ol className="sample-progress" aria-label="Sample progress">{steps.map((step, i) => <li key={step} aria-current={i === stage ? 'step' : undefined}>{i + 1}. {step}</li>)}</ol>
       <div aria-live="polite" aria-atomic="true">
         <h3>{steps[stage]}</h3>
         <p className="sample-message">{sample.opening}</p>
-        {stage === 0 && <p>Start with your position. The next questions help uncover what is at stake.</p>}
+        {stage === 0 && <p>This is the starting position. Next come the questions.</p>}
         {stage === 1 && <>{answers.map((answer, i) => <div key={i} className="sample-answer"><p><strong>{sample.questions[i].q}</strong></p><p>You: {sample.questions[i].choices[answer].say}</p><p>{sample.questions[i].choices[answer].reply}</p></div>)}{question && <><h4>{question.q}</h4><div className="actions sample-controls">{question.choices.map((choice, i) => <button key={choice.say} onClick={() => setAnswers([...answers, i])}>{choice.say}</button>)}</div></>}</>}
         {stage === 2 && <><p><strong>{sample.realQuestion}</strong></p>{sample.bias && <p>Possible bias to examine: {sample.bias}</p>}</>}
         {stage === 3 && <><h4>The case for you</h4>{sample.caseFor.map(p => <p key={p.text}>{p.text}</p>)}<h4>The strongest other side</h4>{sample.otherSide.map(p => <div key={p.point}><p>{p.point}</p><p className="fine">{p.source}</p></div>)}<p className="fine">{sample.note}</p></>}
@@ -40,15 +39,15 @@ export function SampleDebate() {
         <button className="quiet" onClick={() => reset()}>Start over</button>
       </div>
     </div>
-    <div className="feature-grid sample-walkthrough">{[
-      ['Pick your perspective', 'Choose business validation or philosophical reflection.'],
-      ['Spill it', 'Describe the actual idea or decision, including what you already know.'],
-      ['Clarify the stakes', 'Answer up to three focused questions. You can skip and keep unknowns visible.'],
-      ['Name the real question', 'Separate your position from assumptions and possible biases.'],
-      ['Consider both sides', 'Start with strengths, then inspect counterpoints and available reviewed sources.'],
-      ['Push back', 'Correct the context or challenge an argument. Evidence coverage may be limited.'],
-      ['Keep your hand-back card', 'Save the tradeoffs, open questions and a reversible next step. You decide.'],
-    ].map(([title, text], i) => <article className="panel feature-card" key={title}><p className="eyebrow">STEP {i + 1}</p><h3>{title}</h3><p>{text}</p></article>)}</div>
+    <ol className="story-steps" aria-label="How a conversation unfolds">{[
+      ['Pick a lens', 'Business or personal.'],
+      ['Spill it', 'Your idea, in your words.'],
+      ['Clarify', 'Up to three quick questions.'],
+      ['Find the real question', 'What’s actually at stake.'],
+      ['See both sides', 'Strengths, then counterpoints.'],
+      ['Push back', 'Correct or challenge anything.'],
+      ['Keep your card', 'Tradeoffs and a next step.'],
+    ].map(([title, text]) => <li key={title}><strong>{title}</strong><span>{text}</span></li>)}</ol>
   </section>;
 }
 

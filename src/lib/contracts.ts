@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MESSAGE_LIMIT } from './limits';
 
 // Shared public shapes are strict: providers and browsers cannot add authority fields.
 export const ModeSchema = z.enum(['business', 'philosophy']);
@@ -6,7 +7,7 @@ export type Mode = z.infer<typeof ModeSchema>;
 export const TopicSchema = z.enum(['startup', 'work', 'life', 'beliefs']);
 export type Topic = z.infer<typeof TopicSchema>;
 export const IdSchema = z.string().min(1).max(128);
-export const TextSchema = z.string().trim().min(1).max(12000);
+export const TextSchema = z.string().trim().min(1).max(MESSAGE_LIMIT);
 export const SafeUrlSchema = z.string().url().refine(v => new URL(v).protocol === 'https:', 'HTTPS source required');
 export const CitationSchema = z.object({ evidenceId: IdSchema, claimId: IdSchema, excerptId: IdSchema, kind: z.enum(['quote', 'paraphrase']), quote: z.string().max(6000).optional() }).strict();
 export type Citation = z.infer<typeof CitationSchema>;
@@ -24,6 +25,7 @@ export type Session = z.infer<typeof SessionSchema>;
 export const CreateSessionSchema = z.object({ mode: ModeSchema.default('business'), topic: TopicSchema, title: z.string().trim().min(1).max(120).optional() }).strict();
 export type CreateSessionInput = z.infer<typeof CreateSessionSchema>;
 export const TurnRequestSchema = z.object({ operationId: IdSchema, expectedRevision: z.number().int().nonnegative(), text: TextSchema, action: z.enum(['message', 'skip', 'correction', 'pushback']).default('message') }).strict();
+export type TurnAction = z.infer<typeof TurnRequestSchema>['action'];
 export type TurnRequest = z.infer<typeof TurnRequestSchema>;
 export const CardRequestSchema = z.object({ operationId: IdSchema, expectedRevision: z.number().int().nonnegative() }).strict();
 export const RenameSessionSchema = z.object({ title: z.string().trim().min(1).max(120), expectedRevision: z.number().int().nonnegative() }).strict();
@@ -54,7 +56,7 @@ export interface UserProfile { id: string; email: string; disabled: boolean; del
 export interface Invite { userId: string; expiresAt: string; enabled: boolean; }
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
 export interface Subscription { provider?: 'dodo'|'stripe'; environment?: 'test_mode'|'live_mode'; verifiedPaymentId?: string; userId: string; customerId: string; subscriptionId: string; priceId: string; status: SubscriptionStatus; currentPeriodEnd: string; cancelAtPeriodEnd: boolean; updatedAt: string; }
-export interface AccessDecision { allowed: boolean; reason: 'free' | 'beta' | 'trial' | 'paid' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
+export interface AccessDecision { allowed: boolean; reason: 'free' | 'beta' | 'trial' | 'paid' | 'member' | 'expired' | 'disabled' | 'unavailable'; expiresAt?: string; }
 export interface UsageEvent { operationId: string; userId: string; sessionId: string; committedAt: string; inputTokens: number; outputTokens: number; costMicros: number; }
 export interface SpendAttempt { id: string; operationId: string; userId: string; reservedMicros: number; actualMicros?: number; createdAt: string; }
 export interface TurnOperation { id: string; userId: string; sessionId: string; fingerprint: string; expectedRevision: number; status: 'pending' | 'committed' | 'failed' | 'cancelled'; leaseExpiresAt: string; createdAt: string; resultRevision?: number; errorCode?: string; }

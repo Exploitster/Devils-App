@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { startConversation } from './support/navigation';
 
 test('chat keyboard supports new lines, IME composition and Enter submission', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('alex@example.test');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page);
   const input = page.getByLabel('Your message', { exact: true });
   await input.fill('I want to build a scheduling tool');
   await input.press('Shift+Enter');
@@ -26,7 +27,7 @@ test('an edited draft survives a response arriving for the preceding message', a
   await page.goto('/login');
   await page.getByLabel('Email address').fill('alex@example.test');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.getByRole('button', { name: 'Start a conversation', exact: true }).click();
+  await startConversation(page);
   const input = page.getByLabel('Your message', { exact: true });
   await expect(input).toBeVisible();
   let release!: () => void;
@@ -39,7 +40,7 @@ test('an edited draft survives a response arriving for the preceding message', a
   try {
     await input.fill('I want to build a database tool because developers pay for support, but costs may be high.');
     await input.press('Enter');
-    await expect(page.getByRole('button', { name: 'Thinking…', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel generation', exact: true })).toBeVisible();
     await input.fill('A follow-up I am still composing.');
     release();
     await expect(page.locator('.message.assistant').first()).toBeVisible();
