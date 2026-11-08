@@ -17,6 +17,10 @@ Cost in USD is `(inputTokens × inputPrice + outputTokens × outputPrice) / 1,00
 
 User submissions are limited to 10 per minute, one active generation per user, and 12,000 characters per message. Context retains at most 24 messages plus the state and latest card for generation. Complete saved history remains in storage. Failed attempts still consume submission limits. Operation IDs are bound to an input fingerprint and expected revision; identical completed retries reuse the saved result, while changed duplicates fail.
 
+## Case-prep return rate
+
+The headline measure for case prep is how many people who complete a case start another within 30 days. Run `npm run report:return-rate` with `DEVILS_SUPABASE_URL` and `DEVILS_SUPABASE_SERVICE_ROLE_KEY` set (production), or with `DEVILS_RUNTIME_MODE=local` against the local SQLite file. The report only reads saved conversations. A completion is the first full assessment of a case; conversations and accounts that were deleted are not counted.
+
 ## Storage and privacy
 
 Apply migrations in order in a dedicated development Supabase project. The service role is restricted to server code. Browser-authenticated users can select their own rows through RLS but cannot mutate generated state, invites, subscriptions, or provider receipts. Disabled accounts cannot read private sessions, operations, or usage through direct RLS access. Account profiles remain readable for closure retry.
