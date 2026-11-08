@@ -20,7 +20,7 @@ function output(e: Evidence, kind: 'quote' | 'paraphrase' = 'paraphrase'): Model
 describe('inspected evidence', () => {
   it('verifies every exact excerpt, source hash, review and license snapshot offline', async () => {
     const report = await verifyEvidenceCollection();
-    expect(report.records).toBe(9); expect(report.excerpts).toBe(12);
+    expect(report.records).toBe(14); expect(report.excerpts).toBe(19);
   });
   it('retrieves reviewed relevant business sources, bounded to three and excludes used sources', async () => {
     const found = await retrieve('Build an open source database for developers');
@@ -139,7 +139,7 @@ describe('inspected evidence', () => {
     } finally { await rm(temporary, { recursive: true, force: true }); }
   });
   it('CLI verifies offline and cannot directly import reviewed candidates or write outside drafts', async () => {
-    expect(await runEvidenceImport(['--verify'])).toContain('9 reviewed records');
+    expect(await runEvidenceImport(['--verify'])).toContain('14 reviewed records');
     await expect(runEvidenceImport(['--draft', 'data/evidence/seed.json', '--manifest', 'data/evidence/inspection.json', '--output', 'drafts/reviewed-import.json'])).rejects.toThrow('Draft import cannot carry');
     await expect(runEvidenceImport(['--draft', 'data/evidence/seed.json', '--manifest', 'data/evidence/inspection.json', '--output', '../seed.json'])).rejects.toThrow('Output must');
   });
@@ -208,6 +208,20 @@ describe('Stack Exchange attribution', () => {
     expect(found.map(x => x.id)).toEqual([record.id]);
     expect(found[0].attribution).toEqual(attribution);
   });
+  it('retrieves the reviewed Philosophy Stack Exchange answers by topic, quoted verbatim with their licence', async () => {
+    const [regret] = await retrieve('I am afraid I will regret my decision', 'philosophy');
+    expect(regret.id).toBe('philosophy-se-regret-incomplete-information');
+    expect(regret.attribution).toEqual({ site: 'Philosophy Stack Exchange', postUrl: 'https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted/121416#121416', authors: [{ name: 'philo_777', profileUrl: 'https://philosophy.stackexchange.com/users/89471/philo-777' }], licence: 'CC BY-SA 4.0', licenceUrl: 'https://creativecommons.org/licenses/by-sa/4.0/legalcode.en' });
+    const [family] = await retrieve('Is my obligation to family stronger than my own plans?', 'philosophy');
+    expect(family.id).toBe('philosophy-se-sartre-student-commitments');
+    expect(family.excerpts[0].text).toContain("There is no answer 'out there'.");
+    const [career] = await retrieve('I feel obligated to become a doctor', 'philosophy');
+    expect(career.id).toBe('philosophy-se-career-felt-obligation');
+    expect(career.attribution?.licence).toBe('CC BY-SA 3.0');
+    const ids = ['philosophy-se-regret-incomplete-information', 'philosophy-se-regret-bad-luck', 'philosophy-se-sartre-student-commitments', 'philosophy-se-career-felt-obligation', 'philosophy-se-theory-acceptable-options'];
+    const stored = await Promise.all(ids.map(id => service.get(id)));
+    expect(stored.every(x => x?.attribution?.site === 'Philosophy Stack Exchange' && x.excerpts.every(e => e.quoteAllowed) && x.claims.every(c => !c.paraphraseAllowed))).toBe(true);
+  });
   it('fails offline verification for an unattributed or paraphrasable Stack Exchange source', async () => {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'devils-evidence-se-'));
     try {
@@ -222,7 +236,7 @@ describe('Stack Exchange attribution', () => {
       records[index].attribution = attribution; await writeFile(seedPath, JSON.stringify(records));
       await expect(verifyEvidenceCollection(temporary)).rejects.toThrow('Stack Exchange claims cannot allow paraphrase');
       records[index].claims.forEach(claim => { claim.paraphraseAllowed = false; }); await writeFile(seedPath, JSON.stringify(records));
-      expect(await verifyEvidenceCollection(temporary)).toEqual({ records: 9, excerpts: 12 });
+      expect(await verifyEvidenceCollection(temporary)).toEqual({ records: 14, excerpts: 19 });
     } finally { await rm(temporary, { recursive: true, force: true }); }
   });
 });

@@ -106,5 +106,65 @@
     "inspectedAt": "2026-10-15T16:24:44.706Z",
     "reviewedAt": "2026-10-15T16:24:44.706Z",
     "reviewedBy": "Codex MVP evidence source reviewer; passage/context, exact quotes, supported claims and distribution terms inspected"
+  },
+  {
+    "evidenceId": "philosophy-se-regret-incomplete-information",
+    "sourcePath": "sources/philosophy-se-121415.json",
+    "sourceSha256": "c26b97281745972fb88a7c34a910d5aa178b85f64933f0b44265da87a9111f76",
+    "licensePath": "sources/cc-by-sa-4.0-legalcode.html",
+    "licenseSha256": "47c0a954c88d793bdefe92fb007ae3c038fb3807f1a27083433d01aa7542c0d8",
+    "normalization": "UTF-8 JSON response body exactly as received from https://api.stackexchange.com/2.3/questions/121415?site=philosophy&filter=!*Mg4PjfgUgqOW6wX on 2026-11-08 (gzip transfer encoding decoded); no CR characters present, nothing else changed; HTML markup and entities in answer bodies retained; excerpts are plain-text runs inside one answer body",
+    "sourceUrl": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)"
+  },
+  {
+    "evidenceId": "philosophy-se-regret-bad-luck",
+    "sourcePath": "sources/philosophy-se-121415.json",
+    "sourceSha256": "c26b97281745972fb88a7c34a910d5aa178b85f64933f0b44265da87a9111f76",
+    "licensePath": "sources/cc-by-sa-4.0-legalcode.html",
+    "licenseSha256": "47c0a954c88d793bdefe92fb007ae3c038fb3807f1a27083433d01aa7542c0d8",
+    "normalization": "UTF-8 JSON response body exactly as received from https://api.stackexchange.com/2.3/questions/121415?site=philosophy&filter=!*Mg4PjfgUgqOW6wX on 2026-11-08 (gzip transfer encoding decoded); no CR characters present, nothing else changed; HTML markup and entities in answer bodies retained; excerpts are plain-text runs inside one answer body",
+    "sourceUrl": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)"
+  },
+  {
+    "evidenceId": "philosophy-se-sartre-student-commitments",
+    "sourcePath": "sources/philosophy-se-67900.json",
+    "sourceSha256": "4aa23f7d7cd2752ef47fdba6ee483ad6a05b42c188b14f7173590d9ab7d746d6",
+    "licensePath": "sources/cc-by-sa-4.0-legalcode.html",
+    "licenseSha256": "47c0a954c88d793bdefe92fb007ae3c038fb3807f1a27083433d01aa7542c0d8",
+    "normalization": "UTF-8 JSON response body exactly as received from https://api.stackexchange.com/2.3/questions/67900?site=philosophy&filter=!*Mg4PjfgUgqOW6wX on 2026-11-08 (gzip transfer encoding decoded); no CR characters present, nothing else changed; HTML markup and entities in answer bodies retained; excerpts are plain-text runs inside one answer body",
+    "sourceUrl": "https://philosophy.stackexchange.com/questions/67900/im-being-drafted-to-the-military-but-i-have-the-option-to-refuse-legally-wou",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)"
+  },
+  {
+    "evidenceId": "philosophy-se-career-felt-obligation",
+    "sourcePath": "sources/philosophy-se-10823.json",
+    "sourceSha256": "8c9f035ed9b86a2c202995b8f2f2b5ec3ee92559a29021bc49f30219bfc83090",
+    "licensePath": "sources/cc-by-sa-3.0-legalcode.html",
+    "licenseSha256": "c33d7ebdbcc5c8db073e69a794b2ac44805f5d7d9edcfb8b5181a71869a9b7d5",
+    "normalization": "UTF-8 JSON response body exactly as received from https://api.stackexchange.com/2.3/questions/10823?site=philosophy&filter=!*Mg4PjfgUgqOW6wX on 2026-11-08 (gzip transfer encoding decoded); no CR characters present, nothing else changed; HTML markup and entities in answer bodies retained; excerpts are plain-text runs inside one answer body",
+    "sourceUrl": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)"
+  },
+  {
+    "evidenceId": "philosophy-se-theory-acceptable-options",
+    "sourcePath": "sources/philosophy-se-10823.json",
+    "sourceSha256": "8c9f035ed9b86a2c202995b8f2f2b5ec3ee92559a29021bc49f30219bfc83090",
+    "licensePath": "sources/cc-by-sa-3.0-legalcode.html",
+    "licenseSha256": "c33d7ebdbcc5c8db073e69a794b2ac44805f5d7d9edcfb8b5181a71869a9b7d5",
+    "normalization": "UTF-8 JSON response body exactly as received from https://api.stackexchange.com/2.3/questions/10823?site=philosophy&filter=!*Mg4PjfgUgqOW6wX on 2026-11-08 (gzip transfer encoding decoded); no CR characters present, nothing else changed; HTML markup and entities in answer bodies retained; excerpts are plain-text runs inside one answer body",
+    "sourceUrl": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)"
   }
 ]

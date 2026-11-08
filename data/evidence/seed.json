@@ -540,5 +540,368 @@
         "paraphraseAllowed": true
       }
     ]
+  },
+  {
+    "id": "philosophy-se-regret-incomplete-information",
+    "mode": "philosophy",
+    "title": "Can a rational decision ever be regretted?",
+    "url": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted",
+    "sourceIdentifier": "philosophy-stackexchange-answer-121416",
+    "publisher": "Philosophy Stack Exchange (Stack Exchange network)",
+    "publicationDate": "2025-01-09",
+    "sourceSha256": "c26b97281745972fb88a7c34a910d5aa178b85f64933f0b44265da87a9111f76",
+    "limitations": [
+      "A forum answer by one contributor, not a published philosophical work or a consensus view; it says regret is possible, not how likely it is.",
+      "It does not say whether more information was available to the person or worth seeking in a given decision."
+    ],
+    "author": "philo_777",
+    "work": "Answer 121416 to the Philosophy Stack Exchange question “Can a rational decision ever be regretted?” (question 121415)",
+    "edition": "Answer posted 2025-01-09T02:06:24Z, last edited 2025-01-11T13:53:20Z; text as returned by the Stack Exchange API single-question endpoint on 2026-11-08",
+    "license": "CC BY-SA 4.0, chosen by the date of the answer revision quoted. Quote word for word only, beside the site, a link to the answer, the author linked to their profile and the licence link; no adaptations.",
+    "status": "reviewed",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "excerpts": [
+      {
+        "id": "philosophy-se-regret-incomplete-information-excerpt",
+        "text": "If we have incomplete information, we can regret a perfectly rational decision’s outcome or the decision itself.",
+        "sha256": "87503014e4a1ffb5e9b6357e7c1290f8c41da65046ecfa49e27c0a9ea2a217a2",
+        "locator": "Answer 121416 by philo_777, first paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "philosophy-se-regret-incomplete-information-claim",
+        "text": "A Philosophy Stack Exchange answer argues that, with incomplete information, a person can regret either the outcome of a perfectly rational decision or the decision itself.",
+        "excerptIds": [
+          "philosophy-se-regret-incomplete-information-excerpt"
+        ],
+        "topics": [
+          "regret",
+          "regret my decision",
+          "regret a decision",
+          "incomplete information",
+          "not enough information",
+          "rational decision"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      }
+    ],
+    "attribution": {
+      "site": "Philosophy Stack Exchange",
+      "postUrl": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted/121416#121416",
+      "authors": [
+        {
+          "name": "philo_777",
+          "profileUrl": "https://philosophy.stackexchange.com/users/89471/philo-777"
+        }
+      ],
+      "licence": "CC BY-SA 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+    }
+  },
+  {
+    "id": "philosophy-se-regret-bad-luck",
+    "mode": "philosophy",
+    "title": "Can a rational decision ever be regretted?",
+    "url": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted",
+    "sourceIdentifier": "philosophy-stackexchange-answer-121483",
+    "publisher": "Philosophy Stack Exchange (Stack Exchange network)",
+    "publicationDate": "2025-01-10",
+    "sourceSha256": "c26b97281745972fb88a7c34a910d5aa178b85f64933f0b44265da87a9111f76",
+    "limitations": [
+      "A forum answer by one contributor offering a way to understand regret; it is not empirical evidence about how people feel after decisions.",
+      "The answer goes on to decision-theory puzzles that this excerpt does not cover."
+    ],
+    "author": "Ben Millwood",
+    "work": "Answer 121483 to the Philosophy Stack Exchange question “Can a rational decision ever be regretted?” (question 121415)",
+    "edition": "Answer posted 2025-01-10T14:24:46Z, not edited; text as returned by the Stack Exchange API single-question endpoint on 2026-11-08",
+    "license": "CC BY-SA 4.0, chosen by the date of the answer revision quoted. Quote word for word only, beside the site, a link to the answer, the author linked to their profile and the licence link; no adaptations.",
+    "status": "reviewed",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "excerpts": [
+      {
+        "id": "philosophy-se-regret-bad-luck-excerpt",
+        "text": "Several answers have already talked about how you can make rational probabilistic decisions, get unlucky, and regret being unlucky. I think this isn't regretting your decision, per se, so much as regretting your bad luck. Similarly when choosing rationally between two bad alternatives, I think your regret is best understood as regretting being put into that situation, rather than regretting the particular choice you made.",
+        "sha256": "75ed9227f1af2a6c2d73ebaf954e3fbdfdefbcdec1fef5b620142ab011dd8b0d",
+        "locator": "Answer 121483 by Ben Millwood, first paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "philosophy-se-regret-bad-luck-claim",
+        "text": "A Philosophy Stack Exchange answer distinguishes regretting a decision from regretting bad luck, or regretting being forced to choose between two bad alternatives.",
+        "excerptIds": [
+          "philosophy-se-regret-bad-luck-excerpt"
+        ],
+        "topics": [
+          "regret",
+          "bad luck",
+          "unlucky",
+          "two bad options",
+          "two bad alternatives",
+          "no good options"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      }
+    ],
+    "attribution": {
+      "site": "Philosophy Stack Exchange",
+      "postUrl": "https://philosophy.stackexchange.com/questions/121415/can-a-rational-decision-ever-be-regretted/121483#121483",
+      "authors": [
+        {
+          "name": "Ben Millwood",
+          "profileUrl": "https://philosophy.stackexchange.com/users/28584/ben-millwood"
+        }
+      ],
+      "licence": "CC BY-SA 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+    }
+  },
+  {
+    "id": "philosophy-se-sartre-student-commitments",
+    "mode": "philosophy",
+    "title": "I'm being drafted to the military but I have the option to refuse (legally), would it be immoral for me to serve?",
+    "url": "https://philosophy.stackexchange.com/questions/67900/im-being-drafted-to-the-military-but-i-have-the-option-to-refuse-legally-wou",
+    "sourceIdentifier": "philosophy-stackexchange-answer-67905",
+    "publisher": "Philosophy Stack Exchange (Stack Exchange network)",
+    "publicationDate": "2019-10-20",
+    "sourceSha256": "4aa23f7d7cd2752ef47fdba6ee483ad6a05b42c188b14f7173590d9ab7d746d6",
+    "limitations": [
+      "A forum answer by one contributor; the summary of Sartre is the answerer’s reading, not Sartre’s text, and should be checked against Existentialism is a Humanism before relying on it.",
+      "The question it answers concerns a particular person’s military service; the excerpts are limited to the general point and say nothing about that service or any political conflict."
+    ],
+    "author": "Geoffrey Thomas",
+    "work": "Answer 67905 to the Philosophy Stack Exchange question “I'm being drafted to the military but I have the option to refuse (legally), would it be immoral for me to serve?” (question 67900)",
+    "edition": "Answer posted 2019-10-20T21:43:23Z, not edited; text as returned by the Stack Exchange API single-question endpoint on 2026-11-08",
+    "license": "CC BY-SA 4.0, chosen by the date of the answer revision quoted. Quote word for word only, beside the site, a link to the answer, the author linked to their profile and the licence link; no adaptations.",
+    "status": "reviewed",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "excerpts": [
+      {
+        "id": "philosophy-se-sartre-student-excerpt",
+        "text": "The key passage is the case of the student who in wartime France (early 1940s) does not know whether to stay with his mother, who needs him, or to join the Free French forces who are combatting the Germans. The Free French are a larger cause but his role with them might be negligible. There is no answer 'out there'. He has to decide his commitments.",
+        "sha256": "31884de3be6e6ca6717debb4081ae182ea1869c8bc13fe44aa76ec7092455c0c",
+        "locator": "Answer 67905 by Geoffrey Thomas, final paragraph, describing Sartre’s Existentialism is a Humanism",
+        "quoteAllowed": true
+      },
+      {
+        "id": "philosophy-se-define-the-person-excerpt",
+        "text": "You are at a point where you have to define the kind of person you are.",
+        "sha256": "cca9185f7e2b6db7f9f1eff2af8e026c8fe06d169109fb7df75d3d68aae4cf12",
+        "locator": "Answer 67905 by Geoffrey Thomas, fifth paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "philosophy-se-sartre-student-claim",
+        "text": "A Philosophy Stack Exchange answer summarises Sartre’s example of a student torn between staying with his mother, who needs him, and joining a larger cause, and reads it as saying there is no external answer: he has to decide his commitments.",
+        "excerptIds": [
+          "philosophy-se-sartre-student-excerpt"
+        ],
+        "topics": [
+          "obligation to family",
+          "family obligations",
+          "duty to my mother",
+          "duty to my parents",
+          "family or a larger cause",
+          "stay with my family",
+          "decide my commitments"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      },
+      {
+        "id": "philosophy-se-define-the-person-claim",
+        "text": "A Philosophy Stack Exchange answer frames a hard choice between loyalty to family and a competing moral concern as a point where the person has to define the kind of person they are.",
+        "excerptIds": [
+          "philosophy-se-define-the-person-excerpt"
+        ],
+        "topics": [
+          "what kind of person",
+          "kind of person i am",
+          "who i want to be",
+          "family disapproval",
+          "letting my family down"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      }
+    ],
+    "attribution": {
+      "site": "Philosophy Stack Exchange",
+      "postUrl": "https://philosophy.stackexchange.com/questions/67900/im-being-drafted-to-the-military-but-i-have-the-option-to-refuse-legally-wou/67905#67905",
+      "authors": [
+        {
+          "name": "Geoffrey Thomas",
+          "profileUrl": "https://philosophy.stackexchange.com/users/29361/geoffrey-thomas"
+        }
+      ],
+      "licence": "CC BY-SA 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+    }
+  },
+  {
+    "id": "philosophy-se-career-felt-obligation",
+    "mode": "philosophy",
+    "title": "Am I morally obligated to pursue a career in medicine?",
+    "url": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine",
+    "sourceIdentifier": "philosophy-stackexchange-answer-10834",
+    "publisher": "Philosophy Stack Exchange (Stack Exchange network)",
+    "publicationDate": "2014-04-19",
+    "sourceSha256": "8c9f035ed9b86a2c202995b8f2f2b5ec3ee92559a29021bc49f30219bfc83090",
+    "limitations": [
+      "A forum answer by one contributor stating an expectation, not a study of doctors or of other careers.",
+      "The answer’s figures on lives saved come from an external 2014 analysis that is not part of this record and is not quoted."
+    ],
+    "author": "Kaj_Sotala",
+    "work": "Answer 10834 to the Philosophy Stack Exchange question “Am I morally obligated to pursue a career in medicine?” (question 10823)",
+    "edition": "Answer posted 2014-04-19T11:52:48Z, not edited; text as returned by the Stack Exchange API single-question endpoint on 2026-11-08",
+    "license": "CC BY-SA 3.0, chosen by the date of the answer revision quoted. Quote word for word only, beside the site, a link to the answer, the author linked to their profile and the licence link; no adaptations.",
+    "status": "reviewed",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "excerpts": [
+      {
+        "id": "philosophy-se-career-felt-obligation-excerpt",
+        "text": "I would expect that, other things being equal, the kind of person who already had a strong internal motivation to become a doctor would be more likely to become a good doctor than the kind of person who was mostly doing it because they felt obligated to do so.",
+        "sha256": "8cca66aedb20882a6d0078fe6e2f8dc647b8cbdc324affe83ec57c00d02f7d52",
+        "locator": "Answer 10834 by Kaj_Sotala, fifth paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "philosophy-se-career-felt-obligation-claim",
+        "text": "A Philosophy Stack Exchange answer expects that, other things being equal, someone strongly motivated to become a doctor would be more likely to do the job well than someone doing it mainly from a sense of obligation.",
+        "excerptIds": [
+          "philosophy-se-career-felt-obligation-excerpt"
+        ],
+        "topics": [
+          "feel obligated",
+          "sense of obligation",
+          "career choice",
+          "career in medicine",
+          "become a doctor",
+          "motivation"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      }
+    ],
+    "attribution": {
+      "site": "Philosophy Stack Exchange",
+      "postUrl": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine/10834#10834",
+      "authors": [
+        {
+          "name": "Kaj_Sotala",
+          "profileUrl": "https://philosophy.stackexchange.com/users/6073/kaj-sotala"
+        }
+      ],
+      "licence": "CC BY-SA 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/legalcode"
+    }
+  },
+  {
+    "id": "philosophy-se-theory-acceptable-options",
+    "mode": "philosophy",
+    "title": "Am I morally obligated to pursue a career in medicine?",
+    "url": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine",
+    "sourceIdentifier": "philosophy-stackexchange-answer-10825",
+    "publisher": "Philosophy Stack Exchange (Stack Exchange network)",
+    "publicationDate": "2014-04-19",
+    "sourceSha256": "8c9f035ed9b86a2c202995b8f2f2b5ec3ee92559a29021bc49f30219bfc83090",
+    "limitations": [
+      "A forum answer by one contributor drawing on personal experience; it is advice, not evidence that a values-aligned path produces any particular outcome.",
+      "The answerer later clarifies that philosophy can still help develop attitudes and rule out choices that contravene basic values."
+    ],
+    "author": "Richard",
+    "work": "Answer 10825 to the Philosophy Stack Exchange question “Am I morally obligated to pursue a career in medicine?” (question 10823)",
+    "edition": "Answer posted 2014-04-19T05:18:26Z, last edited 2014-04-19T13:39:37Z; text as returned by the Stack Exchange API single-question endpoint on 2026-11-08",
+    "license": "CC BY-SA 3.0, chosen by the date of the answer revision quoted. Quote word for word only, beside the site, a link to the answer, the author linked to their profile and the licence link; no adaptations.",
+    "status": "reviewed",
+    "reviewedAt": "2026-11-08T13:08:14.846Z",
+    "reviewedBy": "case-prep implementation (pending owner review)",
+    "inspectedAt": "2026-11-08T13:08:14.838Z",
+    "excerpts": [
+      {
+        "id": "philosophy-se-theory-acceptable-options-excerpt",
+        "text": "Philosophical theories are great for ruling out bad choices, or justifying actions that you wish to take, but it is next to useless for choosing between multiple acceptable options.",
+        "sha256": "4cb6c59aa8b43f7925ae7e9fcf898d7e7190b87db80b62b6b266567e8b5b4f9d",
+        "locator": "Answer 10825 by Richard, third paragraph",
+        "quoteAllowed": true
+      },
+      {
+        "id": "philosophy-se-path-in-harmony-excerpt",
+        "text": "If the path that you choose is in harmony with your abilities, what you enjoy, and your values, you will be able to do an unmeasurable amount of good in the world, no matter what particular job you have.",
+        "sha256": "4ed5c0c75b2bdcaa7ba8d815c59e6f047eed01c7c64e56f5bf9943b9b79e8c5a",
+        "locator": "Answer 10825 by Richard, sixth paragraph",
+        "quoteAllowed": true
+      }
+    ],
+    "claims": [
+      {
+        "id": "philosophy-se-theory-acceptable-options-claim",
+        "text": "A Philosophy Stack Exchange answer argues that philosophical theories help rule out bad choices but do little to decide between several acceptable options.",
+        "excerptIds": [
+          "philosophy-se-theory-acceptable-options-excerpt"
+        ],
+        "topics": [
+          "acceptable options",
+          "two good options",
+          "several good options",
+          "choosing between options",
+          "moral theory"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      },
+      {
+        "id": "philosophy-se-path-in-harmony-claim",
+        "text": "A Philosophy Stack Exchange answer suggests choosing a path in harmony with one’s abilities, enjoyment and values, whatever the particular job.",
+        "excerptIds": [
+          "philosophy-se-path-in-harmony-excerpt"
+        ],
+        "topics": [
+          "my values",
+          "what i enjoy",
+          "my abilities",
+          "career choice",
+          "which career"
+        ],
+        "status": "supported",
+        "supportType": "interpretation",
+        "paraphraseAllowed": false
+      }
+    ],
+    "attribution": {
+      "site": "Philosophy Stack Exchange",
+      "postUrl": "https://philosophy.stackexchange.com/questions/10823/am-i-morally-obligated-to-pursue-a-career-in-medicine/10825#10825",
+      "authors": [
+        {
+          "name": "Richard",
+          "profileUrl": "https://philosophy.stackexchange.com/users/6067/richard"
+        }
+      ],
+      "licence": "CC BY-SA 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/legalcode"
+    }
   }
 ]
