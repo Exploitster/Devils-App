@@ -156,6 +156,7 @@ Today a conversation asks at most three clarifying questions and then argues bac
 - A pre-mortem opening question ("it's a year later and this failed; why?").
 - A per-person limit on AI usage; the existing daily spend limit is the only cost guard.
 - Scores that compare a person against other founders.
+- Considered and not built: a plainer assessment built without the AI when the assessment call fails. A failure is visible at once and "Get assessment" retries it with the answers safely saved; revisit if assessment failures turn out to be frequent.
 
 **Outside this product's identity**
 
@@ -201,18 +202,33 @@ This plan covers the case-prep conversation. The areas below are the current und
 
 ### Key Technical Decisions
 
-- KTD1. **Case-prep state lives in an optional `casePrep` object inside the conversation's saved state, created by the engine on the first turn.** A conversation with messages and no `casePrep` is legacy. This needs no database migration and no change to how sessions are created, because state is stored as one JSON document (`supabase/migrations/001_application.sql`, `src/lib/store/local.ts`). Governs R1, R16, R22.
+- KTD1. **Case-prep state lives in an optional `casePrep` object inside the conversation's saved state, created by the engine on the first turn before the safety and privacy branches run.** A conversation with messages and no `casePrep` is legacy, which is then true only of conversations saved before release. When the first turn takes the safety or privacy path, the record holds no answer and the next ordinary message is the opening answer to the first area. This needs no database migration and no change to how sessions are created, because state is stored as one JSON document (`supabase/migrations/001_application.sql`, `src/lib/store/local.ts`). Governs R1, R16, R22.
 - KTD2. **One area catalogue feeds everything.** `src/lib/case-prep/frameworks.ts` holds, per perspective, the ordered areas with their label, what the area must establish, strong-answer signals, follow-up patterns and a fallback opening question. The reducer, prompts, simulated AI, progress view and assessment all read it, and it is plain data so plan 2's admin page can later edit it. Governs R2, R3, R17.
-- KTD3. **The app chooses the target area before the AI is called; the AI only proposes.** Each turn the AI receives the target area, its framework and the area record, and returns a proposal: a rating of the latest answer (strong, weak or vague), a quote from that answer, and one question for the target area. The app accepts a "strong" rating only when the quote is a verbatim substring of the answer and the answer clears a substance floor (at least about 8 words). It accepts the question only when it is a single question ending in "?" that does not restate a framework's strong-answer signals as an answer. Otherwise it uses the area's fallback question. Follow-up counts and area transitions are the app's alone. Governs R4, R5, R6, R8.
-- KTD4. **Actions map onto the existing turn actions.** "I don't know yet" is the existing `skip`: the area becomes untested, or weak when it already holds an earlier answer. `pushback` keeps the area and asks the AI to explain or rephrase the current question. `correction` replaces the position, and the AI proposes which answered areas no longer fit; the app resets those to not asked and keeps the rest. The simulated AI resets every answered area except the first. Governs R7, R10.
-- KTD5. **The assessment runs through the existing card task as its own call, which the client starts automatically once every area is covered.** The app writes the per-area scores, quoted reasons and next-step slots from the case record. The AI writes only the prose (one-line statement, good, bad, what must be true, loopholes); loophole counterpoints pass the existing evidence validation unchanged. An area still being probed when an early assessment is requested scores weak with the reason "still being explored". If the AI call fails, or the spend limit refuses it, the app saves a plainer assessment built from the record, marked so the person can regenerate it. Only the latest assessment is kept, in `casePrep.assessment`; storing it in state avoids changing the card commit path in both stores and the SQL function, which a separate assessments list would need. Governs R11, R12, R13, R14, R15.
+- KTD3. **The app owns every transition; the AI proposes a question for each possible outcome.** Each turn the AI receives the current area and the next area in catalogue order, each with its framework, plus the case record. It returns a rating of the latest answer (strong, weak or vague), a quote from that answer, a `followUpQuestion` for the current area and a `nextAreaQuestion` for the next area.
+  - **Strong rating checks:** the app accepts "strong" only when the quote matches the latest answer after normalising case, whitespace, punctuation and quote marks (the `normalize` approach in `src/lib/conversation/state.ts`), and the area's recorded answers together clear a substance floor of about 8 words. The stored quote is the matching span of the person's original text.
+  - **Question checks:** the app applies its own transition and takes the question for the area it leads to. It accepts that question only when it is a single question ending in "?" that does not restate the framework's strong-answer signals as an answer; otherwise it uses that area's fallback question.
+  - **Exempt turns:** the one-question rule covers questioning turns only. The turn that announces the assessment and the safety support reply are exempt.
+  - **Ownership:** follow-up counts and area transitions are the app's alone.
+  - Governs R4, R5, R6, R8.
+- KTD4. **Actions map onto the existing turn actions.**
+  - "I don't know yet" is the existing `skip` and always makes the area untested, per R7.
+  - `pushback` keeps the area and asks the AI to explain or rephrase the current question.
+  - `correction` replaces the position. The AI returns `invalidatedAreaIds` and a question for the earliest invalidated area (or the current area when none is invalidated); the app resets those areas to not asked, keeps the rest, and accepts the question only when its area matches the target the app derives. The simulated AI invalidates every answered area except the first.
+  - Once a case is complete, only `correction` and the assessment request are accepted; a message, skip or pushback is refused with a clear error and the session is unchanged. After an early assessment on an incomplete case, plain answers continue at the next area.
+  - Governs R7, R10, R11.
+- KTD5. **The assessment runs through the existing card task as its own call, which the client starts whenever it shows a complete case with no assessment.**
+  - The app writes the per-area scores, quoted reasons and next-step slots from the case record. Areas still not asked score "not covered"; areas still probing score weak with the reason "still being explored".
+  - The AI writes only the prose: one-line statement, good, bad, what must be true, loopholes. Loophole counterpoints get the same citation checks as today's counterpoints, by extending `validateCitations` to the assessment's loopholes.
+  - If the AI call fails or the spend limit refuses it, the request fails as turns do today, no partial assessment is saved, and the person retries with "Get assessment".
+  - Only the latest assessment is kept, in `casePrep.assessment`; storing it in state avoids changing the card commit path in both stores and the SQL function, which a separate assessments list would need. `casePrep.completedAt` is set the first time a full assessment is saved after every area was covered, and is never cleared.
+  - Governs R11, R12, R13, R14, R15.
 - KTD6. **One proposal schema shared by all three AI transports.** The case-prep proposal is defined once and added to `ModelOutputSchema` (Gemini), `RouterEnvelopeSchema` and its decoder (OpenRouter and Gateway). The prompt versions are bumped and the case-prep instructions replace the old clarify-then-debate rules. The Gemini schema cleaner must accept every construct the proposal uses.
 - KTD7. **The old engine is retired.** Turn and card requests on a legacy conversation are refused with a clear "read-only" error, and the clarifying and debate logic, `nextClarification` and the playbooks are removed once nothing calls them. Governs R16, R22. (session-settled: user-directed — chosen over keeping old conversations continuable: one engine to maintain.)
 - KTD8. **The AI sees a compact case record, not the whole transcript.** Each area keeps up to three bounded answer quotes (about 500 characters each), so a long case still works within the 24-message context window. The assessment is written from this record. Governs R13.
-- KTD9. **The assessment gets its own, larger output budget.** It uses `DEVILS_MAX_ASSESSMENT_TOKENS` (default 6000), separate from the 2500-token turn budget. The daily spend limit is unchanged.
-- KTD10. **A safety pause holds the case.** The support phase leaves `casePrep` untouched. The next ordinary message resumes the current area, and an assessment can still be requested from the record. Governs R1.
+- KTD9. **The assessment gets its own, larger output budget, and the spend reservation prices it.** It uses `DEVILS_MAX_ASSESSMENT_TOKENS` (default 6000), separate from the 2500-token turn budget, and `reserveCost` uses the same budget for card tasks. The daily spend limit is unchanged.
+- KTD10. **A safety pause holds the case.** The support phase leaves area states untouched. The next ordinary message resumes the current area, and an assessment can still be requested from the record. The qualified-help notice (money, legal, medical words) shows at most once per case, so it does not prefix every question in the money and founder areas. Governs R1, R4.
 - KTD11. **Stack Exchange attribution is a structured field, quoted verbatim.** `EvidenceSchema` gains an optional `attribution` (site, post URL, authors with profile URLs, licence name and URL by post date). Stack Exchange records allow quotes and never paraphrase, to avoid creating an adaptation. Attribution shows in the source dialog and the Markdown export. Snapshots are saved by hand: no data dump, API bulk pull or scraping. Governs R18, R19.
-- KTD12. **The return rate is an owner-run report.** `scripts/case-prep-return-rate.ts` reads every saved conversation (service-role Supabase, or the local SQLite file in local mode) and prints completions, returns and the rate. A completion is a full assessment written after every area was covered. A return is the same person starting a new case-prep conversation within 30 days of that completion. Deleted conversations and accounts drop out. Governs R21.
+- KTD12. **The return rate is an owner-run report.** `scripts/case-prep-return-rate.ts` reads every saved conversation (service-role Supabase, or the local SQLite file in local mode) and prints completions, returns and the rate. A completion is `casePrep.completedAt` (KTD5). A return is the same person starting a new case-prep conversation within 30 days of that completion. Deleted conversations and accounts drop out. Governs R21.
 
 ### High-Level Technical Design
 
@@ -225,8 +241,7 @@ stateDiagram-v2
   Probing --> Strong: answer passes quote + substance check
   Probing --> Probing: vague answer, follow-ups < 3
   Probing --> Weak: vague after 3 follow-ups
-  Probing --> Untested: "I don't know yet" with no earlier answer
-  Probing --> Weak: "I don't know yet" after an earlier answer
+  Probing --> Untested: "I don't know yet"
   Strong --> NotAsked: correction invalidates the area
   Weak --> NotAsked: correction invalidates the area
   Untested --> NotAsked: correction invalidates the area
@@ -243,8 +258,8 @@ sequenceDiagram
   UI->>E: answer / skip / pushback / correction
   E->>R: apply action to case record (KTD4)
   R-->>E: target area + framework
-  E->>M: compact case record + target area (KTD8)
-  M-->>E: proposal: rating, quote, question
+  E->>M: compact case record + current and next area (KTD8)
+  M-->>E: proposal: rating, quote, follow-up and next-area questions
   E->>R: validate proposal (KTD3)
   R-->>E: next area state, accepted or fallback question
   E-->>UI: saved session (+ complete flag)
@@ -255,14 +270,14 @@ sequenceDiagram
 
 - **Sessions API:** turn and card routes keep their request shapes; legacy sessions now return a read-only error, which the chat UI handles (U4, U5).
 - **Stored data:** new conversations save the case record and assessment inside session state; nothing is migrated, and conversation deletion removes them as today (`docs/privacy.md` updated in U9).
-- **AI prompts and cost:** every turn and the assessment change prompt shape and size; spend reservations follow automatically because `reserveCost` serialises the real request.
-- **Evidence:** the citation rules and validation stay as they are; only attribution is added (KTD11).
+- **AI prompts and cost:** every turn and the assessment change prompt shape and size; the input side of the spend reservation follows automatically because `reserveCost` serialises the real request, and the output side is changed explicitly for assessments (KTD9).
+- **Evidence:** the citation rules stay as they are, extended to the assessment's loopholes (KTD5); attribution is added (KTD11).
 - **Public site:** homepage, pricing and the sample conversation change wording (U9); info and legal pages keep their content.
 
 ### Assumptions
 
 - Philosophy Stack Exchange post pages can be read from the build environment, or the owner can save snapshots by hand. If neither works, U6 stops (Goal Capsule).
-- Answers of about eight words or more are a fair substance floor for "strong". The offline evaluation cases tune it.
+- About eight words across an area's recorded answers is a fair substance floor for "strong". The offline evaluation cases tune it.
 
 ### Risks & Dependencies
 
@@ -271,7 +286,7 @@ sequenceDiagram
 | AI proposals drift from the schema on one transport | One shared schema (KTD6); transport tests per provider; one retry already exists for invalid output |
 | A full case costs more than expected | One call per question plus the assessment; spend limit unchanged; the return-rate report and usage events show actual cost |
 | Bad AI questions leak answers | Controller check plus framework fallback (KTD3); evaluation cases assert one question per turn |
-| Removing the old engine breaks tests broadly | U4 removes it only after U2/U3 land; seven e2e specs are rewritten in U5 |
+| Removing the old engine breaks tests broadly | U4 removes it only after U2/U3 land; eight e2e specs are rewritten in U5 |
 
 ---
 
@@ -288,7 +303,7 @@ sequenceDiagram
   - `tests/case-prep-frameworks.test.ts` (new)
 - **Approach:**
   1. Write each area's label, what it must establish, strong-answer signals, follow-up patterns and fallback question, drawn from customer discovery, case-interview structure and classic philosophical questions.
-  2. Add optional `casePrep` to `SessionStateSchema`: perspective, areas (id, state, follow-up count, bounded quotes), current area, complete flag, assessment.
+  2. Add optional `casePrep` to `SessionStateSchema`: perspective, areas (id, state, follow-up count, bounded quotes), current area, complete flag, qualified-notice flag, assessment and `completedAt`.
   3. Add the proposal schema and the assessment schema; keep every new field optional on the state so legacy rows still parse.
 - **Patterns to follow:** strict Zod shapes in `src/lib/contracts.ts`; playbook text in `src/lib/model/playbooks.ts`.
 - **Test scenarios:**
@@ -301,16 +316,16 @@ sequenceDiagram
 ### U2. Case-prep reducer
 
 - **Goal:** The app-owned area state machine: choose the target area, apply actions, validate proposals, count follow-ups, detect completion.
-- **Requirements:** R4, R5, R6, R7, R8, R10, R11; KTD3, KTD4, KTD8, KTD10; F1, F2.
+- **Requirements:** R4, R5, R6, R7, R8, R10, R11; KTD1, KTD3, KTD4, KTD8, KTD10; F1, F2.
 - **Dependencies:** U1.
 - **Files:**
   - `src/lib/case-prep/reducer.ts` (new)
   - `tests/case-prep-reducer.test.ts` (new)
 - **Approach:**
-  1. `startCase` builds the record from the catalogue and the first message; the first message counts as the opening answer to the first area.
-  2. `nextTarget` returns the current probing area, else the first area not asked.
-  3. `applyAction` handles answer, skip, pushback and correction per KTD4.
-  4. `acceptProposal` validates rating, quote and question per KTD3, stores the bounded quote, increments follow-ups, transitions the area, and falls back to the framework question when needed.
+  1. `startCase` builds the record from the catalogue; the first ordinary message counts as the opening answer to the first area (KTD1).
+  2. `targets` returns the current probing area and the next area not asked.
+  3. `applyAction` handles answer, skip, pushback and correction per KTD4, including refusing message, skip and pushback on a complete case.
+  4. `acceptProposal` validates rating, quote and questions per KTD3, stores the bounded original-text quote, increments follow-ups, transitions the area, and picks the follow-up, next-area or fallback question.
   5. `isComplete` is true when no area is not asked or probing.
 - **Execution note:** Implement test-first; the reducer is pure and carries the product rules.
 - **Patterns to follow:** `controlOutput` and `prepareState` in `src/lib/conversation/state.ts` (the app overrides the model).
@@ -318,11 +333,15 @@ sequenceDiagram
   - Covers AE1. A vague customer answer keeps the area probing and the next target stays customer.
   - Covers AE2. A third vague follow-up marks market weak and the target moves to alternatives.
   - Covers AE3. Skip on an unanswered area marks it untested and moves on.
-  - Skip on an area that already holds an answer marks it weak.
+  - Skip on an area that already holds an answer still marks it untested (R7).
   - A "strong" rating with a quote not found in the answer is downgraded to vague.
-  - A "strong" rating on a three-word answer is downgraded to vague.
-  - A proposed question with two question marks, or none, is replaced by the fallback.
-  - Covers AE5. A correction that invalidates customer and market resets those two and keeps the problem answer.
+  - A quote differing only by curly apostrophes, case or extra spaces is accepted, and the stored quote is the person's original text.
+  - A "strong" rating on a three-word answer with no earlier answer in the area is downgraded to vague.
+  - A long opening answer followed by "Three doctors, in Porto." can be rated strong.
+  - A strong rating uses `nextAreaQuestion`; a strong rating downgraded to vague uses `followUpQuestion`.
+  - A proposed question with two question marks, or none, is replaced by the fallback for the area the transition leads to.
+  - Covers AE5. A correction that invalidates customer and market resets those two, keeps the problem answer, and asks the AI's customer question.
+  - A message, skip or pushback on a complete case is refused and leaves the record unchanged; a correction is accepted.
   - Pushback leaves the area state and follow-up count unchanged.
   - Follow-ups past fifteen total questions are still allowed (R8).
   - Completion is reached only when every area is strong, weak or untested.
@@ -341,20 +360,22 @@ sequenceDiagram
   - `src/lib/model/gateway-request.ts`
   - `src/lib/model/gemini.ts`
   - `src/lib/config.ts`
+  - `src/lib/conversation/limits.ts`
   - `.env.example`
-  - `tests/gemini.test.ts`, `tests/openrouter.test.ts`, `tests/gateway.test.ts`, `tests/config.test.ts`
+  - `tests/gemini.test.ts`, `tests/openrouter.test.ts`, `tests/gateway.test.ts`, `tests/config.test.ts`, `tests/model-failures.test.ts`
 - **Approach:**
   1. Replace the clarify/debate instructions with case-prep rules: one simple question for the given target area, built on the person's words, never containing the answer; rate the latest answer and quote it; never give a verdict or probability; keep the safety rules.
   2. `providerInput` sends the compact case record and target area instead of the full state (KTD8).
   3. Add the proposal and assessment-prose fields to `ModelOutputSchema` and `RouterEnvelopeSchema`, and decode them in `decodeRouterOutput` and the gateway diagnostics.
   4. Bump `promptVersion`, `routerPromptVersion` and the gateway prompt version.
-  5. Add `DEVILS_MAX_ASSESSMENT_TOKENS` (default 6000) and use it for the card task.
+  5. Add `DEVILS_MAX_ASSESSMENT_TOKENS` (default 6000), use it for the card task's output limit, and price card-task spend reservations with it (KTD9).
 - **Patterns to follow:** existing schema cleaner in `src/lib/model/request.ts`; router decode in `src/lib/model/openrouter-request.ts`.
 - **Test scenarios:**
   - The Gemini response schema generated from the new envelope contains no keyword the cleaner strips silently.
   - An OpenRouter response with a valid proposal decodes into the shared proposal shape.
   - A router response missing the question field fails decoding as invalid output (retryable).
   - A card-task request uses the assessment token budget; a turn request uses the turn budget.
+  - A card-task spend reservation is priced on the assessment budget, a turn reservation on the turn budget.
   - `DEVILS_MAX_ASSESSMENT_TOKENS` rejects non-numeric and out-of-range values.
   - The instructions text contains "Never provide a verdict or probability" and no longer mentions "three total".
 - **Verification:** Transport tests pass for all three providers; typecheck clean.
@@ -369,12 +390,13 @@ sequenceDiagram
   - `src/lib/conversation/state.ts`
   - `src/lib/model/deterministic.ts`
   - `src/lib/model/playbooks.ts` (remove once unused)
+  - `src/lib/evidence/validate.ts`
   - `src/lib/errors.ts` (if a new error code is needed)
   - `tests/conversation.test.ts`, `tests/adaptive-conversation.test.ts`, `tests/model-failures.test.ts`, `tests/case-prep-engine.test.ts` (new)
 - **Approach:**
-  1. On a turn, refuse legacy sessions (KTD7). Otherwise start the case on the first message, apply the action, pick the target, call the AI, and validate the proposal through the reducer before commit.
-  2. On the card task for a case session, build scores and quotes from the record, ask the AI for prose, validate loophole citations with the existing evidence check, and save `casePrep.assessment`. On AI failure or spend refusal, save the plain record-built assessment marked regenerable.
-  3. Keep the safety path; it leaves `casePrep` unchanged (KTD10).
+  1. On a turn, refuse legacy sessions (KTD7). Otherwise create the case record before the safety branch (KTD1), apply the action, pick the targets, call the AI, and validate the proposal through the reducer before commit.
+  2. On the card task for a case session, build scores and quotes from the record, ask the AI for prose, validate loophole citations with the extended `validateCitations`, save `casePrep.assessment`, and set `completedAt` the first time a full assessment is saved (KTD5). On AI failure or spend refusal, fail as turns do and save nothing.
+  3. Keep the safety path; it leaves area states unchanged, and the qualified-help notice shows once per case (KTD10).
   4. Rewrite `DeterministicModel` for case prep: per-area questions from the catalogue, vagueness by answer length and filler words ("everyone", "I guess", "not sure"), invalidated areas on correction per KTD4, and template assessment prose.
   5. Remove the old clarify/debate code and `makeCard` callers that only legacy turns used.
 - **Patterns to follow:** existing `run()` pipeline (idempotency, lease, spend reservation, one retry).
@@ -384,8 +406,11 @@ sequenceDiagram
   - The card task on a complete case saves an assessment with nine scored areas, quoted reasons and "Your call. Always.".
   - Covers AE4. The card task after five areas scores five and marks four "not covered".
   - Covers AE6. An all-weak case's assessment contains no "go", "don't do this" or probability wording.
-  - When the AI call fails twice, the saved assessment is the record-built version, marked regenerable.
-  - When the spend reservation is refused, the record-built assessment is saved and the person is not charged.
+  - When the AI assessment call fails twice, or the spend reservation is refused, no assessment is saved and a later card task succeeds.
+  - An assessment loophole citing evidence not retrieved for this operation, or with text that differs from the claim, fails validation.
+  - `completedAt` is set on the first full assessment and survives a later correction and a regenerated assessment.
+  - A first message that hits the political rule or the privacy boundary saves a case record, is not legacy, and the next ordinary message gets a question for the first area.
+  - A money question in the founder area shows the qualified-help notice once; later turns in the same case do not repeat it.
   - A turn on a legacy session (messages, no `casePrep`) is refused as read-only and the session is unchanged.
   - A crisis message mid-case returns the support reply and leaves area states unchanged; the next message resumes the same area.
   - Idempotent replay of a case turn returns the same session without a second model call.
@@ -395,7 +420,7 @@ sequenceDiagram
 
 - **Goal:** Show progress, the "I don't know yet" reply, the assessment and its download, start the assessment automatically, and render legacy conversations read-only.
 - **Requirements:** R7, R9, R11, R12, R13, R15, R16, R22; F1, F2; AE3, AE4, AE7.
-- **Dependencies:** U4.
+- **Dependencies:** U4, U6.
 - **Files:**
   - `src/components/session.tsx`
   - `src/components/case-progress.tsx` (new)
@@ -406,13 +431,15 @@ sequenceDiagram
   - Updated: `tests/e2e/mvp.spec.ts`, `tests/e2e/application.spec.ts`, `tests/e2e/chat-thread.spec.ts`, `tests/e2e/chat-ux.spec.ts`, `tests/e2e/new-chat.spec.ts`, `tests/e2e/layout.spec.ts`, `tests/e2e/public-onboarding.spec.ts`, `tests/e2e/accessibility.spec.ts`
 - **Approach:**
   1. A compact progress strip above the composer lists the areas and their state, collapsible on phones.
-  2. The latest question offers "I don't know yet" as a quiet reply; Push back and Correct my position stay; "Get assessment" replaces "Make a hand-back card".
-  3. After a turn that completes the case, the client requests the assessment once.
+  2. The latest question offers "I don't know yet" as a quiet reply; Push back and Correct my position stay; "Get assessment" replaces "Make a hand-back card". Once the case is complete, only Correct my position and "Update assessment" remain (KTD4).
+  3. Whenever the client shows a case that is complete with no assessment, including on page load, it requests the assessment, shows "Writing your assessment" in the thread while it runs, and a retry control if it fails. A short "Your assessment is ready" line marks its arrival.
   4. The assessment renders as a document section in the thread with Copy and Download Markdown, including source attribution.
   5. A legacy session hides the composer and shows "Start a case", which hands the old position to a new session through the existing first-message hand-over.
 - **Patterns to follow:** `Card` and its `markdown()` export in `src/components/session.tsx`; the pending-message hand-over.
 - **Test scenarios:**
   - Covers F1. An e2e run answers every business area with the simulated AI and sees the assessment appear without pressing anything.
+  - Reloading between the final answer and the assessment still produces the assessment.
+  - After completion, the composer accepts only a correction, and "Update assessment" replaces the assessment.
   - Covers AE3. "I don't know yet" marks the area untested in the progress strip.
   - Covers AE4. "Get assessment" mid-case shows "not covered" for unasked areas.
   - The downloaded Markdown file contains every area score and "Your call. Always.".
@@ -478,12 +505,13 @@ sequenceDiagram
   - `tests/case-prep-return-rate.test.ts` (new)
   - `docs/operations.md`
 - **Approach:**
-  1. A pure function takes sessions (owner, created time, case record) and returns completions, returns within 30 days, and the rate.
+  1. A pure function takes sessions (owner, created time, case record) and returns completions (from `completedAt`), returns within 30 days, and the rate.
   2. The script loads sessions with the service-role client (as `scripts/verify-supabase.ts` does) or from the local SQLite file in local mode, and prints the figures. It writes nothing.
 - **Test scenarios:**
   - A person who completes a case and starts another 10 days later counts as a return.
   - A second case started 31 days later does not count.
   - An early assessment (case not complete) is not a completion.
+  - A correction after completion does not remove the completion.
   - Legacy sessions are ignored.
   - With no completions the rate prints as "no completions yet" rather than dividing by zero.
 - **Verification:** Tests pass; the script runs against a local SQLite file seeded by the e2e suite.
