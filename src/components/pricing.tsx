@@ -14,8 +14,8 @@ export function Pricing({ paid }: { paid: boolean }) {
         <p>Charged once every month. Cancel anytime.</p><LocalPrice/>
         <ul className="plan-benefits">
           <li><Icon name="check"/>Business validation and philosophical reflection</li>
-          <li><Icon name="check"/>Reviewed sources, with their limits</li>
-          <li><Icon name="check"/>Saved conversations and hand-back cards</li>
+          <li><Icon name="check"/>Sourced loopholes, with their limits</li>
+          <li><Icon name="check"/>Saved conversations and assessments</li>
         </ul>
         <Link className="button primary full-width" href="/billing">Subscribe for ₹2,000/month<Icon name="arrow"/></Link>
                 {!paid && <p className="notice">Subscriptions open soon; your free access continues until then, and no real payment is collected.</p>}

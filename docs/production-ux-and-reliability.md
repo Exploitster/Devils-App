@@ -4,9 +4,9 @@
 
 Reference: https://exploitster.github.io/devilsadvocate/ (retrieved 26 October).
 Existing theme, sections, sign-in, billing and app features are retained.
-Added business/philosophy discovery switch, six scripted sample debates with
-three clarifying questions, strengths/counterpoints, selectable pushback and
-answer-dependent hand-back cards; a seven-step walkthrough; product FAQs;
+Added business/philosophy discovery switch, six scripted sample case-prep
+exchanges with three guided questions and an answer-dependent mini assessment
+ending in "Your call. Always."; a six-step walkthrough; product FAQs;
 and homepage navigation to the samples and FAQ.
 
 The reference's waitlist, December opening message, $59 monthly / $150 yearly
@@ -68,10 +68,10 @@ Before accepting subscribers:
    cases with a bounded budget. Existing offline tests use deterministic responses;
    the current `eval:live` runner is Gemini-specific and is not a production
    Gateway quality benchmark. Adapt the harness to the configured provider.
-5. Score usefulness: preserves user facts, asks only missing high-value questions
-   (maximum three), strengths first, relevant counterarguments, accurate source
-   support, corrections honored, no repetitive pushback, actionable reversible
-   test with success/stop criteria, no final verdict. Human-review samples from
+5. Score usefulness: preserves user facts, asks only missing high-value questions,
+   follow-ups on weak answers (maximum three per area), every area scored, relevant
+   loopholes, accurate source support, corrections honored, no repeated questions,
+   actionable reversible test with success/stop criteria, no go or no-go verdict. Human-review samples from
    both verticals. Proposed release gates: zero fabricated citations or altered
    user facts in the release set; at least 90% pass on the remaining rubric.
 6. Keep citation validation strict. The current check enforces canonical IDs,

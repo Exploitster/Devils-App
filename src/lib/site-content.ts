@@ -13,18 +13,18 @@ export const publicPages: PublicPage[] = [
     intro: 'Devils Advocate helps you examine an idea before committing to it, or understand the tradeoffs in a personal choice.',
     sections: [
       section('Two perspectives, one purpose', 'Business validation explores customers, demand, pricing, costs and the assumptions behind an idea. Philosophical reflection explores values, obligations and uncertainty in personal decisions. Choose the perspective that fits your situation; both are designed to help you think, rather than choose for you.'),
-      section('A conversation with something to keep', 'Describe your situation in your own words. The app can ask up to three clarifying questions, identify what is strong in your position, and offer relevant counterpoints. You can correct the context or push back. Save a hand-back card with open questions and a practical next step, then revisit your conversation later.'),
+      section('A conversation with something to keep', 'Describe your situation in your own words. The app walks through the areas that matter, nine for a business idea and seven for a personal decision, asking one simple question at a time and probing answers that sound weak. At the end you get an assessment that scores each area, names loopholes, and suggests next steps. Revisit your conversation later.'),
       section('An evolving product', 'This is an MVP. Its evidence collection is deliberately reviewed but currently small, and AI responses can be incomplete or wrong. The product is text-only and does not replace professional advice. Inspect sources, notice where evidence is missing, and verify important facts independently before acting.'),
     ], related: ['features', 'how-it-works', 'sources'],
   },
   {
     slug: 'features', title: 'Features for clearer thinking', heading: 'From an opening thought to a practical next step.',
-    description: 'Explore business validation, philosophical reflection, saved conversations, source details and exportable hand-back cards.',
+    description: 'Explore business validation, philosophical reflection, saved conversations, source details and exportable assessments.',
     intro: 'One workspace for challenging assumptions, considering another perspective and keeping what you learn.',
     sections: [
-      section('Focused conversations', 'Choose business or philosophy, then start with an idea, work proposal, life decision or belief. Clarifying questions help establish what you mean before exploring the other side. You can skip a question, change your position or challenge a response without pretending uncertainty has disappeared.'),
-      section('Sources with context', 'When relevant reviewed material is available, inspect source details alongside a counterpoint. Exact quotations and paraphrases are distinguished. Source context and limitations matter: a company shutdown does not prove your idea will fail, and a philosophical argument does not decide how you should live.'),
-      section('History and hand-back cards', 'Your signed-in conversations are saved to your account. Reopen them from History, search for earlier thoughts, and create updated decision cards as the conversation evolves. Cards collect your position, strengths, counterpoints, open questions and next step. Copy a card or download it as Markdown; deletion controls are available in the app.'),
+      section('Focused conversations', 'Choose business or philosophy, then start with an idea, work proposal, life decision or belief. Guiding questions take you area by area, and a weak answer gets up to three follow-ups. You can say you don’t know yet, which marks that area untested, or correct your position without pretending uncertainty has disappeared.'),
+      section('Sources with context', 'When relevant reviewed material is available, inspect source details alongside a loophole in your assessment. Exact quotations and paraphrases are distinguished. Source context and limitations matter: a company shutdown does not prove your idea will fail, and a philosophical argument does not decide how you should live.'),
+      section('History and assessments', 'Your signed-in conversations are saved to your account. Reopen them from History and search for earlier thoughts. The assessment scores each area as strong, weak or untested, and lists loopholes, what is good, what is bad, what must be true and next steps. It never gives a go or no-go verdict. Download it as Markdown; deletion controls are available in the app.'),
     ], related: ['business-validation', 'philosophical-reflection', 'pricing'],
   },
   {
@@ -33,8 +33,8 @@ export const publicPages: PublicPage[] = [
     intro: 'For founders, students and working professionals who want to understand what needs testing before investing more time or money.',
     sections: [
       section('Start with the actual business', 'Describe the customer, the problem, who pays and what people use today. Include any interviews, observed behavior or revenue you already have. Separate those observations from assumptions about demand. A precise starting point helps the conversation address your plan rather than a generic version of your industry.'),
-      section('Examine risks without a verdict', 'Explore costs, willingness to pay, distribution, delivery constraints and reasons the idea could work. Comparisons use reviewed evidence where relevant; coverage is limited. A failed startup is not a prediction, and an unrelated software business should not be treated as proof about a local food-delivery idea.'),
-      section('Leave with an experiment', 'Use a hand-back card to identify a reversible next step: for example, interview a defined customer group, test a price with consent, or run a small delivery pilot. Decide what observation would strengthen or weaken the idea before running the experiment. The app supports reasoning; it does not certify market demand or guarantee success.'),
+      section('Examine risks without a verdict', 'Work through the problem, customer, market size, what people use today, your MVP, validation, revenue, distribution and why you. Loopholes use reviewed evidence where relevant; coverage is limited. A failed startup is not a prediction, and an unrelated software business should not be treated as proof about a local food-delivery idea.'),
+      section('Leave with an experiment', 'Use the next steps in your assessment to identify a reversible step: for example, interview a defined customer group, test a price with consent, or run a small delivery pilot. Decide what observation would strengthen or weaken the idea before running the experiment. The app supports reasoning; it does not certify market demand or guarantee success.'),
     ], related: ['how-it-works', 'sources', 'pricing'],
   },
   {
@@ -44,17 +44,17 @@ export const publicPages: PublicPage[] = [
     sections: [
       section('Bring the tension, not a perfect question', 'Explain the options you see, what matters to you and who else might be affected. A career change, an obligation to family or a belief you have never examined can all be starting points. You can keep identifying details general and share only what you are comfortable sending to an AI service.'),
       section('Use philosophy as a perspective', 'Relevant reviewed passages may offer a way to examine autonomy, responsibility, consequences or revising a belief. These are interpretations with context and limits, not instructions from a philosopher about your particular life. Inspect the work and passage behind a source, and distinguish a paraphrase from an exact quotation.'),
-      section('Keep ownership of the outcome', 'The conversation can clarify strengths, tradeoffs and unanswered questions, then suggest an optional small step. It does not diagnose you, provide therapy or make your decision. For urgent or serious health, legal or financial concerns, seek qualified help. Your hand-back card is a record of reflection, not a professional assessment.'),
+      section('Keep ownership of the outcome', 'The conversation can clarify strengths, tradeoffs and unanswered questions, then suggest an optional small step. It does not diagnose you, provide therapy or make your decision. For urgent or serious health, legal or financial concerns, seek qualified help. Your assessment is a record of reflection, not a professional assessment.'),
     ], related: ['how-it-works', 'sources', 'security'],
   },
   {
     slug: 'how-it-works', title: 'How Devils Advocate works', heading: 'A conversation that hands the decision back.',
-    description: 'Learn the steps: choose a perspective, clarify your situation, examine both sides, push back and save a decision card.',
+    description: 'Learn the steps: choose a perspective, answer guiding questions area by area, go deeper on weak answers and read your assessment.',
     intro: 'Start wherever you are. You do not need a business plan or a perfectly formed question.',
     sections: [
       section('Choose and describe', 'Try the scripted sample on the homepage without an account. For your own conversation, sign in with Google or create an email-and-password account. Choose business validation or philosophical reflection, then describe the situation, any evidence you already have and the decision you want to examine.'),
-      section('Clarify and challenge', 'The app can ask up to three clarifying questions before examining your position. You can skip unknowns. Look at what holds up, consider counterpoints, inspect any relevant sources and correct misunderstandings. Pushback is welcome, but source coverage and service limits mean fresh evidence is not guaranteed every round.'),
-      section('Save and return', 'Create a hand-back card when you want to collect the useful parts of the conversation. It records your position, strengths, counterpoints, open questions and a next step. Copy or download it as Markdown. Your history lets you resume a saved conversation and create another card as your reasoning changes.'),
+      section('Answer and go deeper', 'The app asks one guiding question at a time. A weak answer gets up to three follow-ups, and you can say you don’t know yet to mark that area untested. You can correct your position, and only the areas that no longer fit are asked again. Source coverage and service limits mean fresh evidence is not guaranteed every time.'),
+      section('Read your assessment', 'When every area is covered, you receive an assessment. It scores each area as strong, weak or untested, names loopholes with sources where available, and lists what is good, what is bad, what must be true and next steps. It gives no verdict; the call is yours. Download it as Markdown. Conversations from before this flow stay readable, and you can start a new case from them.'),
     ], related: ['features', 'help', 'faq'],
   },
   {
@@ -63,7 +63,7 @@ export const publicPages: PublicPage[] = [
     intro: 'Business validation and philosophical reflection are included together. No yearly plan or introductory discount.',
     sections: [
       section('What the membership costs', 'The base price is ₹2,000 INR charged once every month. Applicable taxes and the final payable amount appear at Dodo checkout before you confirm. Supported countries may see a converted local-currency total. Website currency estimates are indicative; the checkout quote and any bank conversion fees can differ.'),
-      section('What is included', 'The plan covers both conversation perspectives, available reviewed sources, saved history, hand-back cards and Markdown exports. Usage is subject to fair-use safeguards, context limits, operating budgets and provider availability. We do not promise unlimited generations, complete industry coverage or error-free AI responses.'),
+      section('What is included', 'The plan covers both conversation perspectives, available reviewed sources, saved history, assessments and Markdown exports. Usage is subject to fair-use safeguards, context limits, operating budgets and provider availability. We do not promise unlimited generations, complete industry coverage or error-free AI responses.'),
       section('Access and renewal', 'Live subscriptions remain closed while payment verification is being completed; current free access continues. When paid access is enabled, new verified accounts receive a 24-hour cardless trial that ends without an automatic charge. Choosing a paid subscription authorizes monthly renewals until canceled. Cancel renewal from Billing before the next payment date.'),
     ], related: ['subscription-and-cancellation', 'refunds', 'faq'],
   },
@@ -72,26 +72,26 @@ export const publicPages: PublicPage[] = [
     description: 'Answers about Devils Advocate accounts, sources, AI limits, pricing, privacy, conversations and subscription management.',
     intro: 'Clear answers about what the product offers and where its limits are.',
     sections: [
-      section('What you can bring', 'Use business validation for a startup idea, pricing decision or work proposal. Use philosophical reflection for a personal choice, values conflict or belief. You do not need a perfect prompt: describe the situation, include what you know and mark what is uncertain. The text-only app can ask clarifying questions before offering another perspective.'),
+      section('What you can bring', 'Use business validation for a startup idea, pricing decision or work proposal. Use philosophical reflection for a personal choice, values conflict or belief. You do not need a perfect prompt: describe the situation, include what you know and mark what is uncertain. The text-only app asks guiding questions one at a time and then gives you an assessment.'),
       section('What you should verify', 'AI can misunderstand context or return an unhelpful interpretation. Sources are checked against a reviewed collection, but that does not make every application of a source correct. Read the source details, challenge assumptions and independently verify important claims before making a decision. The app cannot guarantee a business or personal outcome.'),
       section('Where to manage your account', 'Use History to find saved conversations, the conversation page to delete a session, and Account for profile and deletion controls. Billing holds subscription status and payment-management actions when available. Google sign-in and email/password accounts are supported. Never include passwords, card numbers or identity documents in a conversation.'),
     ], related: ['help', 'pricing', 'security'],
     questions: [
-      { question: 'Does Devils Advocate disagree with everything?', answer: 'No. It starts with what is strong in your position, then explores relevant counterpoints. You can correct the context or push back, and the decision remains yours.' },
+      { question: 'Does Devils Advocate disagree with everything?', answer: 'No. It asks guiding questions, probes weak answers and then scores each area of your case. Loopholes are there to help you reason, and the decision remains yours.' },
       { question: 'How much does it cost?', answer: 'The planned membership is ₹2,000 INR per month before applicable taxes shown at checkout. There is no yearly plan. Live subscriptions are currently closed while verification is completed.' },
       { question: 'Can I try it without a payment card?', answer: 'Current access remains free while subscriptions are disabled. When paid access opens, new verified accounts receive a 24-hour cardless trial that ends without an automatic charge.' },
       { question: 'Are sources available for every topic?', answer: 'No. The reviewed source collection is currently small. The app should explain coverage limits rather than invent a source or treat an unrelated example as evidence.' },
       { question: 'Is this professional advice?', answer: 'No. It is a tool for reflection, not medical, legal, financial or mental health advice. Consult qualified support for decisions that require it.' },
-      { question: 'Can I export or delete my conversations?', answer: 'You can download saved hand-back cards as Markdown, delete individual conversations and use Account to request account deletion. Operational and billing records may have separate retention requirements described in the Privacy notice.' },
+      { question: 'Can I export or delete my conversations?', answer: 'You can download saved assessments as Markdown, delete individual conversations and use Account to request account deletion. Operational and billing records may have separate retention requirements described in the Privacy notice.' },
     ],
   },
   {
     slug: 'help', title: 'Help and getting started', heading: 'Find your way through the app.',
-    description: 'Get help with signing in, starting a conversation, inspecting sources, saving cards and resolving common errors.',
+    description: 'Get help with signing in, starting a conversation, inspecting sources, reading assessments and resolving common errors.',
     intro: 'A practical guide to the controls you will use most often.',
     sections: [
       section('Sign in and start', 'Use Google or your email and password. If you forget your password, use the reset link on the sign-in screen and follow the email in the same browser where possible. After signing in, choose a perspective and start a conversation. The homepage sample is a scripted demonstration; your own account conversation is a separate experience.'),
-      section('Use the conversation controls', 'Write your situation, then send it. If the app asks a question you cannot answer, use the skip control. Choose correction when your earlier position needs changing, or pushback when you want to challenge a response. Inspect source details when they appear. Create a hand-back card to collect the discussion and download it as Markdown.'),
+      section('Use the conversation controls', 'Write your situation, then send it and answer one question at a time. If you cannot answer, say you don’t know yet and that area is marked untested. Tell the app when your earlier position needs changing. Inspect source details when they appear. When every area is covered, read your assessment and download it as Markdown.'),
       section('When something fails', 'If sending fails, keep your unsent text and read the error before retrying. A stale-conversation notice means another change occurred; refresh the saved conversation first. A limit or provider error can prevent a new response without removing history. Returning from payment checkout does not prove payment; use Billing to refresh verified status.'),
     ], related: ['faq', 'contact', 'subscription-and-cancellation'],
   },
@@ -116,13 +116,13 @@ export const publicPages: PublicPage[] = [
     ], related: ['sources', 'help', 'contact'],
   },
   {
-    slug: 'sources', title: 'Sources, citations and evidence limits', heading: 'Inspect the reasoning behind a counterpoint.',
+    slug: 'sources', title: 'Sources, citations and evidence limits', heading: 'Inspect the reasoning behind a loophole.',
     description: 'Understand reviewed evidence, exact quotations, paraphrases, source limitations and the current coverage of Devils Advocate.',
     intro: 'A source is a starting point for scrutiny. Its relevance to your situation still needs examination.',
     sections: [
       section('What reviewed evidence means', 'The current collection contains nine reviewed records and twelve stored excerpts. Records include source location, author or publisher, work, edition or pinned version, supported claims and limitations. Business coverage is concentrated in software and AI-evaluation material; it does not cover every industry, country or customer segment.'),
-      section('How citations are checked', 'A generated citation must refer to reviewed material retrieved for that response. Exact quotes must match permitted stored excerpts, and sourced counterpoint text must match a supported curated claim. Paraphrases are labeled separately. These mechanical checks reduce fabricated references; they do not certify every interpretation or guarantee that a comparison fits your circumstances.'),
-      section('When the collection has a gap', 'The app should explain when relevant reviewed evidence is missing rather than invent a failed company, quotation or historical fact. Homepage sample debates are scripted illustrations and are not additional reviewed evidence. Inspect the visible source context and limitations in a real conversation, then verify consequential factual claims independently.'),
+      section('How citations are checked', 'A generated citation must refer to reviewed material retrieved for that response. Exact quotes must match permitted stored excerpts, and sourced loophole text must match a supported curated claim. Paraphrases are labeled separately. These mechanical checks reduce fabricated references; they do not certify every interpretation or guarantee that a comparison fits your circumstances.'),
+      section('When the collection has a gap', 'The app should explain when relevant reviewed evidence is missing rather than invent a failed company, quotation or historical fact. The homepage sample is scripted illustrations and are not additional reviewed evidence. Inspect the visible source context and limitations in a real conversation, then verify consequential factual claims independently.'),
     ], related: ['business-validation', 'philosophical-reflection', 'faq'],
   },
   {
