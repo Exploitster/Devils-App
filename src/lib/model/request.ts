@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { ModelOutputSchema, type ModelInput } from '../contracts';
-import type { RuntimeConfig } from '../config';
+import { ModelOutputSchema, SessionStateSchema, type ModelInput } from '../contracts';
+import { outputTokenLimit, type RuntimeConfig } from '../config';
 import { systemInstructions, providerInput } from './provider';
-export const EnvelopeSchema=z.object({safety:z.enum(['ordinary','crisis','harm','political','qualified']),output:ModelOutputSchema}).strict();
+// The case record in state is app-owned: the model never authors it, and leaving it out keeps the response schema small.
+export const EnvelopeSchema=z.object({safety:z.enum(['ordinary','crisis','harm','political','qualified']),output:ModelOutputSchema.extend({state:SessionStateSchema.omit({casePrep:true})})}).strict();
 function responseSchema(){
  const schema=z.toJSONSchema(EnvelopeSchema);
  const supported=new Set(['$id','$defs','$ref','$anchor','type','format','title','description','enum','items','prefixItems','minItems','maxItems','minimum','maximum','anyOf','oneOf','properties','additionalProperties','required','propertyOrdering']);
@@ -11,4 +12,4 @@ function responseSchema(){
 }
 /** Shared by transport and spend reservation so prompt/schema changes cannot
  * silently drift away from the cost bound. Contains no credential headers. */
-export function geminiRequest(input:ModelInput,config:RuntimeConfig){return {systemInstruction:{parts:[{text:systemInstructions(input)}]},contents:[{role:'user',parts:[{text:JSON.stringify(providerInput(input))}]}],generationConfig:{candidateCount:1,maxOutputTokens:config.maxOutputTokens,responseMimeType:'application/json',responseJsonSchema:responseSchema(),...(/^gemini-2\.5-/.test(config.model)?{thinkingConfig:{thinkingBudget:0}}:/^gemini-3[.-]/.test(config.model)?{thinkingConfig:{thinkingLevel:'low'}}:{})}};}
+export function geminiRequest(input:ModelInput,config:RuntimeConfig){return {systemInstruction:{parts:[{text:systemInstructions(input)}]},contents:[{role:'user',parts:[{text:JSON.stringify(providerInput(input))}]}],generationConfig:{candidateCount:1,maxOutputTokens:outputTokenLimit(config,input.task),responseMimeType:'application/json',responseJsonSchema:responseSchema(),...(/^gemini-2\.5-/.test(config.model)?{thinkingConfig:{thinkingBudget:0}}:/^gemini-3[.-]/.test(config.model)?{thinkingConfig:{thinkingLevel:'low'}}:{})}};}

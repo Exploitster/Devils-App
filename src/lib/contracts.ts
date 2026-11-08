@@ -114,7 +114,18 @@ export interface Store {
 export interface AuthService { authenticate(input: AccountAuthRequest, request: Request): Promise<Response>; getIdentity(request: Request): Promise<Identity | null>; signIn(email: string, request: Request): Promise<Response>; signOut(request: Request): Promise<Response>; deleteIdentity(userId: string): Promise<void>; }
 export interface Clock { now(): Date; }
 export interface EvidenceService { retrieve(input: { mode: Mode; query: string; excludeIds: string[]; limit: number }): Promise<Evidence[]>; get(id: string): Promise<Evidence | null>; validate(output: ModelOutput, retrieved: Evidence[]): Promise<ModelOutput>; }
-export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; }
+/** One area as the AI sees it: its framework plus the app's record of it. */
+export interface AreaBrief { id: string; label: string; establishes: string; strongSignals: string[]; followUps: string[]; status: AreaStatus; followUpsUsed: number; quotes: string[]; }
+/** The compact case record sent in place of the full transcript. The app fills it; the AI only proposes. */
+export interface CaseContext {
+  purpose: 'question' | 'pushback' | 'correction' | 'assessment';
+  currentArea: AreaBrief | null;
+  nextArea: AreaBrief | null;
+  areas: { id: string; label: string; status: AreaStatus; quotes: string[] }[];
+  latestAnswer?: string;
+  assessment?: { areas: { id: string; label: string; score: z.infer<typeof AssessmentScoreSchema>; reason: string }[] };
+}
+export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; }
 export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }
 export interface BillingService { checkout(user: Identity, plan: 'monthly' | 'yearly'): Promise<{ url: string }>; portal(user: Identity): Promise<{ url: string }>; processWebhook(rawBody: string, signature: string): Promise<void>; cancelRenewal(userId: string): Promise<void>; }
