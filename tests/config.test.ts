@@ -77,6 +77,11 @@ describe('runtime configuration', () => {
     expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'typo' })).toThrow('DEVILS_PAYMENTS_ENABLED');
     expect(() => readConfig({ ...bindings, DEVILS_PAYMENTS_ENABLED: 'false', DEVILS_GEMINI_API_KEY: undefined })).toThrow('DEVILS_GEMINI_API_KEY');
   });
+  it('gives assessments their own validated output budget, separate from turns', () => {
+    expect(readConfig(local)).toMatchObject({ maxOutputTokens: 2500, maxAssessmentTokens: 6000 });
+    expect(readConfig({ ...local, DEVILS_MAX_ASSESSMENT_TOKENS: '9000' }).maxAssessmentTokens).toBe(9000);
+    for (const value of ['many', '', '6000.5', '99', '16001']) expect(() => readConfig({ ...local, DEVILS_MAX_ASSESSMENT_TOKENS: value })).toThrow('DEVILS_MAX_ASSESSMENT_TOKENS must be an integer between 100 and 16000.');
+  });
   it('exports a public allowlist without privileged bindings', () => {
     const result = publicConfig(readConfig(local));
     expect(result.runtimeMode).toBe('local');

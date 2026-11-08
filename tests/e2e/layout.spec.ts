@@ -74,18 +74,18 @@ for (const theme of themes) {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page).toHaveURL(/\/home/);
 
-    // One conversation with a reply and a hand-back card, the busiest screen in the app.
+    // One case with a reply, the progress strip and an assessment, the busiest screen in the app.
     await startConversation(page, { title: 'Layout check' });
     await page.getByLabel('Your message', { exact: true }).fill('I want to build an open source database startup because developer tools customers will pay for support but serving costs may be high.');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await expect(page.getByText(/Strengths/).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Make a hand-back card' }).click();
-    await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Case progress' })).toBeVisible();
+    await page.getByRole('button', { name: 'Get assessment', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Your assessment' })).toBeVisible();
     const conversation = new URL(page.url()).pathname;
 
     const screens = [
       { path: '/home', ready: page.getByRole('heading', { name: 'What would you like to think through?' }), composer: true },
-      { path: conversation, ready: page.getByRole('heading', { name: /Hand-back card/ }), composer: true },
+      { path: conversation, ready: page.getByRole('heading', { name: 'Your assessment' }), composer: true },
       { path: '/history', ready: page.locator('main h1').first(), composer: false },
       { path: '/account', ready: page.locator('main h1').first(), composer: false },
       { path: '/billing', ready: page.getByRole('heading', { name: 'Your subscription' }), composer: false },
@@ -99,6 +99,13 @@ for (const theme of themes) {
         const label = screen.path === conversation ? 'conversation' : screen.path;
         await checkScreen(page, label, width);
         if (screen.composer) await composerInView(page, label, width);
+        // On phones the area list folds away; opened, it must still fit.
+        const toggle = page.getByRole('button', { name: 'Show areas', exact: true });
+        if (screen.path === conversation && await toggle.isVisible()) {
+          await toggle.click();
+          await expect(page.getByRole('region', { name: 'Case progress' }).getByRole('listitem').first()).toBeVisible();
+          await checkScreen(page, 'conversation with the area list open', width);
+        }
       }
     }
   });

@@ -95,44 +95,43 @@ Implement this as a coherent conversation with explicit state:
 
 1. Choose a mode.
 2. Describe an idea, proposal, decision, or belief.
-3. Ask up to three clarifying questions before arguing.
-4. Identify the real question and, when relevant, assumptions or biases.
-5. Explain what is genuinely strong in the user’s case.
-6. Present the strongest opposing case with evidence.
-7. Let the user push back in free text for multiple rounds.
-8. Generate or update a hand-back card.
-9. Save the session so it can be resumed or deleted.
+3. Walk through the case-prep areas, one simple guiding question at a time. A business idea has nine areas: problem and why now, customer, market size, what people use today, the MVP, how it was validated, how it makes money, how it reaches customers, and why you. A personal decision has seven: what is really being decided, values, options not yet considered, assumptions, who else is affected, regret, and reversibility.
+4. Probe a weak answer with up to three follow-ups. "I don't know yet" marks the area untested.
+5. Accept corrections; re-ask only the areas whose answers no longer fit the new position.
+6. When every area is covered, produce an assessment.
+7. Save the session so it can be resumed or deleted.
 
 Requirements:
-- Clarification questions must adapt to the user’s input.
-- Ask fewer than three questions when enough context already exists.
+- Each question builds on the user's own words and is simple enough to answer in a sentence or two.
+- The app owns each area's state and enforces coverage, the follow-up limit and "I don't know yet"; the model proposes the questions and judgements.
+- A typical case runs about 10 to 15 questions; follow-ups may take it further.
 - Do not repeat questions the user already answered.
-- Let users indicate uncertainty, skip a question, or clarify an answer.
-- Do not trap users in a rigid wizard when a natural conversation works better.
-- Accept corrections to earlier assumptions.
-- Pushback should introduce new evidence or a materially different argument.
+- Accept corrections to earlier assumptions without restarting.
 - Do not promise fresh evidence when the evidence collection is exhausted.
 - When evidence runs out, say so and offer a useful next step.
 - Separate sourced facts, interpretations, and suggested experiments.
-- Allow the user to request a hand-back card without extending the debate indefinitely.
 - Streaming responses, if used, must preserve consistent saved state.
 
-HAND-BACK CARD
+ASSESSMENT
 
-Every completed session should produce a structured card containing:
-- The user’s position in one line.
-- What is genuinely strong in their case.
-- Up to three toughest counterpoints, each with its source.
-- Open questions only the user can answer.
-- The cheapest useful test or smaller first step this month.
+Every completed case produces a structured assessment containing:
+- The user's position in one line.
+- A score for each area: strong, weak or untested.
+- Loopholes, each with its source where one is available.
+- What is good.
+- What is bad.
+- What must be true for the case to hold.
+- Next steps, including the cheapest useful test this month.
 - “Your call. Always.”
 
-Aim for three counterpoints, but never fabricate or pad them to meet a quota. If fewer supported counterpoints are available, show fewer and explain the limitation.
+The assessment never gives a go or no-go verdict. Never fabricate or pad loopholes or sources to meet a quota; if fewer supported loopholes are available, show fewer and explain the limitation.
 
-Cards should be:
+Assessments should be:
 - Stored with the session.
 - Accessible from session history.
-- Updated when the user materially changes their position.
+- Downloadable as Markdown.
+
+Conversations created before case prep stay readable as they were, with a way to start a new case from the same idea.
 - Easy to copy and download in a simple format.
 - Clear about which conversation state they summarize.
 
@@ -193,13 +192,12 @@ Keep model calls on the server.
 
 Use structured outputs for:
 - Session state.
-- Clarification questions.
-- The real question.
-- Strengths.
-- Counterpoints and evidence IDs.
-- Open questions.
-- Suggested tests.
-- Hand-back cards.
+- Guiding and follow-up questions with area state.
+- Area ratings.
+- Loopholes and evidence IDs.
+- What is good, what is bad and what must be true.
+- Next steps.
+- Assessments.
 
 Validate model outputs against schemas.
 
@@ -212,7 +210,7 @@ Separate, where useful:
 
 Avoid unnecessary multi-agent complexity in the product runtime. Start with the simplest orchestration that meets correctness requirements.
 
-Track which counterpoints and evidence have already been used to reduce repetition.
+Track which loopholes and evidence have already been used to reduce repetition.
 
 Implement:
 - Timeouts.
@@ -263,11 +261,11 @@ The website advertises:
 Both plans include:
 - Both modes.
 - All four topic areas.
-- Unlimited debates under fair use.
-- Up to three clarification questions.
-- Both sides with evidence.
-- Multiple pushback rounds.
-- Hand-back cards.
+- Unlimited case-prep conversations under fair use.
+- Up to three follow-ups on a weak answer.
+- Loopholes with sources where available.
+- Corrections that re-judge only the affected areas.
+- Assessments.
 - Saved history.
 - Private, deletable sessions.
 
@@ -326,7 +324,7 @@ Build a coherent minimal application covering:
 - A home screen with the two modes and a clear new-session action.
 - Conversation screen.
 - Accessible source/evidence detail view.
-- Hand-back card view.
+- Assessment view.
 - Session history and resume.
 - Account and privacy settings.
 - Subscription and billing management.
@@ -379,8 +377,8 @@ The marketing site also includes:
 - Hero animation.
 - Mode switching.
 - Scroll-driven explanation.
-- Sample debates.
-- Example hand-back cards.
+- Sample case-prep exchanges.
+- Example assessments.
 - Pricing.
 - Refusal boundaries.
 - FAQs.
@@ -425,16 +423,16 @@ TESTING AND ACCEPTANCE
 The application is complete only when these behaviors are verified:
 
 1. A user can authenticate and start either mode.
-2. The app asks no more than three clarification questions.
-3. It handles skipped questions and corrections.
-4. It identifies a relevant underlying question.
-5. It presents strengths before counterarguments.
+2. The app covers every area and asks no more than three follow-ups on a weak answer.
+3. It handles "I don't know yet" and corrections.
+4. It asks a guiding question grounded in the user's own words.
+5. It scores each area as strong, weak or untested.
 6. Displayed evidence maps to verified stored sources.
 7. Direct quotes match verified excerpts.
 8. No-evidence cases do not fabricate support.
-9. Pushback avoids repeating the same argument where alternatives exist.
+9. Follow-ups avoid repeating the same question where alternatives exist.
 10. Evidence exhaustion is handled honestly.
-11. A hand-back card contains the required fields.
+11. An assessment contains the required fields and no go or no-go verdict.
 12. Sessions persist and resume correctly.
 13. One user cannot access another user’s sessions.
 14. Session deletion removes the documented associated data.
@@ -462,7 +460,7 @@ COMPOUND ENGINEERING WORKFLOW AND DELIVERABLES
 3. Use ce-plan to save a phased implementation plan with acceptance criteria.
 4. After plan agreement, use lfg to implement autonomously through an open PR.
 5. Build a complete vertical slice first:
-   authentication → session → clarification → verified evidence → both sides → pushback → hand-back card → saved history.
+   authentication → session → area-by-area questions → verified evidence → assessment → saved history.
 6. Expand to billing, deletion, safety, and operational hardening.
 7. Use the relevant simplification, code review, debugging, and browser testing skills.
 8. Capture non-obvious verified learnings with ce-compound when appropriate.

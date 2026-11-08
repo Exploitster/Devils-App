@@ -39,12 +39,14 @@ try {
     currentCheck = example.name;
     const created = await store.createSession(userId, { mode: example.mode, topic: example.mode === 'business' ? 'startup' : 'work', title: example.name }, new Date().toISOString());
     let saved = await engine.turn(userId, created.id, { operationId: `${example.name}-describe`, expectedRevision: 0, text: example.text, action: 'message' });
-    if (saved.state.phase === 'clarifying') saved = await engine.turn(userId, created.id, { operationId: `${example.name}-skip`, expectedRevision: saved.revision, text: 'I do not know yet; suggest a small reversible test.', action: 'skip' });
-    saved = await engine.card(userId, created.id, { operationId: `${example.name}-card`, expectedRevision: saved.revision });
-    if (saved.cards.at(-1)?.closing !== 'Your call. Always.' || !saved.cards.at(-1)?.nextStep.trim()) throw new Error('INVALID_CARD');
-    if (example.name === 'supported-business' && !saved.cards.at(-1)?.counterpoints.length) throw new Error('SOURCE_COVERAGE_NOT_DEMONSTRATED');
+    if (!saved.messages.at(-1)?.text.includes('?') || !saved.state.casePrep || saved.state.casePrep.complete) throw new Error('INVALID_CASE_PREP_TURN');
+    saved = await engine.turn(userId, created.id, { operationId: `${example.name}-skip`, expectedRevision: saved.revision, text: 'I do not know yet.', action: 'skip' });
+    saved = await engine.card(userId, created.id, { operationId: `${example.name}-assessment`, expectedRevision: saved.revision });
+    const assessment = saved.state.casePrep?.assessment;
+    if (!assessment || assessment.closing !== 'Your call. Always.' || !assessment.areas.length) throw new Error('INVALID_ASSESSMENT');
+    if (example.name === 'supported-business' && !assessment.loopholes.length) throw new Error('SOURCE_COVERAGE_NOT_DEMONSTRATED');
     report.checks.push({ name: currentCheck, passed: true });
-    console.log(`${currentCheck}: conversation and card verified; qualitative review remains required.`);
+    console.log(`${currentCheck}: case prep turn and assessment verified; qualitative review remains required.`);
   }
   report.passed = true;
 } catch (error) {

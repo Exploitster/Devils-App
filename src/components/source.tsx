@@ -39,8 +39,10 @@ export function SourceButton({ citation }: {
       <dd>{excerpt?.locator}</dd>
       <dt>License</dt>
       <dd>{source.license}</dd>
-      </dl>
-      <h3>{citation.kind === 'quote' ? 'Exact quotation' : 'Supporting source excerpt'}</h3>
+      </dl>{source.attribution && <>
+      <h3>Attribution</h3>
+      <p>From {source.attribution.site}: <a href={source.attribution.postUrl} target="_blank" rel="noopener noreferrer">the original post</a>, by {source.attribution.authors.map((author, index) => <span key={author.profileUrl}>{index > 0 && ', '}<a href={author.profileUrl} target="_blank" rel="noopener noreferrer">{author.name}</a></span>)}. Licensed under <a href={source.attribution.licenceUrl} target="_blank" rel="noopener noreferrer">{source.attribution.licence}</a>.</p>
+      </>}<h3>{citation.kind === 'quote' ? 'Exact quotation' : 'Supporting source excerpt'}</h3>
       <blockquote>{citation.kind === 'quote' ? citation.quote : excerpt?.text}</blockquote>{claim && <>
       <h3>Supported claim</h3>
       <p>{claim.text}</p>

@@ -5,7 +5,7 @@ import { reserveCost } from '../src/lib/conversation/limits';
 import type { ModelInput } from '../src/lib/contracts';
 const config = () => readConfig({ DEVILS_RUNTIME_MODE: 'local', DEVILS_LOCAL_AUTH_SECRET: 'x'.repeat(32), DEVILS_MODEL_PROVIDER: 'gateway' });
 const input: ModelInput = { session: { id: 's', ownerId: 'u', mode: 'business', topic: 'startup', title: 'Test', revision: 0, state: { phase: 'description', position: '', underlyingQuestion: '', clarifications: [], strengths: [], counterpoints: [], openQuestions: [], nextStep: '', usedArgumentIds: [], usedEvidenceIds: [], summary: '' }, messages: [], cards: [], createdAt: '2026-10-16T00:00:00Z', updatedAt: '2026-10-16T00:00:00Z' }, request: { operationId: 'a', expectedRevision: 0, text: 'An AI booking assistant', action: 'message' }, task: 'turn', evidence: [], now: '2026-10-16T00:00:00Z' };
-const envelope = { safety: 'ordinary', output: { response: 'Which customer will pay?', citations: [], state: { phase: 'clarifying', underlyingQuestion: 'Will customers pay?', clarifications: [{ id: 'payer', question: 'Which customer will pay?' }], strengths: [], counterpoints: [], openQuestions: [], nextStep: '', coverageNote: 'No reviewed evidence covers this market.', summary: 'Clarifying the payer.' } } };
+const envelope = { safety: 'ordinary', output: { response: 'Which customer will pay?', citations: [], state: { phase: 'clarifying', underlyingQuestion: 'Will customers pay?', clarifications: [{ id: 'payer', question: 'Which customer will pay?' }], strengths: [], counterpoints: [], openQuestions: [], nextStep: '', coverageNote: 'No reviewed evidence covers this market.', summary: 'Clarifying the payer.' }, casePrep: null, assessment: null } };
 it('uses fresh OIDC authentication and Gateway fields without OpenRouter options', async () => {
   const cfg = config(); let tokens = 0;
   const model = new GatewayModel(cfg, async (url, options) => {
@@ -52,7 +52,8 @@ it('keeps the full spending reservation when Gateway omits billed cost', async (
     const cfg = { ...config(), mode: 'services' as const, betaActive: true };
     const reconcile = vi.spyOn(store, 'reconcileSpend');
     const reserve = vi.spyOn(store, 'reserveSpend');
-    const model = new GatewayModel(cfg, async () => new Response(JSON.stringify({ model: cfg.model, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(envelope) } }], usage: { prompt_tokens: 100, completion_tokens: 50 } })), () => 'oidc');
+    const caseEnvelope = { ...envelope, output: { ...envelope.output, casePrep: { rating: 'vague', quote: null, followUpQuestion: 'Which customer will pay?', nextAreaQuestion: null, invalidatedAreaIds: [] } } };
+    const model = new GatewayModel(cfg, async () => new Response(JSON.stringify({ model: cfg.model, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(caseEnvelope) } }], usage: { prompt_tokens: 100, completion_tokens: 50 } })), () => 'oidc');
     const engine = new ConversationEngine({ store, model, config: cfg, evidence: createEvidenceService(), clock: { now: () => new Date(input.now) } });
     await engine.turn('u', session.id, { operationId: 'a', expectedRevision: 0, text: 'An AI booking assistant', action: 'message' });
     expect(reserve).toHaveBeenCalledOnce(); expect(reconcile).not.toHaveBeenCalled();
@@ -65,23 +66,35 @@ it('honors Gateway retry-after headers and uses a conservative free-tier backoff
     await expect(model.generate(input, new AbortController().signal)).rejects.toMatchObject({ transient: true, retryAfterMs: delay });
   }
 });
-it('removes detached response citations when a skipped clarification becomes a reflection',async()=>{
- const {createEvidenceService}=await import('../src/lib/evidence/service');
- const {decodeRouterOutput}=await import('../src/lib/model/openrouter-request');
- const {controlOutput}=await import('../src/lib/conversation/state');
- const evidence=createEvidenceService();const retrieved=await evidence.retrieve({mode:'business',query:'database',excludeIds:[],limit:3});
- const source=retrieved[0];const claim=source.claims[0];const ref={evidenceId:source.id,claimId:claim.id,excerptId:claim.excerptIds[0],kind:'quote' as const};
- const skipped=structuredClone(input);skipped.evidence=retrieved;skipped.session.state.clarifications=[{id:'payer',question:'Which customer will pay?',skipped:false}];skipped.request={operationId:'skip',expectedRevision:0,text:'I do not know.',action:'skip'};
- const raw={...envelope,output:{...envelope.output,citations:[ref],state:{...envelope.output.state,counterpoints:[{source:ref,interpretation:'Test whether this constraint applies.'}]}}};
- const decoded=decodeRouterOutput(JSON.stringify(raw),skipped)!;expect(decoded.citations).toHaveLength(1);
- const controlled=controlOutput(skipped,decoded);const checked=await evidence.validate(controlled,retrieved);
- expect(checked.state.phase).toBe('debate');expect(checked.citations).toEqual([]);expect(checked.state.counterpoints[0].citations).toHaveLength(1);
-});
 it('reports empty reflection fields and invalid reference selections without logging text',async()=>{
  const {gatewayResponseDiagnostics}=await import('../src/lib/model/gateway-request');
  const raw={...envelope,output:{...envelope.output,response:'PRIVATE_GENERATED_TEXT',state:{...envelope.output.state,phase:'debate',underlyingQuestion:'PRIVATE_QUESTION',nextStep:'',counterpoints:[{source:{evidenceId:'private-source',claimId:'private-claim',excerptId:'private-excerpt',kind:'quote'},interpretation:'PRIVATE_INTERPRETATION'}]}}};
  const diagnostics=gatewayResponseDiagnostics(JSON.stringify(raw),[]);
- expect(diagnostics).toMatchObject({status:'valid',sourceReferencesValid:false,missingReflectionFields:['strengths','openQuestions','nextStep']});
+ expect(diagnostics).toMatchObject({status:'valid',sourceReferencesValid:false,missingReflectionFields:['strengths','openQuestions','nextStep'],casePrep:null,assessment:null});
  expect(JSON.stringify(diagnostics)).not.toMatch(/PRIVATE|private-source|private-claim|private-excerpt/);
  expect(gatewayResponseDiagnostics('{invalid',[])).toEqual({status:'not-json'});
+});
+const caseInput = (purpose: 'question' | 'assessment'): ModelInput => ({ ...input, task: purpose === 'assessment' ? 'card' : 'turn', ...(purpose === 'assessment' ? { request: { operationId: 'card', expectedRevision: 0 } } : {}),
+  caseContext: { purpose, currentArea: null, nextArea: null, areas: [{ id: 'customer', label: 'Who the customer is', status: 'probing', quotes: ['Clinics'] }], latestAnswer: 'Clinics' } });
+it('sends case-prep Gateway instructions and gives the assessment its own budget and reservation', () => {
+  const cfg = { ...config(), mode: 'services' as const }; const card = caseInput('assessment'); const turn = caseInput('question');
+  const request = gatewayRequest(card, cfg);
+  expect(request.messages[0].content).toContain('Gateway prompt version: devils-advocate-gateway/3');
+  expect(request.messages[0].content).toContain('output.casePrep');
+  expect(request.messages[0].content).not.toContain('output.state.strengths and output.state.openQuestions must each contain');
+  expect(gatewayRequest(input, cfg).messages[0].content).toContain('output.state.strengths and output.state.openQuestions must each contain');
+  expect(request.max_tokens).toBe(cfg.maxAssessmentTokens); expect(gatewayRequest(turn, cfg).max_tokens).toBe(cfg.maxOutputTokens);
+  expect(reserveCost(card, cfg)).toBe(Math.ceil((Buffer.byteLength(JSON.stringify(request)) + 1024) * cfg.modelInputUsdPerMillion + cfg.maxAssessmentTokens * cfg.modelOutputUsdPerMillion));
+});
+it('summarizes case-prep proposals and assessment prose in diagnostics without logging text', async () => {
+  const { gatewayResponseDiagnostics } = await import('../src/lib/model/gateway-request');
+  const state = { ...envelope.output.state, clarifications: [], summary: '', coverageNote: '' };
+  const turn = { ...envelope, output: { ...envelope.output, response: 'PRIVATE_RESPONSE', state, casePrep: { rating: 'vague', quote: 'PRIVATE_QUOTE', followUpQuestion: 'PRIVATE_QUESTION?', nextAreaQuestion: null, invalidatedAreaIds: ['customer'] } } };
+  const turnDiagnostics = gatewayResponseDiagnostics(JSON.stringify(turn), []);
+  expect(turnDiagnostics).toEqual({ status: 'valid', phase: 'clarifying', counterpoints: 0, citations: 0, sourceReferencesValid: true, missingReflectionFields: [], casePrep: { rating: 'vague', quote: true, followUpQuestion: true, nextAreaQuestion: false, invalidatedAreas: 1 }, assessment: null });
+  const loophole = { source: { evidenceId: 'private-source', claimId: 'private-claim', excerptId: 'private-excerpt', kind: 'paraphrase' }, interpretation: 'PRIVATE_INTERPRETATION' };
+  const card = { ...envelope, output: { ...envelope.output, response: 'PRIVATE_RESPONSE', state: { ...state, phase: 'card' }, assessment: { statement: 'PRIVATE_STATEMENT', good: ['PRIVATE_GOOD'], bad: [], mustBeTrue: ['PRIVATE_TRUE'], loopholes: [loophole] } } };
+  const cardDiagnostics = gatewayResponseDiagnostics(JSON.stringify(card), []);
+  expect(cardDiagnostics).toMatchObject({ status: 'valid', phase: 'card', sourceReferencesValid: false, missingReflectionFields: [], casePrep: null, assessment: { good: 1, bad: 0, mustBeTrue: 1, loopholes: 1 } });
+  expect(JSON.stringify([turnDiagnostics, cardDiagnostics])).not.toMatch(/PRIVATE|private-source|private-claim|private-excerpt/);
 });

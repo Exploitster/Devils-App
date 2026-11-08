@@ -24,49 +24,27 @@ async function occurrences(page: Page, text: string) {
   return page.evaluate(value => document.body.innerText.split(value).length - 1, text);
 }
 
-test('a clarifying question appears once, with answer and skip replies', async ({ page }) => {
+test('the latest question appears once, with "I don\'t know yet", push back and assessment replies', async ({ page }) => {
   await signIn(page);
   await startConversation(page, { title: 'Pricing decision' });
   await send(page, 'I am considering changing the price of my subscription product.');
   const session = (await (await page.request.get(sessionPath(page))).json()).session;
-  const pending = session.state.clarifications.find((item: { answer?: string; skipped?: boolean }) => item.answer === undefined && !item.skipped);
-  expect(pending).toBeTruthy();
-  await expect(page.getByRole('button', { name: 'Answer', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Skip question', exact: true })).toBeVisible();
-  expect(await occurrences(page, pending.question)).toBe(1);
-  await page.getByRole('button', { name: 'Answer', exact: true }).click();
-  await expect(composer(page)).toBeFocused();
+  const question = session.messages.at(-1).text;
+  expect(question).toMatch(/\?$/);
+  const actions = page.getByRole('group', { name: 'Reply actions' });
+  await expect(actions.getByRole('button')).toHaveText(['I don’t know yet', 'Push back', 'Correct my position', 'Get assessment']);
+  expect(await occurrences(page, question)).toBe(1);
 });
 
-test('after the questions end, the summary is not repeated under the reflection reply', async ({ page }) => {
-  await signIn(page);
-  await startConversation(page, { title: 'Pricing decision' });
-  await send(page, 'I am considering changing the price of my subscription product.');
-  for (let i = 0; i < 4 && await page.getByRole('button', { name: 'Skip question', exact: true }).count(); i++) {
-    const saved = page.waitForResponse(response => response.url().endsWith('/turns'));
-    await page.getByRole('button', { name: 'Skip question', exact: true }).click();
-    await saved;
-  }
-  const session = (await (await page.request.get(sessionPath(page))).json()).session;
-  await expect(page.getByRole('button', { name: 'Push back', exact: true })).toBeVisible();
-  expect(await occurrences(page, session.state.underlyingQuestion)).toBe(1);
-});
-
-test('a reply that adds a question outside the clarifying step shows it once', async ({ page }) => {
+test('after an early assessment the open question is repeated once below it', async ({ page }) => {
   await signIn(page);
   await startConversation(page);
   await send(page, 'I want to build an open source database because developer tools customers will pay for support.');
-  const added = 'Which customers have already asked for paid support?';
-  await page.route(`**${sessionPath(page)}`, async route => {
-    if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch(); const body = await response.json();
-    body.session.state.phase = 'debate';
-    body.session.state.clarifications.push({ id: 'synthetic-question', question: added });
-    await route.fulfill({ response, json: body });
-  });
-  await page.reload();
-  await expect(page.getByRole('button', { name: 'Skip question', exact: true })).toBeVisible();
-  expect(await occurrences(page, added)).toBe(1);
+  const question = (await (await page.request.get(sessionPath(page))).json()).session.messages.at(-1).text;
+  await page.getByRole('button', { name: 'Get assessment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your assessment' })).toBeVisible();
+  await expect(page.locator('.reply-question')).toHaveText(`Back to the case: ${question}`);
+  expect(await occurrences(page, question)).toBe(2);
 });
 
 test('reply actions hide while generating and push back tags the composer', async ({ page }) => {
@@ -74,11 +52,6 @@ test('reply actions hide while generating and push back tags the composer', asyn
   await signIn(page);
   await startConversation(page);
   await send(page, 'I want to build an open source database because developer tools customers will pay for support.');
-  for (let i = 0; i < 4 && await page.getByRole('button', { name: 'Skip question', exact: true }).count(); i++) {
-    const saved = page.waitForResponse(response => response.url().endsWith('/turns'));
-    await page.getByRole('button', { name: 'Skip question', exact: true }).click();
-    await saved;
-  }
   const pushBack = page.getByRole('button', { name: 'Push back', exact: true });
   await expect(pushBack).toBeVisible();
   await pushBack.click();

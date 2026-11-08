@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { IdSchema, TextSchema, type Citation, type ModelInput, type ModelOutput } from '../contracts';
-import type { RuntimeConfig } from '../config';
+import { AnswerRatingSchema, IdSchema, TextSchema, type CasePrepProposal, type Citation, type ModelInput, type ModelOutput } from '../contracts';
+import { outputTokenLimit, type RuntimeConfig } from '../config';
 import { prepareState } from '../conversation/state';
 import { assessSafety } from '../conversation/safety';
 import { resolveCitation } from '../evidence/validate';
@@ -23,19 +23,31 @@ export const RouterEnvelopeSchema = z.object({
       openQuestions: z.array(TextSchema).max(5), nextStep: z.string().max(3000),
       coverageNote: z.string().max(2000), summary: z.string().max(6000),
     }).strict(),
+    // Strict JSON mode requires every field, so absent values are null rather than omitted.
+    casePrep: z.object({
+      rating: AnswerRatingSchema.nullable(), quote: z.string().max(1000).nullable(),
+      followUpQuestion: z.string().min(1).max(1000), nextAreaQuestion: z.string().min(1).max(1000).nullable(),
+      invalidatedAreaIds: z.array(IdSchema).max(12),
+    }).strict().nullable(),
+    assessment: z.object({
+      statement: TextSchema, good: z.array(TextSchema).max(5), bad: z.array(TextSchema).max(5), mustBeTrue: z.array(TextSchema).max(5),
+      loopholes: z.array(PointSchema).max(3),
+    }).strict().nullable(),
   }).strict(),
 }).strict();
-export const routerPromptVersion = 'devils-advocate-openrouter/1';
+export const routerPromptVersion = 'devils-advocate-openrouter/2';
 const routerResponseSchema = z.toJSONSchema(RouterEnvelopeSchema);
 delete routerResponseSchema.$schema;
+const legacyTransport = 'Select counterpoints using source references and put your application hypothesis in interpretation. Do not output counterpoint text, quote text, cards, positions or used IDs: the server supplies them. For response citations, select references; the server appends their exact reviewed wording. Do not write quotations from memory. If no supplied source is relevant, use empty citations/counterpoints, explain the evidence gap and propose a test. In a clarifying response use no response citations. Set output.casePrep and output.assessment to null.';
+const casePrepTransport = 'For a question, pushback or correction, fill output.casePrep and set output.assessment to null; use null for a rating, quote or next-area question you do not give and an empty invalidatedAreaIds list unless this is a correction. For the assessment, fill output.assessment and set output.casePrep to null. Select output.assessment.loopholes using source references and put your application hypothesis in interpretation; the server supplies the claim text. Do not write quotations from memory. Use empty output.citations and empty state counterpoints.';
 export function openRouterRequest(input: ModelInput, config: RuntimeConfig) {
   return {
     models: [config.model, ...config.fallbackModels],
     messages: [
-      { role: 'system', content: `${systemInstructions(input)}\n\nTransport version: ${routerPromptVersion}. Follow the provided JSON schema. Select counterpoints using source references and put your application hypothesis in interpretation. Do not output counterpoint text, quote text, cards, positions or used IDs: the server supplies them. For response citations, select references; the server appends their exact reviewed wording. Do not write quotations from memory. If no supplied source is relevant, use empty citations/counterpoints, explain the evidence gap and propose a test. In a clarifying response use no response citations.` },
+      { role: 'system', content: `${systemInstructions(input)}\n\nTransport version: ${routerPromptVersion}. Follow the provided JSON schema. ${input.caseContext ? casePrepTransport : legacyTransport}` },
       { role: 'user', content: JSON.stringify(providerInput(input)) },
     ],
-    stream: false, max_tokens: config.maxOutputTokens,
+    stream: false, max_tokens: outputTokenLimit(config, input.task),
     provider: { allow_fallbacks: true, require_parameters: true, data_collection: 'deny', zdr: true, max_price: { prompt: config.modelInputUsdPerMillion, completion: config.modelOutputUsdPerMillion, request: 0 } },
     response_format: { type: 'json_schema', json_schema: { name: 'decision_response', strict: true, schema: routerResponseSchema } },
   };
@@ -60,10 +72,8 @@ export function decodeRouterOutput(raw: string, input: ModelInput): ModelOutput 
     };
     const value = envelope.output;
     const citations = value.citations.map(citation);
-    const counterpoints = value.state.counterpoints.map(point => {
-      const ref = citation(point.source); const resolved = resolveCitation(ref, input.evidence);
-      return { id: resolved.claimId, text: resolved.claimText, interpretation: point.interpretation, citations: [ref] };
-    });
+    const point = (item: z.infer<typeof PointSchema>) => { const ref = citation(item.source); const resolved = resolveCitation(ref, input.evidence); return { id: resolved.claimId, text: resolved.claimText, interpretation: item.interpretation, citations: [ref] }; };
+    const counterpoints = value.state.counterpoints.map(point);
     let response = value.response;
     for (const ref of citations) {
       const source = resolveCitation(ref, input.evidence);
@@ -71,6 +81,9 @@ export function decodeRouterOutput(raw: string, input: ModelInput): ModelOutput 
       if (!response.includes(text)) response += `\n\nReviewed source (${source.title}): ${text}`;
     }
     if (envelope.safety === 'qualified') response = `${assessSafety('medication').response}\n\n${response}`;
-    return { state: { ...prepared, ...value.state, clarifications: value.state.clarifications.map(q => ({ ...q, skipped: false })), counterpoints }, response, citations };
+    const proposal = value.casePrep;
+    const casePrep: CasePrepProposal | undefined = proposal ? { ...(proposal.rating ? { rating: proposal.rating } : {}), ...(proposal.quote ? { quote: proposal.quote } : {}), followUpQuestion: proposal.followUpQuestion, ...(proposal.nextAreaQuestion ? { nextAreaQuestion: proposal.nextAreaQuestion } : {}), invalidatedAreaIds: proposal.invalidatedAreaIds } : undefined;
+    const assessment = value.assessment ? { ...value.assessment, loopholes: value.assessment.loopholes.map(point) } : undefined;
+    return { state: { ...prepared, ...value.state, clarifications: value.state.clarifications.map(q => ({ ...q, skipped: false })), counterpoints }, response, citations, ...(casePrep ? { casePrep } : {}), ...(assessment ? { assessment } : {}) };
   } catch { return null; }
 }

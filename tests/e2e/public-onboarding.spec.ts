@@ -21,14 +21,14 @@ test('public signup, guided onboarding, free conversation, history search, and p
   await startConversation(page, { mode: 'philosophy' });
   await page.getByLabel('Your message').fill('I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(/Strengths/).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Make a hand-back card' }).click();
-  await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Case progress' })).toBeVisible();
+  await page.getByRole('button', { name: 'Get assessment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your assessment' })).toBeVisible();
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ path: testInfo.outputPath('conversation-desktop.png'), fullPage: true, animations: 'disabled' });
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download Markdown' }).click();
-  expect((await downloadEvent).suggestedFilename()).toMatch(/hand-back-.*\.md/);
+  expect((await downloadEvent).suggestedFilename()).toMatch(/^assessment-\d{4}-\d{2}-\d{2}\.md$/);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

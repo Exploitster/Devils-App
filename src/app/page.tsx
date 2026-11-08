@@ -12,7 +12,7 @@ export default function Landing() {
       <div className="hero-copy">
         <span className="pill"><span className="availability-dot"/>Business ideas · Personal decisions</span>
         <h1>Good ideas deserve<br/><span className="text-gradient">better questions.</span></h1>
-        <p className="lead">Bring an idea or a decision. We’ll ask the hard questions, show you the other side, and hand the call back to you.</p>
+        <p className="lead">Bring an idea or a decision. We’ll ask one good question at a time, show you where your thinking is strong or thin, and hand the call back to you.</p>
         <div className="actions">
           <Link className="button primary" href="/signup">Find your perspective<Icon name="arrow"/></Link>
           <a className="button quiet" href="#pricing">View pricing · ₹2,000/month</a>
@@ -57,29 +57,29 @@ export default function Landing() {
     <section className="landing-values">
       <div><Icon name="business"/><span>Business ideas</span></div>
       <div><Icon name="personal"/><span>Personal decisions</span></div>
-      <div><Icon name="card"/><span>Clear next steps</span></div>
+      <div><Icon name="card"/><span>A clear assessment</span></div>
     </section>
     <section className="landing-section" id="how-it-works">
       <p className="eyebrow blue-text">HOW IT GOES</p>
       <h2>Not another answer.<br/>A better way to yours.</h2>
       <div className="feature-grid">{[
         { n: '01', icon: 'chat', title: 'Say what’s on your mind.', text: 'Half-formed is fine.' },
-        { n: '02', icon: 'spark', title: 'See the other side.', text: 'Strengths first, then honest counterpoints with sources.' },
-        { n: '03', icon: 'card', title: 'Keep what helps.', text: 'A card with the tradeoffs and one next step.' },
+        { n: '02', icon: 'spark', title: 'Answer one question at a time.', text: 'Weak spots get a closer look, and “I don’t know yet” is a fine answer.' },
+        { n: '03', icon: 'card', title: 'Read your assessment.', text: 'Each area scored, with loopholes, what must be true and next steps.' },
       ].map(item => <article className="panel feature-card" key={item.n}><div className="feature-top"><span className="icon-tile blue"><Icon name={item.icon}/></span><span>{item.n}</span></div><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
     </section>
     <section className="landing-split">
       <div className="perspective-sample panel">
         <p className="eyebrow">A SMALL SHIFT</p>
         <div className="sample-message">“I think I should quit my job and build this.”</div>
-        <div className="sample-response"><span className="icon-tile violet"><Icon name="spark"/></span><p>What’s strong here?<br/><strong>You’re taking your ambition seriously.</strong></p></div>
+        <div className="sample-response"><span className="icon-tile violet"><Icon name="spark"/></span><p>What do you already know?<br/><strong>Who has paid you so far?</strong></p></div>
         <div className="sample-question">What could you test before you leap?</div>
         <span className="fine">Illustrative example.</span>
       </div>
       <div>
         <span className="pill">Thoughtful by design</span>
         <h2>Supportive.<br/>Never just agreeable.</h2>
-        <p className="lead">We start with what holds up, then make room for what doesn’t.</p>
+        <p className="lead">We ask where your reasoning holds up, then where it doesn’t yet.</p>
         <p className="muted">A starting point for reflection, not professional advice.</p>
         <Link className="text-link" href="/signup">Give your idea some room <Icon name="arrow"/></Link>
       </div>

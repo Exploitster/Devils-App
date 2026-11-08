@@ -35,6 +35,9 @@ export function validateCitations(output: unknown, retrieved: readonly Evidence[
   });
   counterpoints(value.state.counterpoints);
   if (value.card) counterpoints(value.card.counterpoints);
+  // Assessment loopholes follow the counterpoint rules, both as written by the AI and as stored on the case.
+  if (value.assessment) counterpoints(value.assessment.loopholes);
+  if (value.state.casePrep?.assessment) counterpoints(value.state.casePrep.assessment.loopholes);
   return value;
 }
 

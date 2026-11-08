@@ -1,17 +1,15 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-test('sample answers produce a hand-back card and switching modes resets the flow', async ({ page }) => {
+test('sample answers produce a mini assessment and switching modes resets the flow', async ({ page }) => {
   await page.goto('/');
-  const sample = page.getByRole('region', { name: 'Bring an idea. Meet the other side.' });
+  const sample = page.getByRole('region', { name: 'Answer three questions. See the assessment.' });
   await sample.getByRole('button', { name: 'Start sample', exact: true }).click();
   for (let i = 0; i < 3; i++) {
     await sample.locator('[aria-live] .sample-controls button').first().click();
   }
-  for (let i = 0; i < 3; i++) await sample.getByRole('button', { name: 'Continue sample', exact: true }).click();
-  await sample.locator('[aria-live] .sample-controls button').first().click();
-  await sample.getByRole('button', { name: 'Make my hand-back card' }).click();
-  await expect(sample.getByRole('heading', { name: 'Your hand-back card', exact: true })).toBeVisible();
+  await sample.getByRole('button', { name: 'See my assessment' }).click();
+  await expect(sample.getByRole('heading', { name: 'Your mini assessment', exact: true })).toBeVisible();
   await expect(sample.locator('.sample-handback')).toContainText('Your call. Always.');
   await sample.getByRole('button', { name: 'Philosophy', exact: true }).click();
   await expect(sample.getByRole('button', { name: 'Start sample', exact: true })).toBeVisible();

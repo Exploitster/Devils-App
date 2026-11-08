@@ -6,7 +6,7 @@ async function login(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
 }
-for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, source, card, history and resume`, async ({ page }) => {
+for (const mode of ['Business', 'Philosophy']) test(`${mode}: case, assessment source, history and resume`, async ({ page }) => {
   await login(page);
   await page.getByRole('button', { name: new RegExp(`^${mode}`) }).click();
   const loaded = page.waitForResponse(response => /\/api\/sessions\/[^/?]+$/.test(new URL(response.url()).pathname) && response.request().method() === 'GET' && response.status() === 200, {timeout:30000});
@@ -15,16 +15,17 @@ for (const mode of ['Business', 'Philosophy']) test(`${mode}: conversation, sour
   await expect(page.getByLabel('Your message')).toBeVisible();
   await page.getByLabel('Your message').fill(mode === 'Business' ? 'I want to build an open source database startup because developer tools customers will pay for support but serving costs may be high.' : 'I am deciding whether to leave my work because I value freedom and have obligations to my family.');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(/Strengths/).first()).toBeVisible();
-  const source = page.getByRole('button', { name: /View source/ }).first();
+  await expect(page.getByRole('region', { name: 'Case progress' })).toBeVisible();
+  await expect(page.locator('.message.assistant').last()).toContainText('?');
+  await page.getByRole('button', { name: 'Get assessment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your assessment' })).toBeVisible();
+  const source = page.getByRole('region', { name: 'Your assessment' }).getByRole('button', { name: /View source/ }).first();
   await expect(source).toBeVisible(); await source.click(); await expect(page.getByRole('dialog', {name: /./})).toBeVisible(); await page.keyboard.press('Escape'); await expect(source).toBeFocused();
-  await page.getByRole('button', { name: 'Make a hand-back card' }).click();
-  await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download Markdown' })).toBeVisible();
   const url = page.url();
   await goToHistory(page);
   await page.locator("main").locator(`a[href="${new URL(url).pathname}"]`).click();
-  await expect(page.getByRole('heading', { name: /Hand-back card/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your assessment' })).toBeVisible();
 });
 test('expired legacy invites retain free access without a paywall', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Email address').fill('expired@example.test'); await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -73,18 +74,15 @@ test('earlier saved questions remain readable after pushback and reload', async 
   await expect(page.getByLabel('Your message')).toBeVisible();
   await page.getByLabel('Your message').fill('I want to build an open source database because developer tools customers will pay for support, but serving costs may be high.');
   await page.getByRole('button', {name:'Send', exact:true}).click();
-  await expect(page.getByText(/Strengths/).first()).toBeVisible();
+  await expect(page.getByRole('button', {name:'Push back', exact:true})).toBeVisible();
   const endpoint = `/api/sessions/${new URL(page.url()).pathname.split('/').pop()}`;
   const saved = await (await page.request.get(endpoint)).json();
   const earlier = saved.session.messages.find((message: {role:string}) => message.role === 'assistant');
-  const question = saved.session.state.openQuestions[0];
-  expect(question).toBeTruthy();
+  expect(earlier.text).toMatch(/\?$/);
   await page.getByRole('button', {name:'Push back', exact:true}).click();
   await page.getByLabel('Your message').fill('I disagree: committed support contracts could cover the serving costs. Which assumption should I test next?');
   await page.getByRole('button', {name:'Send', exact:true}).click();
   await expect(page.getByLabel('Your message')).toHaveValue('');
   await page.reload();
-  const response = page.locator('.message.assistant').filter({hasText:earlier.text});
-  await expect(response.locator('.preserve')).toHaveText(earlier.text);
-  await expect(response.locator('.preserve')).toContainText(question);
+  await expect(page.locator('.message.assistant .preserve')).toHaveText([earlier.text, /^Put another way/]);
 });
