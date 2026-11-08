@@ -179,3 +179,50 @@ it('retrieves AI-evaluation methodology for a consumer-product voice agent witho
   expect(found.map(record => record.id)).not.toContain('rethinkdb-shutdown-2016');
   expect(found.map(record => record.id)).not.toContain('atom-product-retirement-2022');
 });
+
+describe('Stack Exchange attribution', () => {
+  const attribution = { site: 'Philosophy Stack Exchange', postUrl: 'https://philosophy.stackexchange.com/questions/1/example', authors: [{ name: 'Example Author', profileUrl: 'https://philosophy.stackexchange.com/users/1/example-author' }], licence: 'CC BY-SA 3.0', licenceUrl: 'https://creativecommons.org/licenses/by-sa/3.0/' };
+  async function stackExchangeRecord(): Promise<Evidence> {
+    const base = (await service.get('mill-liberty-individuality'))!;
+    return { ...base, id: 'philosophy-se-example', url: attribution.postUrl, claims: base.claims.map(claim => ({ ...claim, paraphraseAllowed: false })), attribution };
+  }
+  it('rejects a Stack Exchange record without attribution or allowing paraphrase', async () => {
+    const record = await stackExchangeRecord();
+    expect(isReviewedEvidence(record)).toBe(true);
+    const unattributed = { ...record, attribution: undefined };
+    expect(parseEvidence(unattributed)).toBeNull();
+    expect(parseEvidence({ ...record, claims: record.claims.map(claim => ({ ...claim, paraphraseAllowed: true })) })).toBeNull();
+    expect(parseEvidence({ ...record, attribution: { ...attribution, postUrl: 'https://example.com/copy' } })).toBeNull();
+    expect(await createEvidenceService([unattributed]).get(record.id)).toBeNull();
+  });
+  it('returns attribution with author profile links and licence URL from the source lookup', async () => {
+    const record = await stackExchangeRecord();
+    const body = JSON.parse(JSON.stringify({ evidence: await createEvidenceService([record]).get(record.id) }));
+    expect(body.evidence.attribution).toEqual(attribution);
+    expect(body.evidence.attribution.authors[0].profileUrl).toBe('https://philosophy.stackexchange.com/users/1/example-author');
+    expect(body.evidence.attribution.licenceUrl).toBe('https://creativecommons.org/licenses/by-sa/3.0/');
+  });
+  it('retrieves an attributed Stack Exchange record for a philosophy query naming its topic', async () => {
+    const record = await stackExchangeRecord();
+    const found = await createEvidenceService([record]).retrieve({ mode: 'philosophy', query: 'Is my career choice about autonomy?', excludeIds: [], limit: 3 });
+    expect(found.map(x => x.id)).toEqual([record.id]);
+    expect(found[0].attribution).toEqual(attribution);
+  });
+  it('fails offline verification for an unattributed or paraphrasable Stack Exchange source', async () => {
+    const temporary = await mkdtemp(path.join(os.tmpdir(), 'devils-evidence-se-'));
+    try {
+      await cp(path.resolve('data/evidence'), temporary, { recursive: true });
+      const seedPath = path.join(temporary, 'seed.json'), manifestPath = path.join(temporary, 'inspection.json');
+      const records: Evidence[] = JSON.parse(await readFile(seedPath, 'utf8')); const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+      const index = records.findIndex(x => x.id === 'mill-liberty-individuality');
+      records[index].url = attribution.postUrl; manifest.find((x: { evidenceId: string }) => x.evidenceId === records[index].id).sourceUrl = attribution.postUrl;
+      await writeFile(manifestPath, JSON.stringify(manifest));
+      await writeFile(seedPath, JSON.stringify(records));
+      await expect(verifyEvidenceCollection(temporary)).rejects.toThrow('Stack Exchange records need attribution');
+      records[index].attribution = attribution; await writeFile(seedPath, JSON.stringify(records));
+      await expect(verifyEvidenceCollection(temporary)).rejects.toThrow('Stack Exchange claims cannot allow paraphrase');
+      records[index].claims.forEach(claim => { claim.paraphraseAllowed = false; }); await writeFile(seedPath, JSON.stringify(records));
+      expect(await verifyEvidenceCollection(temporary)).toEqual({ records: 9, excerpts: 12 });
+    } finally { await rm(temporary, { recursive: true, force: true }); }
+  });
+});

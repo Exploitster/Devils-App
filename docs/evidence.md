@@ -24,6 +24,16 @@ Each philosophy claim is marked `supportType: interpretation`: it describes a po
 
 `resolveCitation(citation, canonical)` returns the source URL, author/work/edition/locator, exact quote or curated paraphrase, source limitations, and `Exact quote`/`Paraphrase` label. Its `supportType` additionally distinguishes an interpretation. Supply canonical records obtained through server-owned `get`; never resolve against browser/provider records. `validateMessageCitations(messages, retrieved, canonical)` applies the same rules to saved assistant messages. For retained state/cards/messages, the engine must supply the relevant server-owned historical retrieval set as well as any newly retrieved evidence; history does not grant authority to a provider-invented source.
 
+## Stack Exchange sources
+
+Posts from Stack Exchange sites (any host ending in `stackexchange.com`) are licensed CC BY-SA, so each record carries a structured `attribution`: the site name, a direct link to the post, every quoted author's display name linked to their profile on that site, and the licence name and legal-code URL. Pick the licence from the post date (UTC): before 2011-04-08 CC BY-SA 2.5, from 2011-04-08 to before 2018-05-02 CC BY-SA 3.0, from 2018-05-02 CC BY-SA 4.0. Where an answer was edited, use the date of the revision the excerpt comes from. The source dialog shows this attribution beside the excerpt and `/api/evidence/[id]` returns it, so the Markdown export can repeat it.
+
+Stack Exchange excerpts are quoted word for word only: every claim has `paraphraseAllowed: false` and excerpts have `quoteAllowed: true`. This keeps the app from producing an adaptation of the post. `evidence:verify`, the import CLI and the evidence service reject a Stack Exchange record without attribution, with an attribution link outside Stack Exchange, or with any claim that allows paraphrase.
+
+Add Stack Exchange material one reviewed post at a time. Open the question page, or fetch that single question through the Stack Exchange API, save the raw page or JSON as the source snapshot, and save the matching CC BY-SA legal code as the licence snapshot. Never use the data dump, an API bulk pull or scraping. Then follow the three-stage procedure below; author names and profile links come from the saved snapshot, and every excerpt must be an exact substring of it.
+
+Philosophy Stack Exchange is the only Stack Exchange site in scope. Startups Stack Exchange closed in 2017, so its posts cannot carry the live links the licence requires. No Stack Exchange record is in the collection yet: on 2026-11-08 the build environment's network policy refused connections to philosophy.stackexchange.com, api.stackexchange.com and creativecommons.org, so no post or licence could be saved. The first reviewed set needs those hosts allowed, or snapshots saved by the owner by hand.
+
 ## Offline inspection and ingestion
 
 Run `npm run evidence:verify`. It performs no network request and checks strict schemas, review chronology/metadata, every source and license file hash, exact excerpt substring equality, linked claims, unique IDs and path containment. Source/license paths must stay in `data/evidence/sources`; absolute paths, traversal and symlinks escaping the directory are rejected. Tests use the actual production snapshots and temporary corruption copies, never a fictional seed.

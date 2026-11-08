@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { EvidenceSchema, SafeUrlSchema, type Evidence } from '../contracts';
-import { isReviewedEvidence, parseEvidence, sha256 } from './schema';
+import { isReviewedEvidence, parseEvidence, sha256, stackExchangeIssue } from './schema';
 
 export const evidenceRoot = fileURLToPath(new URL('../../../data/evidence/', import.meta.url));
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -16,7 +16,9 @@ export async function safeSnapshotPath(root: string, relativePath: string): Prom
   if (!target.startsWith(base + path.sep)) throw new Error('Snapshot symlink escapes sources/');
   return target;
 }
+function assertAttribution(records: readonly Evidence[]): void { for (const record of records) { const issue = stackExchangeIssue(record); if (issue) throw new Error(issue); } }
 export async function inspectEvidenceRecords(records: readonly Evidence[], manifest: readonly InspectionEntry[], root = evidenceRoot): Promise<{ records: number; excerpts: number }> {
+  assertAttribution(records);
   const entries = new Map(manifest.map(x => [x.evidenceId, x]));
   if (entries.size !== manifest.length || records.length !== entries.size || new Set(records.map(x => x.id)).size !== records.length) throw new Error('Collection and inspection manifest must have unique matching IDs');
   let excerpts = 0;
@@ -37,6 +39,7 @@ export async function inspectEvidenceRecords(records: readonly Evidence[], manif
 }
 export async function verifyEvidenceCollection(root = evidenceRoot): Promise<{ records: number; excerpts: number }> {
   const records = z.array(EvidenceSchema).min(1).parse(JSON.parse(await readFile(path.join(root, 'seed.json'), 'utf8')));
+  assertAttribution(records);
   if (records.some(x => !isReviewedEvidence(x))) throw new Error('Seed contains unreviewed evidence');
   const manifest = z.array(InspectionEntrySchema).parse(JSON.parse(await readFile(path.join(root, 'inspection.json'), 'utf8')));
   return inspectEvidenceRecords(records, manifest, root);
