@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import type { Session } from '../src/lib/contracts';
 import { returnRate, type SessionSummary } from '../src/lib/case-prep/return-rate';
 
-// Read-only owner report: how many people who completed a case came back within 30 days.
 try { process.loadEnvFile('.env.local'); } catch {}
 
 function summarize(session: Session): SessionSummary {

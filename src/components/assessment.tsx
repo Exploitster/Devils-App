@@ -21,7 +21,6 @@ export function Points({ points }: { points: Counterpoint[] }) {
   </article>)}</>;
 }
 
-/** The reviewed sources behind a set of counterpoints, each with only the excerpts those counterpoints cite. */
 export async function citedSources(points: Counterpoint[]) {
   const ids = [...new Set(points.flatMap(point => point.citations.map(citation => citation.evidenceId)))];
   const sources = await Promise.all(ids.map(id => api<{ evidence: Evidence }>(`/api/evidence/${encodeURIComponent(id)}`).then(data => data.evidence)));
@@ -65,29 +64,34 @@ export async function assessmentMarkdown(assessment: Assessment, mode: Mode) {
   ].join('\n\n') + '\n';
 }
 
+export async function copyMarkdown(build: () => Promise<string>, copied: string, setStatus: (status: string) => void) {
+  try {
+    await navigator.clipboard.writeText(await build());
+    setStatus(copied);
+  } catch {
+    setStatus('Copy unavailable. Use Download Markdown.');
+  }
+}
+
+export async function downloadMarkdown(build: () => Promise<string>, filename: string, setStatus: (status: string) => void) {
+  try {
+    const url = URL.createObjectURL(new Blob([await build()], { type: 'text/markdown' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus('Markdown downloaded.');
+  } catch (error) {
+    setStatus((error as Error).message);
+  }
+}
+
 export function AssessmentDocument({ assessment, mode }: { assessment: Assessment; mode: Mode }) {
   const [status, setStatus] = useState('');
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(await assessmentMarkdown(assessment, mode));
-      setStatus('Assessment copied.');
-    } catch {
-      setStatus('Copy unavailable. Use Download Markdown.');
-    }
-  }
-  async function download() {
-    try {
-      const url = URL.createObjectURL(new Blob([await assessmentMarkdown(assessment, mode)], { type: 'text/markdown' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `assessment-${assessment.createdAt.slice(0, 10)}.md`;
-      link.click();
-      URL.revokeObjectURL(url);
-      setStatus('Markdown downloaded.');
-    } catch (error) {
-      setStatus((error as Error).message);
-    }
-  }
+  const build = () => assessmentMarkdown(assessment, mode);
+  const copy = () => copyMarkdown(build, 'Assessment copied.', setStatus);
+  const download = () => downloadMarkdown(build, `assessment-${assessment.createdAt.slice(0, 10)}.md`, setStatus);
   const titleId = `assessment-${assessment.id}`;
   return <section className="panel handback assessment" aria-labelledby={titleId} aria-live="off" data-assessment-id={assessment.id}>
     <p className="eyebrow">{assessment.complete ? 'EVERY AREA COVERED' : 'AN EARLY LOOK, FROM THE ANSWERS SO FAR'}</p>

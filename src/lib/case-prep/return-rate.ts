@@ -7,13 +7,9 @@ export interface SessionSummary {
 }
 
 export interface ReturnRate {
-  /** People who have completed at least one case. */
   completers: number;
-  /** Completers who started another case within the window after a completion. */
   returned: number;
-  /** Completers who have not returned yet but whose latest window is still open. */
   stillOpen: number;
-  /** returned / completers, or null when nobody has completed a case. */
   rate: number | null;
 }
 
@@ -27,7 +23,11 @@ export function returnRate(sessions: SessionSummary[], now: Date, windowDays = 3
   const windowMs = windowDays * DAY_MS;
   const cases = sessions.filter(session => session.casePrep);
   const byOwner = new Map<string, SessionSummary[]>();
-  for (const session of cases) byOwner.set(session.ownerId, [...(byOwner.get(session.ownerId) ?? []), session]);
+  for (const session of cases) {
+    const owned = byOwner.get(session.ownerId) ?? [];
+    owned.push(session);
+    byOwner.set(session.ownerId, owned);
+  }
 
   let completers = 0;
   let returned = 0;

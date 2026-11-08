@@ -39,16 +39,13 @@ export class ConversationEngine {
  const controller=new AbortController();const key=`${userId}:${request.operationId}`;active.set(key,controller);const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(abort,config.generationTimeoutMs);
  try{
  const session=reserved.session;
- // The case record exists from the first turn, even one answered by the safety path, so a conversation with messages and no record is always legacy.
  const record=session.state.casePrep??startCase(session.mode);
  const supportOutput=(response:string):ModelOutput=>{const state=structuredClone(session.state);state.phase='support';state.casePrep=record;return {state,response,citations:[]};};
- // Loopholes appear only in the assessment, so only the assessment retrieves sources, and every assessment may use any of them again.
  const fresh=support||turn?[]:await evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3});
  const input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseContext:caseContext(record,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined)},config);
  const withNotice=(output:ModelOutput,qualified:boolean):ModelOutput=>{const prep=output.state.casePrep!;if(qualified&&!prep.qualifiedNoticeShown){prep.qualifiedNoticeShown=true;output.response=`${qualifiedNotice}\n\n${output.response}`;}return output;};
  const verify=async(result:ModelResult):Promise<ModelOutput>=>{
  controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw invalidOutput();const output=parsed.data;
- // A provider's own safety classification still wins with its fixed support reply; its state and prose are otherwise not authoritative for a case.
  if(output.state.phase==='support'&&supportReplies.has(output.response))return supportOutput(output.response);
  const qualified=safety.kind==='qualified'||output.response.startsWith(qualifiedNotice);const state=prepareState(input);
  if(turn){if(!output.casePrep)throw invalidOutput();const applied=applyAction(record,turn.action,turn.text,output.casePrep);state.phase='clarifying';state.casePrep=applied.record;return withNotice({state,response:applied.question??assessmentBeingWritten,citations:[]},qualified);}

@@ -11,7 +11,6 @@ const statusLabels: Record<AreaStatus, string> = {
   untested: 'Untested',
 };
 
-/** Which areas are done, which remain, and how each finished one stands. The list folds away on phones. */
 export function CaseProgress({ mode, record }: { mode: Mode; record: CasePrep }) {
   const [open, setOpen] = useState(false);
   const listId = useId();

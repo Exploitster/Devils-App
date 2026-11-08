@@ -30,7 +30,6 @@ export interface TurnResult {
   questionSource: 'ai' | 'fallback' | null;
 }
 
-/** A compact view of the case for the AI: no transcript, only bounded quotes per area. */
 export interface CasePromptContext {
   perspective: Mode;
   areas: Array<{ id: string; label: string; status: CaseAreaRecord['status']; followUps: number; quotes: string[] }>;
@@ -51,7 +50,6 @@ export const MAX_QUOTES_PER_AREA = 3;
 export const MAX_QUOTE_LENGTH = 500;
 export const SUBSTANCE_FLOOR_WORDS = 8;
 
-/** A new case. The first ordinary message is the opening answer to the first area. */
 export function startCase(perspective: Mode): CasePrep {
   const areas = areasFor(perspective);
   return {
@@ -63,7 +61,6 @@ export function startCase(perspective: Mode): CasePrep {
   };
 }
 
-/** The area being asked now, and the first area in catalogue order not asked yet. */
 export function targets(record: CasePrep): { current: CaseArea | null; next: CaseArea | null } {
   const current = record.currentAreaId ? findArea(record.perspective, record.currentAreaId) ?? null : null;
   return { current, next: nextArea(record) };
@@ -101,7 +98,6 @@ export function applyAction(record: CasePrep, action: TurnAction, text: string, 
   }
 }
 
-/** Per-area rows of the assessment, written by the app from the record. */
 export function assessmentAreas(record: CasePrep): AssessmentAreaRow[] {
   return record.areas.map(area => {
     const framework = catalogueArea(record, area.id);
@@ -244,7 +240,6 @@ function wordCount(text: string): number {
 const APOSTROPHES = /['’‘`ʼ]/u;
 const WORD_CHAR = /[\p{L}\p{N}]/u;
 
-/** Lower case, apostrophes dropped, every run of other non-word characters made one space. */
 function normalize(text: string): string {
   return normalizeWithMap(text).normalized;
 }

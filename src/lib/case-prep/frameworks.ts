@@ -7,13 +7,10 @@ import type { Mode } from '../contracts';
 export interface CaseArea {
   id: string;
   label: string;
-  /** What the person's answer has to establish for this area to be solid. */
   establishes: string;
   /** What a strong answer shows. Questions must never hand these over as answers. */
   strongSignals: string[];
-  /** Typical ways to narrow a vague answer. */
   followUps: string[];
-  /** Used when the AI's question cannot be accepted. */
   opening: string;
 }
 

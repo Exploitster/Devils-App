@@ -1,7 +1,6 @@
 import type { AreaBrief, AssessmentProse, CaseContext, CasePrep, ModelInput, SessionState, TurnAction, TurnRequest } from '../contracts';
 import type { CaseArea } from '../case-prep/frameworks';
 import { assessmentAreas, isComplete, promptContext } from '../case-prep/reducer';
-/** Only the controller sets the position: the first message states it and a correction replaces it. */
 export function prepareState(input:ModelInput):SessionState {
  const state=structuredClone(input.session.state);const request=input.request as TurnRequest;
  if(input.task==='turn'&&(!state.position||request.action==='correction'))state.position=request.text;

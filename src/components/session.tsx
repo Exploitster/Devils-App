@@ -5,7 +5,7 @@ import type { HandBackCard, Session, TurnAction } from '@/lib/contracts';
 import Link from 'next/link';
 import { api, ApiError, ErrorNotice, Shell } from './app';
 import { Composer } from './composer';
-import { AssessmentDocument, citedSources, Points } from './assessment';
+import { AssessmentDocument, citedSources, copyMarkdown, downloadMarkdown, Points } from './assessment';
 import { CaseProgress } from './case-progress';
 import { SourceButton } from './source';
 import { handOverFirstMessage, takeFirstMessage } from '@/lib/pending-message';
@@ -32,25 +32,8 @@ function Card({ card, latest }: {
       <p>{card.nextStep}</p>
       <strong>{card.closing}</strong>
       <div className="actions">
-      <button onClick={async () => { try {
-    await navigator.clipboard.writeText(await markdown(card));
-    setStatus('Card copied.');
-}
-catch {
-    setStatus('Copy unavailable. Use Download Markdown.');
-} }}>Copy card</button>
-      <button onClick={async () => { try {
-    const url = URL.createObjectURL(new Blob([await markdown(card)], { type: 'text/markdown' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `hand-back-${card.version}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setStatus('Markdown downloaded.');
-}
-catch (e) {
-    setStatus((e as Error).message);
-} }}>Download Markdown</button>
+      <button onClick={() => void copyMarkdown(() => markdown(card), 'Card copied.', setStatus)}>Copy card</button>
+      <button onClick={() => void downloadMarkdown(() => markdown(card), `hand-back-${card.version}.md`, setStatus)}>Download Markdown</button>
       </div>
       <p role="status">{status}</p>
       </section>; }
@@ -110,7 +93,6 @@ export function SessionView({ id }: {
     }, [busy]);
     async function generate(kind: 'turns' | 'card', skip = false, first?: { session: Session; text: string }) { const current = first?.session ?? session; const submittedText = first?.text ?? text; if (!current || operation.current || cancelling.current || stale || (kind === 'turns' && !skip && !submittedText.trim()))
         return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(kind); setError(''); setAssessmentError(''); setExpired(false); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController();
-        // A complete case accepts only a correction; anything typed there corrects the position.
         const turnAction = skip ? 'skip' : first ? 'message' : current.state.casePrep?.complete ? 'correction' : action;
         try {
         const data = await api<{
@@ -152,7 +134,6 @@ export function SessionView({ id }: {
     const legacy = Boolean(session && messages.length > 0 && !prep);
     const assessment = prep?.assessment;
     const latestAnswer = messages.findLast(message => message.role === 'user');
-    // State decides when the assessment is due, so a reload or a failed request still ends with one.
     const assessmentDue = Boolean(prep?.complete && (!assessment || !assessment.complete || (latestAnswer && latestAnswer.createdAt > assessment.createdAt)));
     useEffect(() => {
         if (!session || !assessmentDue || busy || stale || operation.current || autoAssessed.current === session.revision) return;
@@ -175,10 +156,8 @@ export function SessionView({ id }: {
     };
     const latest = messages[messages.length - 1];
     const latestIsReply = latest?.role === 'assistant' && !busy;
-    // Legacy conversations keep their old summary under the closing reply, exactly as they were saved.
     const replyIsClosingReflection = Boolean(latest?.text.trimStart().startsWith('Underlying question:'));
     const showSummary = Boolean(legacy && latestIsReply && state && state.phase !== 'support' && state.strengths.length > 0 && !replyIsClosingReflection);
-    // When the latest reply is not itself a question (an early assessment, a safety note), repeat the open question.
     const openQuestion = prep && !prep.complete && latestIsReply && !latest.text.trim().endsWith('?') ? messages.findLast(message => message.role === 'assistant' && message.text.trim().endsWith('?'))?.text ?? '' : '';
     const anchor = assessment ? messages.findIndex(message => message.role === 'assistant' && message.createdAt >= assessment.createdAt) : -1;
     const tags: Partial<Record<TurnAction, string>> = { pushback: 'Pushing back', correction: 'Correcting my position' };
