@@ -115,6 +115,12 @@ describe('answers and follow-ups', () => {
 });
 
 describe('strong-rating checks', () => {
+  it('stores the exact quoted span when the answer contains letters outside the basic plane', () => {
+    const answer = 'We serve \u{20000}\u{20001} clinics in Porto who lose six hours every week phoning patients';
+    const result = applyAction(startCase('business'), 'message', answer, { rating: 'strong', quote: 'lose six hours every week phoning patients' });
+    expect(result.record.areas[0].quotes.at(-1)).toBe('lose six hours every week phoning patients');
+  });
+
   it('downgrades a strong rating whose quote is not in the answer and uses the follow-up question', () => {
     const result = answer(startCase('business'), longAnswer, { rating: 'strong', quote: 'clinics pay us twenty euros a month', followUpQuestion: 'Which clinic lost the most hours last week?', nextAreaQuestion: 'Which clinics feel this most?' });
     expect(area(result.record, 'problem')).toMatchObject({ status: 'probing', followUps: 1 });

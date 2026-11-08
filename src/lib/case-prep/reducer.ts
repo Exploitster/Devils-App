@@ -253,7 +253,10 @@ function normalizeWithMap(text: string): { normalized: string; starts: number[];
   for (const char of text) {
     const end = index + char.length;
     if (WORD_CHAR.test(char)) {
-      for (const lower of char.toLowerCase()) { normalized += lower; starts.push(index); ends.push(end); }
+      for (const lower of char.toLowerCase()) {
+        normalized += lower;
+        for (let unit = 0; unit < lower.length; unit++) { starts.push(index); ends.push(end); }
+      }
     } else if (!APOSTROPHES.test(char) && normalized !== '' && !normalized.endsWith(' ')) {
       normalized += ' '; starts.push(index); ends.push(end);
     }

@@ -60,7 +60,7 @@ export function SessionView({ id }: {
     const followReply = useRef(false);
     const cancelling = useRef(false);
     const abort = useRef<AbortController | null>(null);
-    const autoAssessed = useRef<number | null>(null);
+    const autoAssessed = useRef<string | null>(null);
     const operation = useRef<{
         operationId: string;
         expectedRevision: number;
@@ -108,8 +108,9 @@ export function SessionView({ id }: {
         if ((e as Error).name !== 'AbortError') {
             const accessEnded = e instanceof ApiError && e.code === 'ACCESS_EXPIRED';
             setExpired(accessEnded);
-            if (!accessEnded) { if (kind === 'card') setAssessmentError((e as Error).message); else setError((e as Error).message); }
-            setStale(e instanceof ApiError && e.status === 409);
+            const conflict = e instanceof ApiError && e.status === 409;
+            if (!accessEnded) { if (kind === 'card' && !conflict) setAssessmentError((e as Error).message); else setError((e as Error).message); }
+            setStale(conflict);
         }
     }
     finally {
@@ -136,8 +137,9 @@ export function SessionView({ id }: {
     const latestAnswer = messages.findLast(message => message.role === 'user');
     const assessmentDue = Boolean(prep?.complete && (!assessment || !assessment.complete || (latestAnswer && latestAnswer.createdAt > assessment.createdAt)));
     useEffect(() => {
-        if (!session || !assessmentDue || busy || stale || operation.current || autoAssessed.current === session.revision) return;
-        autoAssessed.current = session.revision;
+        const answerKey = latestAnswer?.id ?? 'no-answer';
+        if (!session || !assessmentDue || busy || stale || operation.current || autoAssessed.current === answerKey) return;
+        autoAssessed.current = answerKey;
         void generate('card');
     });
     const pricing = session?.mode === 'business' && /pricing/i.test(session.title);

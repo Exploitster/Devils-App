@@ -183,3 +183,23 @@ test('a conversation saved before case prep opens read-only and "Start a case" c
   await expect(area(page, 'Problem and why now')).toContainText('Strong');
   await expect(page.getByRole('heading', { name: 'Database support idea', level: 1 })).toBeVisible();
 });
+
+test('a safety reply to the assessment request does not set off repeated automatic requests', async ({ page }) => {
+  test.setTimeout(120000);
+  await signUp(page);
+  await startConversation(page, { mode: 'philosophy' });
+  let cardRequests = 0;
+  await page.route('**/api/sessions/*/card', async route => {
+    cardRequests++;
+    const current = await (await page.request.get(`/api/sessions/${sessionId(page)}`)).json();
+    const session = current.session;
+    session.revision += 1;
+    session.state.phase = 'support';
+    session.messages.push({ id: `support-${cardRequests}`, role: 'assistant', text: 'If you are in danger, please contact local emergency services.', createdAt: new Date().toISOString(), citations: [] });
+    await route.fulfill({ json: { session } });
+  });
+  for (const [, text] of personal) await answer(page, text);
+  await expect(page.getByText('If you are in danger, please contact local emergency services.').first()).toBeVisible();
+  await page.waitForTimeout(3000);
+  expect(cardRequests).toBe(1);
+});
