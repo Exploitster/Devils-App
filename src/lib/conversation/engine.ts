@@ -6,11 +6,17 @@ import { AppError } from '../errors';
 import { requireAccess } from '../auth/access';
 import { assessSafety } from './safety';
 import { privacyBoundary } from './boundaries';
-import { controlOutput, prepareState } from './state';
+import { caseContext, prepareState, withAssessment } from './state';
+import { applyAction, assertActionAllowed, startCase } from '../case-prep/reducer';
 import { boundInput, reserveCost } from './limits';
 import { ProviderError } from '../model/provider';
 import { CitationValidationError } from '../evidence/validate';
 const active=new Map<string,AbortController>();
+const qualifiedNotice=assessSafety('medication').response!;
+const supportReplies=new Set(['want to die','help kill someone','political debate'].map(trigger=>assessSafety(trigger).response!));
+const assessmentBeingWritten='Every area is covered. I am writing your assessment now.';
+const assessmentReady='Your assessment is ready. It scores each area and leaves the decision with you.';
+const invalidOutput=()=>new AppError('INVALID_MODEL_OUTPUT','The AI response could not be verified. Your conversation is unchanged; please try again.',502);
 export interface ConversationServices {store:Store;evidence:EvidenceService;model:ModelService;clock:Clock;config:RuntimeConfig;}
 export class ConversationEngine {
  constructor(private services:ConversationServices){}
@@ -21,26 +27,38 @@ export class ConversationEngine {
  const {store,evidence,model,clock,config}=this.services;const now=clock.now();const fingerprint=createHash('sha256').update(JSON.stringify({task,...request})).digest('hex');
  const previous=await store.getOperation(userId,sessionId,request.operationId);
  if(previous){if(previous.fingerprint!==fingerprint)throw new AppError('IDEMPOTENCY_CONFLICT','This operation ID belongs to a different request.',409);if(previous.status==='committed')return store.getSession(userId,sessionId);throw new AppError(previous.status==='pending'?'TURN_IN_PROGRESS':'OPERATION_FINISHED','Use a new operation ID to try again.',409);}
- const original=await store.getSession(userId,sessionId);const safety=assessSafety('text'in request?request.text:original.state.position);const boundary='text'in request?privacyBoundary(request.text):undefined;
+ const original=await store.getSession(userId,sessionId);
+ if(original.messages.length>0&&!original.state.casePrep)throw new AppError('LEGACY_READ_ONLY','This conversation was saved before case prep and is read-only. Start a case to continue from the same idea.',409);
+ const turn='text'in request?request:undefined;const safety=assessSafety(turn?turn.text:original.state.position);const boundary=turn?privacyBoundary(turn.text):undefined;const support=Boolean(boundary||(safety.response&&safety.kind!=='qualified'));
  // Safety handling precedes entitlement and retrieval. It never calls a provider.
+ if(turn&&!support&&original.state.casePrep)assertActionAllowed(original.state.casePrep,turn.action);
  if(!safety.response||safety.kind==='qualified')await requireAccess(store,userId,config,now);
  const leaseExpiresAt=new Date(now.getTime()+config.generationTimeoutMs).toISOString();
  const reserved=await store.reserveTurn({userId,sessionId,operationId:request.operationId,expectedRevision:request.expectedRevision,fingerprint,leaseExpiresAt,now:now.toISOString()});
  if(reserved.kind==='duplicate'){if(reserved.operation.status==='committed')return reserved.session;throw new AppError('TURN_IN_PROGRESS','Wait for the current response.',409);}
  const controller=new AbortController();const key=`${userId}:${request.operationId}`;active.set(key,controller);const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(abort,config.generationTimeoutMs);
  try{
- const session=reserved.session;const corrected=task==='turn'&&'action'in request&&request.action==='correction';const fresh=boundary||(safety.response&&safety.kind!=='qualified')?[]:await evidence.retrieve({mode:session.mode,query:('text'in request&&request.action==='correction')?request.text:('text'in request?request.text:'')+' '+session.state.position,excludeIds:corrected?[]:session.state.usedEvidenceIds,limit:3});
- const historicalIds=new Set(session.state.counterpoints.flatMap(p=>p.citations.map(c=>c.evidenceId)));
- for(const card of session.cards.slice(-1))for(const p of card.counterpoints)for(const c of p.citations)historicalIds.add(c.evidenceId);
- const historical=corrected?[]:(await Promise.all([...historicalIds].map(id=>evidence.get(id)))).filter(e=>e!==null);
- const input=boundInput({session,request,task,evidence:[...fresh,...historical.filter(e=>!fresh.some(f=>f.id===e.id))],now:now.toISOString()},config);
+ const session=reserved.session;
+ // The case record exists from the first turn, even one answered by the safety path, so a conversation with messages and no record is always legacy.
+ const record=session.state.casePrep??startCase(session.mode);
+ const supportOutput=(response:string):ModelOutput=>{const state=structuredClone(session.state);state.phase='support';state.casePrep=record;return {state,response,citations:[]};};
+ // Loopholes appear only in the assessment, so only the assessment retrieves sources, and every assessment may use any of them again.
+ const fresh=support||turn?[]:await evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3});
+ const input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseContext:caseContext(record,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined)},config);
+ const withNotice=(output:ModelOutput,qualified:boolean):ModelOutput=>{const prep=output.state.casePrep!;if(qualified&&!prep.qualifiedNoticeShown){prep.qualifiedNoticeShown=true;output.response=`${qualifiedNotice}\n\n${output.response}`;}return output;};
  const verify=async(result:ModelResult):Promise<ModelOutput>=>{
- controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw new AppError('INVALID_MODEL_OUTPUT','The AI response could not be verified. Your conversation is unchanged; please try again.',502);const output=controlOutput(input,parsed.data);if(safety.kind==='qualified')output.response=`${safety.response}\n\n${output.response}`;
- if(output.state.counterpoints.some(p=>p.citations.length===0)||output.card?.counterpoints.some(p=>p.citations.length===0))throw new AppError('INVALID_EVIDENCE','Counterpoints require reviewed source support.',502);
- return evidence.validate(output,input.evidence);
+ controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw invalidOutput();const output=parsed.data;
+ // A provider's own safety classification still wins with its fixed support reply; its state and prose are otherwise not authoritative for a case.
+ if(output.state.phase==='support'&&supportReplies.has(output.response))return supportOutput(output.response);
+ const qualified=safety.kind==='qualified'||output.response.startsWith(qualifiedNotice);const state=prepareState(input);
+ if(turn){if(!output.casePrep)throw invalidOutput();const applied=applyAction(record,turn.action,turn.text,output.casePrep);state.phase='clarifying';state.casePrep=applied.record;return withNotice({state,response:applied.question??assessmentBeingWritten,citations:[]},qualified);}
+ if(!output.assessment)throw invalidOutput();
+ if(output.assessment.loopholes.some(p=>p.citations.length===0))throw new AppError('INVALID_EVIDENCE','Counterpoints require reviewed source support.',502);
+ state.phase='card';state.casePrep=withAssessment(record,output.assessment,randomUUID(),clock.now().toISOString());
+ return evidence.validate(withNotice({state,response:assessmentReady,citations:[],assessment:output.assessment},qualified),input.evidence);
  };
  let result:ModelResult;let verified:ModelOutput|undefined;
- if(boundary||(safety.response&&safety.kind!=='qualified')){const state=prepareState(input);state.phase='support';state.counterpoints=[];state.strengths=[];state.openQuestions=[];state.coverageNote='Adversarial discussion paused for safety.';result={output:{state,response:boundary||safety.response!,citations:[]},inputTokens:0,outputTokens:0,costMicros:0};}
+ if(support){verified=supportOutput(boundary||safety.response!);result={output:verified,inputTokens:0,outputTokens:0,costMicros:0};}
  else{
  let generated:ModelResult|undefined;for(let attempt=0;attempt<2;attempt++){
  controller.signal.throwIfAborted();const op=await store.getOperation(userId,sessionId,request.operationId);if(op?.status!=='pending')throw new AppError('CANCELLED','This response was cancelled.',409);
@@ -53,8 +71,8 @@ export class ConversationEngine {
  }if(!generated)throw new AppError('PROVIDER_ERROR','The response could not complete.',503);result=generated;
  }
  controller.signal.throwIfAborted();const output=verified??await verify(result);
- const stamp=clock.now().toISOString();const messages=[...('text'in request?[{id:randomUUID(),role:'user' as const,text:request.text,createdAt:stamp,operationId:request.operationId,citations:[]}]:[]),{id:randomUUID(),role:'assistant' as const,text:output.response,createdAt:stamp,operationId:request.operationId,citations:output.citations}];
- return await store.commitTurn({userId,sessionId,operationId:request.operationId,expectedRevision:request.expectedRevision,state:output.state,messages,card:output.card,usage:{inputTokens:result.inputTokens,outputTokens:result.outputTokens,costMicros:result.costMicros},now:stamp});
+ const stamp=clock.now().toISOString();const messages=[...(turn?[{id:randomUUID(),role:'user' as const,text:turn.text,createdAt:stamp,operationId:request.operationId,citations:[]}]:[]),{id:randomUUID(),role:'assistant' as const,text:output.response,createdAt:stamp,operationId:request.operationId,citations:output.citations}];
+ return await store.commitTurn({userId,sessionId,operationId:request.operationId,expectedRevision:request.expectedRevision,state:output.state,messages,usage:{inputTokens:result.inputTokens,outputTokens:result.outputTokens,costMicros:result.costMicros},now:stamp});
  }catch(error){try{await store.failTurn(userId,sessionId,request.operationId,controller.signal.aborted?'CANCELLED':'GENERATION_FAILED');}catch{}if(controller.signal.aborted)throw new AppError('CANCELLED','The response was cancelled or timed out. Please try again.',408);throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);active.delete(key);}
  }
 }

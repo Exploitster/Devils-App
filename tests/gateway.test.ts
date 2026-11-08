@@ -52,7 +52,8 @@ it('keeps the full spending reservation when Gateway omits billed cost', async (
     const cfg = { ...config(), mode: 'services' as const, betaActive: true };
     const reconcile = vi.spyOn(store, 'reconcileSpend');
     const reserve = vi.spyOn(store, 'reserveSpend');
-    const model = new GatewayModel(cfg, async () => new Response(JSON.stringify({ model: cfg.model, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(envelope) } }], usage: { prompt_tokens: 100, completion_tokens: 50 } })), () => 'oidc');
+    const caseEnvelope = { ...envelope, output: { ...envelope.output, casePrep: { rating: 'vague', quote: null, followUpQuestion: 'Which customer will pay?', nextAreaQuestion: null, invalidatedAreaIds: [] } } };
+    const model = new GatewayModel(cfg, async () => new Response(JSON.stringify({ model: cfg.model, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(caseEnvelope) } }], usage: { prompt_tokens: 100, completion_tokens: 50 } })), () => 'oidc');
     const engine = new ConversationEngine({ store, model, config: cfg, evidence: createEvidenceService(), clock: { now: () => new Date(input.now) } });
     await engine.turn('u', session.id, { operationId: 'a', expectedRevision: 0, text: 'An AI booking assistant', action: 'message' });
     expect(reserve).toHaveBeenCalledOnce(); expect(reconcile).not.toHaveBeenCalled();
@@ -64,18 +65,6 @@ it('honors Gateway retry-after headers and uses a conservative free-tier backoff
     const model = new GatewayModel(config(), async () => new Response('', { status: 429, headers }), () => 'oidc');
     await expect(model.generate(input, new AbortController().signal)).rejects.toMatchObject({ transient: true, retryAfterMs: delay });
   }
-});
-it('removes detached response citations when a skipped clarification becomes a reflection',async()=>{
- const {createEvidenceService}=await import('../src/lib/evidence/service');
- const {decodeRouterOutput}=await import('../src/lib/model/openrouter-request');
- const {controlOutput}=await import('../src/lib/conversation/state');
- const evidence=createEvidenceService();const retrieved=await evidence.retrieve({mode:'business',query:'database',excludeIds:[],limit:3});
- const source=retrieved[0];const claim=source.claims[0];const ref={evidenceId:source.id,claimId:claim.id,excerptId:claim.excerptIds[0],kind:'quote' as const};
- const skipped=structuredClone(input);skipped.evidence=retrieved;skipped.session.state.clarifications=[{id:'payer',question:'Which customer will pay?',skipped:false}];skipped.request={operationId:'skip',expectedRevision:0,text:'I do not know.',action:'skip'};
- const raw={...envelope,output:{...envelope.output,citations:[ref],state:{...envelope.output.state,counterpoints:[{source:ref,interpretation:'Test whether this constraint applies.'}]}}};
- const decoded=decodeRouterOutput(JSON.stringify(raw),skipped)!;expect(decoded.citations).toHaveLength(1);
- const controlled=controlOutput(skipped,decoded);const checked=await evidence.validate(controlled,retrieved);
- expect(checked.state.phase).toBe('debate');expect(checked.citations).toEqual([]);expect(checked.state.counterpoints[0].citations).toHaveLength(1);
 });
 it('reports empty reflection fields and invalid reference selections without logging text',async()=>{
  const {gatewayResponseDiagnostics}=await import('../src/lib/model/gateway-request');

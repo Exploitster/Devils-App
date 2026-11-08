@@ -75,18 +75,22 @@ it('never treats missing or invalid usage as a free response', async () => {
     await expect(new OpenRouterModel(config(), async () => response(envelope, { usage })).generate(input, new AbortController().signal)).rejects.toMatchObject({ transient: false });
   }
 });
-it('commits a turn and server-authored card through the real engine, source validation and storage', async () => {
-  const { store, input, evidence, envelope } = await fixture(); const cfg = { ...config(), mode: 'services' as const };
+it('commits a case turn and an assessment through the real engine, source validation and storage', async () => {
+  const { store, input, evidence, envelope, source, claim } = await fixture(); const cfg = { ...config(), mode: 'services' as const };
+  const turnEnvelope = { ...envelope, output: { ...envelope.output, citations: [], state: { ...envelope.output.state, counterpoints: [] }, casePrep: { rating: 'vague', quote: null, followUpQuestion: 'Which team feels the cost first?', nextAreaQuestion: 'Who exactly would pay first?', invalidatedAreaIds: [] } } };
+  const ref = { evidenceId: source.id, claimId: claim.id, excerptId: claim.excerptIds[0], kind: 'paraphrase' as const };
+  const cardEnvelope = { ...envelope, output: { ...envelope.output, citations: [], state: { ...envelope.output.state, counterpoints: [] }, assessment: { statement: 'Database developer tools that lower costs.', good: [], bad: ['The payer is not named.'], mustBeTrue: ['Teams pay for lower costs.'], loopholes: [{ source: ref, interpretation: 'Check whether this applies.' }] } } };
   let calls = 0;
-  const model = new OpenRouterModel(cfg, async () => ++calls === 1 ? new Response('', { status: 503 }) : response(envelope));
+  const model = new OpenRouterModel(cfg, async (_url, options) => { calls++; if (calls === 1) return new Response('', { status: 503 }); return response(JSON.parse(options!.body as string).max_tokens === cfg.maxAssessmentTokens ? cardEnvelope : turnEnvelope); });
   const engine = new ConversationEngine({ store, evidence, model, config: cfg, clock: { now: () => new Date(input.now) } });
   const reserve = vi.spyOn(store, 'reserveSpend'); const reconcile = vi.spyOn(store, 'reconcileSpend');
   const saved = await engine.turn('u', input.session.id, input.request);
   expect(saved.revision).toBe(1); expect(calls).toBe(2); expect(reserve).toHaveBeenCalledTimes(2);
   expect(reconcile).toHaveBeenCalledExactlyOnceWith(expect.any(String), 300);
-  const card = await engine.card('u', input.session.id, { operationId: 'card', expectedRevision: 1 });
-  expect(card.cards[0].closing).toBe('Your call. Always.');
-  expect(card.cards[0].counterpoints[0].text).toBe(saved.state.counterpoints[0].text);
+  expect(saved.messages.at(-1)).toMatchObject({ text: 'Which team feels the cost first?', citations: [] });
+  const assessed = await engine.card('u', input.session.id, { operationId: 'card', expectedRevision: 1 });
+  expect(assessed.cards).toEqual([]);
+  expect(assessed.state.casePrep!.assessment).toMatchObject({ closing: 'Your call. Always.', statement: 'Database developer tools that lower costs.', loopholes: [{ id: claim.id, text: claim.text, citations: [ref] }] });
   expect(await store.listUsage('u', '')).toHaveLength(2);
 });
 it('keeps cancellation final and preserves the original abort signal', async () => {
@@ -94,15 +98,15 @@ it('keeps cancellation final and preserves the original abort signal', async () 
   const model = new OpenRouterModel(config(), async (_url, options) => { expect(options!.signal).toBe(controller.signal); controller.abort(); throw error; });
   await expect(model.generate(input, controller.signal)).rejects.toBe(error);
 });
-it('replaces a cited clarification response without leaving detached response citations', async () => {
+it('shows the app-chosen question in place of the provider response on a case turn', async () => {
   const { store, input, evidence, envelope } = await fixture();
-  const clarified = { ...envelope, output: { ...envelope.output, state: { ...envelope.output.state, phase: 'clarifying', clarifications: [{ id: 'payer', question: 'Which customer will pay?' }] } } };
+  const cited = { ...envelope, output: { ...envelope.output, citations: [], state: { ...envelope.output.state, counterpoints: [] }, response: 'Here is some analysis instead of a question.', casePrep: { rating: 'vague', quote: null, followUpQuestion: 'Which customer will pay?', nextAreaQuestion: null, invalidatedAreaIds: [] } } };
   const cfg = { ...config(), mode: 'services' as const };
-  const model = new OpenRouterModel(cfg, async () => response(clarified));
+  const model = new OpenRouterModel(cfg, async () => response(cited));
   const engine = new ConversationEngine({ store, evidence, model, config: cfg, clock: { now: () => new Date(input.now) } });
   const saved = await engine.turn('u', input.session.id, input.request);
   expect(saved.messages.at(-1)).toMatchObject({ text: 'Which customer will pay?', citations: [] });
-  expect(saved.state.counterpoints[0].citations).toHaveLength(1);
+  expect(saved.state.casePrep!.areas[0]).toMatchObject({ status: 'probing', followUps: 1 });
   expect(saved.revision).toBe(1);
 });
 it('still rejects unknown sources in a cited clarification', async () => {
