@@ -23,7 +23,7 @@ async function loadSessions(): Promise<SessionSummary[]> {
   const admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const sessions: SessionSummary[] = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await admin.from('sessions').select('data').range(from, from + 999);
+    const { data, error } = await admin.from('sessions').select('data').order('id').range(from, from + 999);
     if (error) throw new Error(`Could not read conversations: ${error.message}`);
     sessions.push(...(data as { data: Session }[]).map(row => summarize(row.data)));
     if (data.length < 1000) break;
