@@ -99,6 +99,16 @@ describe('cases pinned to a question-set version', () => {
     expect(session.messages.at(-1)!.text).toBe('Which single person would sign the first cheque?');
   });
 
+  it('assesses a case whose published areas use the longest allowed “what it must establish” text', async () => {
+    const long = custom.map(area => ({ ...area, establishes: `${area.label}: ${'x'.repeat(2000 - area.label.length - 2)}` }));
+    await publishQuestionSet(knowledge, 'business', long, undefined, now);
+    const started = await (await engineWith(knowledge))();
+    await started.say(strong[0]);
+    const assessed = await started.assess();
+    const rows = assessed.state.casePrep!.assessment!.areas;
+    expect(rows.some(row => row.nextStep?.endsWith(long[1].establishes))).toBe(true);
+  });
+
   it('starts cases on the built-in set when the Studio database update is not applied', async () => {
     const missing = { getVersion: async () => { throw studioUnavailable(); } } as unknown as KnowledgeStore;
     expect(await liveQuestionSet(missing, 'business')).toEqual({ mode: 'business', version: 0, areas: areasFor('business') });

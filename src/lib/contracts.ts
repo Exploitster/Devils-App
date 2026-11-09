@@ -21,7 +21,7 @@ export type AreaStatus = z.infer<typeof AreaStatusSchema>;
 export const CaseAreaRecordSchema = z.object({ id: IdSchema, status: AreaStatusSchema, followUps: z.number().int().min(0).max(3), quotes: z.array(z.string().min(1).max(500)).max(3) }).strict();
 export type CaseAreaRecord = z.infer<typeof CaseAreaRecordSchema>;
 export const AssessmentScoreSchema = z.enum(['strong', 'weak', 'untested', 'not_covered']);
-export const AssessmentAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), score: AssessmentScoreSchema, reason: z.string().min(1).max(1000), nextStep: z.string().max(1000).optional() }).strict();
+export const AssessmentAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), score: AssessmentScoreSchema, reason: z.string().min(1).max(1000), nextStep: z.string().max(2100).optional() }).strict();
 export const AssessmentSchema = z.object({ id: IdSchema, createdAt: z.string().datetime(), complete: z.boolean(), statement: TextSchema, areas: z.array(AssessmentAreaSchema).min(1).max(12), good: z.array(TextSchema).max(5), bad: z.array(TextSchema).max(5), mustBeTrue: z.array(TextSchema).max(5), loopholes: z.array(CounterpointSchema).max(3), closing: z.literal('Your call. Always.') }).strict();
 export type Assessment = z.infer<typeof AssessmentSchema>;
 /** `frameworkVersion` is the question-set version the case started on; absent means version 0, the built-in set. */
