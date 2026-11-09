@@ -4,6 +4,8 @@ Testing address: https://devils-advocate-preview-exploitster1.vercel.app
 
 The owner selected a temporary site using existing accounts on 23 October 2026. This is a separate website deployment, with the same Supabase accounts and saved data as the main website. It is **not an isolated staging database**. Profile edits, conversation deletion, password changes and account deletion affect the same account. Use your own account and disposable conversations. Do not delete your normal account just to test the delete button.
 
+The Studio is read-only on this site. Because it shares the production database, the owner can open `/studio` and look at the library and question sets, but every change returns `STUDIO_READ_ONLY`. Add, approve, delete, publish and restore on the main website only.
+
 The main website stays at https://www.devils-advocate.app on its existing deployment until a production release is explicitly requested. Public payments remain disabled. Dodo uses Test Mode, and only the configured test-account UUIDs may create test checkouts.
 
 ## One-time return addresses

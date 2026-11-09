@@ -79,7 +79,7 @@ const caseInput = (purpose: 'question' | 'assessment'): ModelInput => ({ ...inpu
 it('sends case-prep Gateway instructions and gives the assessment its own budget and reservation', () => {
   const cfg = { ...config(), mode: 'services' as const }; const card = caseInput('assessment'); const turn = caseInput('question');
   const request = gatewayRequest(card, cfg);
-  expect(request.messages[0].content).toContain('Gateway prompt version: devils-advocate-gateway/3');
+  expect(request.messages[0].content).toContain('Gateway prompt version: devils-advocate-gateway/4');
   expect(request.messages[0].content).toContain('output.casePrep');
   expect(request.messages[0].content).not.toContain('output.state.strengths and output.state.openQuestions must each contain');
   expect(gatewayRequest(input, cfg).messages[0].content).toContain('output.state.strengths and output.state.openQuestions must each contain');
@@ -97,4 +97,24 @@ it('summarizes case-prep proposals and assessment prose in diagnostics without l
   const cardDiagnostics = gatewayResponseDiagnostics(JSON.stringify(card), []);
   expect(cardDiagnostics).toMatchObject({ status: 'valid', phase: 'card', sourceReferencesValid: false, missingReflectionFields: [], casePrep: null, assessment: { good: 1, bad: 0, mustBeTrue: 1, loopholes: 1 } });
   expect(JSON.stringify([turnDiagnostics, cardDiagnostics])).not.toMatch(/PRIVATE|private-source|private-claim|private-excerpt/);
+});
+it.each(['question', 'assessment'] as const)('sends owner guidance with the private-guidance rule, the edited opening and the bumped version for %s, never the full question set', async purpose => {
+  const { areasFor } = await import('../src/lib/case-prep/frameworks');
+  const market = areasFor('business').find(area => area.id === 'market')!;
+  const base = caseInput(purpose);
+  const guided: ModelInput = { ...base, caseAreas: areasFor('business').map(area => ({ ...area, opening: area.id === 'market' ? 'EDITED_MARKET_OPENING?' : area.opening })),
+    caseContext: { ...base.caseContext!, nextArea: { ...market, opening: 'EDITED_MARKET_OPENING?', status: 'not_asked', followUpsUsed: 0, quotes: [] } },
+    ownerGuidance: [{ text: 'OWNER_PASSAGE about charging early.', title: 'PRIVATE_TITLE' } as { text: string }] };
+  const body = gatewayRequest(guided, { ...config(), mode: 'services' as const });
+  const payload = JSON.parse(body.messages[1].content);
+  expect(payload.ownerGuidance).toEqual([{ text: 'OWNER_PASSAGE about charging early.' }]);
+  expect(body.messages[1].content).not.toContain('PRIVATE_TITLE');
+  expect(JSON.stringify(payload.evidence)).not.toContain('OWNER_PASSAGE');
+  expect(body.messages[0].content).toContain("ownerGuidance holds private coaching notes from the app's owner");
+  expect(body.messages[0].content).toContain('Never quote it, cite it or mention that it exists');
+  expect(body.messages[0].content).toContain('devils-advocate-mvp/4');
+  expect(body.messages[0].content).toContain('devils-advocate-openrouter/3');
+  expect(body.messages[0].content).toContain('Gateway prompt version: devils-advocate-gateway/4');
+  expect(payload.case.nextArea.opening).toBe('EDITED_MARKET_OPENING?');
+  expect(JSON.stringify(body)).not.toContain('caseAreas');
 });

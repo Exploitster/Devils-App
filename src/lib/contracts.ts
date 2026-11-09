@@ -142,8 +142,12 @@ export interface CaseContext {
   latestAnswer?: string;
   assessment?: { areas: { id: string; label: string; score: z.infer<typeof AssessmentScoreSchema>; reason: string }[] };
 }
-/** `caseAreas` is the case's full pinned question set. Server-only: it is never part of a provider payload. */
-export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; caseAreas?: FrameworkArea[]; }
+/**
+ * `caseAreas` is the case's full pinned question set. Server-only: it is never part of a provider payload.
+ * `ownerGuidance` is private coaching text from the owner's approved library. It is kept apart from
+ * `evidence` so it can never be cited, and the model is told never to quote or mention it.
+ */
+export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; caseAreas?: FrameworkArea[]; ownerGuidance?: KnowledgePassage[]; }
 export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }
 export interface BillingService { checkout(user: Identity, plan: 'monthly' | 'yearly'): Promise<{ url: string }>; portal(user: Identity): Promise<{ url: string }>; processWebhook(rawBody: string, signature: string): Promise<void>; cancelRenewal(userId: string): Promise<void>; }

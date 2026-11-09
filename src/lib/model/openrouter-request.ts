@@ -35,7 +35,7 @@ export const RouterEnvelopeSchema = z.object({
     }).strict().nullable(),
   }).strict(),
 }).strict();
-export const routerPromptVersion = 'devils-advocate-openrouter/2';
+export const routerPromptVersion = 'devils-advocate-openrouter/3';
 const routerResponseSchema = z.toJSONSchema(RouterEnvelopeSchema);
 delete routerResponseSchema.$schema;
 const legacyTransport = 'Select counterpoints using source references and put your application hypothesis in interpretation. Do not output counterpoint text, quote text, cards, positions or used IDs: the server supplies them. For response citations, select references; the server appends their exact reviewed wording. Do not write quotations from memory. If no supplied source is relevant, use empty citations/counterpoints, explain the evidence gap and propose a test. In a clarifying response use no response citations. Set output.casePrep and output.assessment to null.';

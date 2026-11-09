@@ -2,7 +2,7 @@ import type { Evidence, ModelInput } from '../contracts';
 import type { RuntimeConfig } from '../config';
 import { openRouterRequest, RouterEnvelopeSchema } from './openrouter-request';
 import { resolveCitation } from '../evidence/validate';
-export const gatewayPromptVersion = 'devils-advocate-gateway/3';
+export const gatewayPromptVersion = 'devils-advocate-gateway/4';
 export function gatewayRequest(input: ModelInput, config: RuntimeConfig) {
   const { messages, stream, max_tokens, response_format } = openRouterRequest(input, config);
   messages[0].content += `\nGateway prompt version: ${gatewayPromptVersion}. ${input.caseContext ? casePrepGateway : legacyGateway}`;

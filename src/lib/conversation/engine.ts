@@ -10,6 +10,8 @@ import { caseContext, prepareState, withAssessment } from './state';
 import { applyAction, assertActionAllowed, startCase } from '../case-prep/reducer';
 import { questionSetFor } from '../case-prep/versions';
 import type { KnowledgeStore } from '../knowledge/store';
+import { echoesGuidance, guidanceFor } from '../knowledge/guidance';
+import { logEvent } from '../logging';
 import { boundInput, reserveCost } from './limits';
 import { ProviderError } from '../model/provider';
 import { CitationValidationError } from '../evidence/validate';
@@ -47,7 +49,10 @@ export class ConversationEngine {
  const record=session.state.casePrep??startCase(session.mode,areas,set.version);
  const supportOutput=(response:string):ModelOutput=>{const state=structuredClone(session.state);state.phase='support';state.casePrep=record;return {state,response,citations:[]};};
  const fresh=support||turn?[]:await evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3});
- const input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseAreas:areas,caseContext:caseContext(record,areas,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined)},config);
+ const context=caseContext(record,areas,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined);
+ // Searched before the spend reservation, which prices the guidance with the rest of the request.
+ const ownerGuidance=support?[]:await guidanceFor(this.services.knowledge,{session,context,areas});
+ let input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseAreas:areas,caseContext:context,ownerGuidance},config);
  const withNotice=(output:ModelOutput,qualified:boolean):ModelOutput=>{const prep=output.state.casePrep!;if(qualified&&!prep.qualifiedNoticeShown){prep.qualifiedNoticeShown=true;output.response=`${qualifiedNotice}\n\n${output.response}`;}return output;};
  const verify=async(result:ModelResult):Promise<ModelOutput>=>{
  controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw invalidOutput();const output=parsed.data;
@@ -62,12 +67,16 @@ export class ConversationEngine {
  let result:ModelResult;let verified:ModelOutput|undefined;
  if(support){verified=supportOutput(boundary||safety.response!);result={output:verified,inputTokens:0,outputTokens:0,costMicros:0};}
  else{
- let generated:ModelResult|undefined;for(let attempt=0;attempt<2;attempt++){
+ // One retry for a transient failure or unverifiable output. A reply that recites owner guidance
+ // is discarded and written once more without guidance, under its own spend reservation.
+ let generated:ModelResult|undefined;let retried=false;for(;;){
  controller.signal.throwIfAborted();const op=await store.getOperation(userId,sessionId,request.operationId);if(op?.status!=='pending')throw new AppError('CANCELLED','This response was cancelled.',409);
  const attemptId=randomUUID();await store.reserveSpend({id:attemptId,operationId:request.operationId,userId,reservedMicros:reserveCost(input,config),createdAt:clock.now().toISOString()},config.dailySpendLimitMicros);
- try{generated=await Promise.race([model.generate(input,controller.signal),new Promise<never>((_,reject)=>{if(controller.signal.aborted)reject(new Error('Cancelled'));else controller.signal.addEventListener('abort',()=>reject(new Error('Cancelled')),{once:true});})]);if(generated.costKnown!==false)await store.reconcileSpend(attemptId,generated.costMicros);verified=await verify(generated);break;}catch(error){
+ try{generated=await Promise.race([model.generate(input,controller.signal),new Promise<never>((_,reject)=>{if(controller.signal.aborted)reject(new Error('Cancelled'));else controller.signal.addEventListener('abort',()=>reject(new Error('Cancelled')),{once:true});})]);if(generated.costKnown!==false)await store.reconcileSpend(attemptId,generated.costMicros);verified=await verify(generated);
+ if(input.ownerGuidance?.length&&echoesGuidance(visibleText(verified,task),input.ownerGuidance)){logEvent('knowledge_echo_blocked',{id:sessionId});input={...input,ownerGuidance:[]};generated=verified=undefined;continue;}
+ break;}catch(error){
  const retryable=error instanceof ProviderError?error.transient:error instanceof CitationValidationError||(error instanceof AppError&&error.code==='INVALID_MODEL_OUTPUT');
- if(!retryable||attempt!==0||controller.signal.aborted)throw error;
+ if(!retryable||retried||controller.signal.aborted)throw error;retried=true;
  await retryDelay(error instanceof ProviderError?error.retryAfterMs??200+Math.floor(Math.random()*200):200,undefined,{signal:controller.signal});
  }
  }if(!generated)throw new AppError('PROVIDER_ERROR','The response could not complete.',503);result=generated;
@@ -77,5 +86,10 @@ export class ConversationEngine {
  return await store.commitTurn({userId,sessionId,operationId:request.operationId,expectedRevision:request.expectedRevision,state:output.state,messages,usage:{inputTokens:result.inputTokens,outputTokens:result.outputTokens,costMicros:result.costMicros},now:stamp});
  }catch(error){try{await store.failTurn(userId,sessionId,request.operationId,controller.signal.aborted?'CANCELLED':'GENERATION_FAILED');}catch{}if(controller.signal.aborted)throw new AppError('CANCELLED','The response was cancelled or timed out. Please try again.',408);throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);active.delete(key);}
  }
+}
+/** What the person would read: the reply, and on the assessment every prose field the model wrote. */
+function visibleText(output:ModelOutput,task:ModelInput['task']):string[]{
+ const prose=task==='card'?output.state.casePrep?.assessment:undefined;
+ return [output.response,...(prose?[prose.statement,...prose.good,...prose.bad,...prose.mustBeTrue,...prose.loopholes.flatMap(point=>[point.text,point.interpretation??''])]:[])];
 }
 export function createConversationEngine(services:ConversationServices){return new ConversationEngine(services);}
