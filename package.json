@@ -23,6 +23,7 @@
     "test:db": "node scripts/test-postgres.mjs",
     "db:setup:bundle": "node scripts/build-supabase-setup.mjs",
     "test:gateway": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-gateway.ts",
+    "test:transcription": "NODE_USE_ENV_PROXY=1 tsx scripts/verify-transcription.ts",
     "report:return-rate": "NODE_USE_ENV_PROXY=1 tsx scripts/case-prep-return-rate.ts"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "stripe": "23.0.0",
+    "unpdf": "2.1.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
