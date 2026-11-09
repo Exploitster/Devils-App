@@ -1,7 +1,6 @@
 'use client';
 import { useId, useState } from 'react';
-import type { AreaStatus, CasePrep, Mode } from '@/lib/contracts';
-import { areasFor } from '@/lib/case-prep/frameworks';
+import type { AreaStatus, CasePrep } from '@/lib/contracts';
 
 const statusLabels: Record<AreaStatus, string> = {
   not_asked: 'Not asked',
@@ -11,11 +10,12 @@ const statusLabels: Record<AreaStatus, string> = {
   untested: 'Untested',
 };
 
-export function CaseProgress({ mode, record }: { mode: Mode; record: CasePrep }) {
+/** `areas` names each area as the case's own question-set version does; the server sends them with the session. */
+export function CaseProgress({ record, areas }: { record: CasePrep; areas: { id: string; label: string }[] }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
   const titleId = useId();
-  const labels = new Map(areasFor(mode).map(area => [area.id, area.label]));
+  const labels = new Map(areas.map(area => [area.id, area.label]));
   const covered = record.areas.filter(area => area.status === 'strong' || area.status === 'weak' || area.status === 'untested').length;
   return <section className="case-progress" aria-labelledby={titleId}>
     <div className="case-progress-head">

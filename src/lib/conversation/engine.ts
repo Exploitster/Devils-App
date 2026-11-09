@@ -8,6 +8,8 @@ import { assessSafety } from './safety';
 import { privacyBoundary } from './boundaries';
 import { caseContext, prepareState, withAssessment } from './state';
 import { applyAction, assertActionAllowed, startCase } from '../case-prep/reducer';
+import { questionSetFor } from '../case-prep/versions';
+import type { KnowledgeStore } from '../knowledge/store';
 import { boundInput, reserveCost } from './limits';
 import { ProviderError } from '../model/provider';
 import { CitationValidationError } from '../evidence/validate';
@@ -17,7 +19,8 @@ const supportReplies=new Set(['want to die','help kill someone','political debat
 const assessmentBeingWritten='Every area is covered. I am writing your assessment now.';
 const assessmentReady='Your assessment is ready. It scores each area and leaves the decision with you.';
 const invalidOutput=()=>new AppError('INVALID_MODEL_OUTPUT','The AI response could not be verified. Your conversation is unchanged; please try again.',502);
-export interface ConversationServices {store:Store;evidence:EvidenceService;model:ModelService;clock:Clock;config:RuntimeConfig;}
+/** Without `knowledge`, every case runs on the built-in question sets. */
+export interface ConversationServices {store:Store;evidence:EvidenceService;model:ModelService;clock:Clock;config:RuntimeConfig;knowledge?:KnowledgeStore;}
 export class ConversationEngine {
  constructor(private services:ConversationServices){}
  async turn(userId:string,sessionId:string,request:TurnRequest,signal?:AbortSignal){return this.run(userId,sessionId,request,'turn',signal);}
@@ -39,19 +42,21 @@ export class ConversationEngine {
  const controller=new AbortController();const key=`${userId}:${request.operationId}`;active.set(key,controller);const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(abort,config.generationTimeoutMs);
  try{
  const session=reserved.session;
- const record=session.state.casePrep??startCase(session.mode);
+ // A case reads its pinned question set on every turn; a new case pins the live one.
+ const set=await questionSetFor(this.services.knowledge,session);const areas=set.areas;
+ const record=session.state.casePrep??startCase(session.mode,areas,set.version);
  const supportOutput=(response:string):ModelOutput=>{const state=structuredClone(session.state);state.phase='support';state.casePrep=record;return {state,response,citations:[]};};
  const fresh=support||turn?[]:await evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3});
- const input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseContext:caseContext(record,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined)},config);
+ const input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseAreas:areas,caseContext:caseContext(record,areas,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined)},config);
  const withNotice=(output:ModelOutput,qualified:boolean):ModelOutput=>{const prep=output.state.casePrep!;if(qualified&&!prep.qualifiedNoticeShown){prep.qualifiedNoticeShown=true;output.response=`${qualifiedNotice}\n\n${output.response}`;}return output;};
  const verify=async(result:ModelResult):Promise<ModelOutput>=>{
  controller.signal.throwIfAborted();const parsed=ModelOutputSchema.safeParse(result.output);if(!parsed.success)throw invalidOutput();const output=parsed.data;
  if(output.state.phase==='support'&&supportReplies.has(output.response))return supportOutput(output.response);
  const qualified=safety.kind==='qualified'||output.response.startsWith(qualifiedNotice);const state=prepareState(input);
- if(turn){if(!output.casePrep)throw invalidOutput();const applied=applyAction(record,turn.action,turn.text,output.casePrep);state.phase='clarifying';state.casePrep=applied.record;return withNotice({state,response:applied.question??assessmentBeingWritten,citations:[]},qualified);}
+ if(turn){if(!output.casePrep)throw invalidOutput();const applied=applyAction(record,areas,turn.action,turn.text,output.casePrep);state.phase='clarifying';state.casePrep=applied.record;return withNotice({state,response:applied.question??assessmentBeingWritten,citations:[]},qualified);}
  if(!output.assessment)throw invalidOutput();
  if(output.assessment.loopholes.some(p=>p.citations.length===0))throw new AppError('INVALID_EVIDENCE','Counterpoints require reviewed source support.',502);
- state.phase='card';state.casePrep=withAssessment(record,output.assessment,randomUUID(),clock.now().toISOString());
+ state.phase='card';state.casePrep=withAssessment(record,areas,output.assessment,randomUUID(),clock.now().toISOString());
  return evidence.validate(withNotice({state,response:assessmentReady,citations:[],assessment:output.assessment},qualified),input.evidence);
  };
  let result:ModelResult;let verified:ModelOutput|undefined;

@@ -24,7 +24,8 @@ export const AssessmentScoreSchema = z.enum(['strong', 'weak', 'untested', 'not_
 export const AssessmentAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), score: AssessmentScoreSchema, reason: z.string().min(1).max(1000), nextStep: z.string().max(1000).optional() }).strict();
 export const AssessmentSchema = z.object({ id: IdSchema, createdAt: z.string().datetime(), complete: z.boolean(), statement: TextSchema, areas: z.array(AssessmentAreaSchema).min(1).max(12), good: z.array(TextSchema).max(5), bad: z.array(TextSchema).max(5), mustBeTrue: z.array(TextSchema).max(5), loopholes: z.array(CounterpointSchema).max(3), closing: z.literal('Your call. Always.') }).strict();
 export type Assessment = z.infer<typeof AssessmentSchema>;
-export const CasePrepSchema = z.object({ perspective: ModeSchema, areas: z.array(CaseAreaRecordSchema).min(1).max(12), currentAreaId: IdSchema.nullable(), complete: z.boolean(), qualifiedNoticeShown: z.boolean(), assessment: AssessmentSchema.optional(), completedAt: z.string().datetime().optional() }).strict();
+/** `frameworkVersion` is the question-set version the case started on; absent means version 0, the built-in set. */
+export const CasePrepSchema = z.object({ perspective: ModeSchema, frameworkVersion: z.number().int().nonnegative().optional(), areas: z.array(CaseAreaRecordSchema).min(1).max(12), currentAreaId: IdSchema.nullable(), complete: z.boolean(), qualifiedNoticeShown: z.boolean(), assessment: AssessmentSchema.optional(), completedAt: z.string().datetime().optional() }).strict();
 export type CasePrep = z.infer<typeof CasePrepSchema>;
 export const SessionStateSchema = z.object({ phase: z.enum(['description', 'clarifying', 'debate', 'card', 'support']), position: z.string().max(12000), underlyingQuestion: z.string().max(3000), clarifications: z.array(ClarificationSchema).max(3), strengths: z.array(TextSchema).max(5), counterpoints: z.array(CounterpointSchema).max(3), openQuestions: z.array(TextSchema).max(5), nextStep: z.string().max(3000), usedArgumentIds: z.array(IdSchema).max(200), usedEvidenceIds: z.array(IdSchema).max(200), coverageNote: z.string().max(2000).optional(), summary: z.string().max(6000), casePrep: CasePrepSchema.optional() }).strict();
 export type SessionState = z.infer<typeof SessionStateSchema>;
@@ -132,7 +133,7 @@ export interface Store {
 export interface AuthService { authenticate(input: AccountAuthRequest, request: Request): Promise<Response>; getIdentity(request: Request): Promise<Identity | null>; signIn(email: string, request: Request): Promise<Response>; signOut(request: Request): Promise<Response>; deleteIdentity(userId: string): Promise<void>; }
 export interface Clock { now(): Date; }
 export interface EvidenceService { retrieve(input: { mode: Mode; query: string; excludeIds: string[]; limit: number }): Promise<Evidence[]>; get(id: string): Promise<Evidence | null>; validate(output: ModelOutput, retrieved: Evidence[]): Promise<ModelOutput>; }
-export interface AreaBrief { id: string; label: string; establishes: string; strongSignals: string[]; followUps: string[]; status: AreaStatus; followUpsUsed: number; quotes: string[]; }
+export interface AreaBrief { id: string; label: string; establishes: string; opening: string; strongSignals: string[]; followUps: string[]; status: AreaStatus; followUpsUsed: number; quotes: string[]; }
 export interface CaseContext {
   purpose: 'question' | 'pushback' | 'correction' | 'assessment';
   currentArea: AreaBrief | null;
@@ -141,7 +142,8 @@ export interface CaseContext {
   latestAnswer?: string;
   assessment?: { areas: { id: string; label: string; score: z.infer<typeof AssessmentScoreSchema>; reason: string }[] };
 }
-export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; }
+/** `caseAreas` is the case's full pinned question set. Server-only: it is never part of a provider payload. */
+export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; caseAreas?: FrameworkArea[]; }
 export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }
 export interface BillingService { checkout(user: Identity, plan: 'monthly' | 'yearly'): Promise<{ url: string }>; portal(user: Identity): Promise<{ url: string }>; processWebhook(rawBody: string, signature: string): Promise<void>; cancelRenewal(userId: string): Promise<void>; }

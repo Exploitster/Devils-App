@@ -1,5 +1,4 @@
-import type { AreaBrief, AssessmentProse, CaseContext, CasePrepProposal, Counterpoint, Evidence, Mode, ModelInput, ModelOutput, ModelService } from '../contracts';
-import { findArea } from '../case-prep/frameworks';
+import type { AreaBrief, AssessmentProse, CaseContext, CasePrepProposal, Counterpoint, Evidence, FrameworkArea, ModelInput, ModelOutput, ModelService } from '../contracts';
 import { prepareState } from '../conversation/state';
 
 /**
@@ -8,7 +7,7 @@ import { prepareState } from '../conversation/state';
  * - an answer is vague when it has fewer than eight words or leans on filler such as "everyone",
  *   "I guess" or "not sure"; otherwise it is strong and the quote is its first sentence, verbatim;
  * - a follow-up echoes the person's words and turns the area's next follow-up pattern into a question;
- * - the next area's question is its catalogue opening;
+ * - the next area's question is its opening, read from the case's own question set (`caseAreas`);
  * - a correction invalidates every answered area except the first;
  * - the assessment prose is a template built from the area scores and the supplied evidence.
  * These rules judge nothing about quality; they only make the flow testable.
@@ -25,12 +24,11 @@ export class DeterministicModel implements ModelService {
     state.phase = input.task === 'card' ? 'card' : 'clarifying';
     const context = input.caseContext;
     const text = 'text' in input.request ? input.request.text : '';
-    const mode = input.session.mode;
     if (!context) return result({ state, response: 'What idea or decision would you like to prepare?', citations: [] });
     if (context.purpose === 'assessment') {
       return result({ state, response: 'Your assessment is ready.', citations: [], assessment: assessmentProse(input, context) });
     }
-    const casePrep = proposal(context, mode, text, 'action' in input.request ? input.request.action : 'message');
+    const casePrep = proposal(context, input.caseAreas ?? [], text, 'action' in input.request ? input.request.action : 'message');
     const response = casePrep.followUpQuestion ?? casePrep.nextAreaQuestion ?? 'Every area is covered.';
     return result({ state, response, citations: [], casePrep });
   }
@@ -40,24 +38,24 @@ function result(output: ModelOutput) {
   return { output, inputTokens: 0, outputTokens: 0, costMicros: 0 };
 }
 
-function proposal(context: CaseContext, mode: Mode, text: string, action: string): CasePrepProposal {
+function proposal(context: CaseContext, areas: readonly FrameworkArea[], text: string, action: string): CasePrepProposal {
   const current = context.currentArea;
   const next = context.nextArea;
   switch (context.purpose) {
     case 'pushback':
-      return current ? { followUpQuestion: `Put another way: ${lowerFirst(openingOf(mode, current.id))}` } : {};
+      return current ? { followUpQuestion: `Put another way: ${lowerFirst(openingOf(areas, current.id))}` } : {};
     case 'correction': {
       const answered = context.areas.filter(area => area.status !== 'not_asked');
       const invalidated = answered.slice(1).map(area => area.id);
       const target = invalidated[0];
       return {
         invalidatedAreaIds: invalidated,
-        ...(target ? { nextAreaQuestion: `Now that your position is “${echo(text)}”, ${lowerFirst(openingOf(mode, target))}` } : {}),
-        ...(current ? { followUpQuestion: `Now that your position is “${echo(text)}”, ${lowerFirst(openingOf(mode, current.id))}` } : {}),
+        ...(target ? { nextAreaQuestion: `Now that your position is “${echo(text)}”, ${lowerFirst(openingOf(areas, target))}` } : {}),
+        ...(current ? { followUpQuestion: `Now that your position is “${echo(text)}”, ${lowerFirst(openingOf(areas, current.id))}` } : {}),
       };
     }
     case 'question': {
-      const nextAreaQuestion = next ? openingOf(mode, next.id) : undefined;
+      const nextAreaQuestion = next ? openingOf(areas, next.id) : undefined;
       if (action === 'skip') return nextAreaQuestion ? { nextAreaQuestion } : {};
       const answer = context.latestAnswer ?? text;
       const vague = isVague(answer);
@@ -94,14 +92,14 @@ function secondPerson(text: string): string {
   return text.replace(/\bthemselves\b/g, 'yourself').replace(/\bthey\b/g, 'you').replace(/\bthem\b/g, 'you').replace(/\btheir\b/g, 'your');
 }
 
-function openingOf(mode: Mode, id: string): string {
-  const area = findArea(mode, id);
+function openingOf(areas: readonly FrameworkArea[], id: string): string {
+  const area = areas.find(candidate => candidate.id === id);
   if (!area) throw new Error(`Unknown case-prep area: ${id}`);
   return area.opening;
 }
 
 function assessmentProse(input: ModelInput, context: CaseContext): AssessmentProse {
-  const mode = input.session.mode;
+  const areas = input.caseAreas ?? [];
   const rows = context.assessment?.areas ?? [];
   const position = input.session.state.position.replace(/\s+/g, ' ').trim();
   const open = rows.filter(row => row.score === 'weak' || row.score === 'untested');
@@ -109,7 +107,7 @@ function assessmentProse(input: ModelInput, context: CaseContext): AssessmentPro
     statement: position ? clip(position, 300) : 'Your idea or decision, as you described it.',
     good: rows.filter(row => row.score === 'strong').slice(0, 5).map(row => `${row.label}: you gave a specific answer in your own words.`),
     bad: open.slice(0, 5).map(row => `Still ${row.score === 'weak' ? 'thin' : 'untested'}: ${lowerFirst(row.label)}.`),
-    mustBeTrue: open.slice(0, 5).map(row => findArea(mode, row.id)?.establishes).filter((text): text is string => Boolean(text)),
+    mustBeTrue: open.slice(0, 5).map(row => areas.find(area => area.id === row.id)?.establishes).filter((text): text is string => Boolean(text)),
     loopholes: loopholes(input.evidence, position),
   };
 }
