@@ -26,7 +26,7 @@ function RecentConversations({ path }: { path: string }) {
   </section>;
 }
 
-function AccountMenu({ user, onSignOut }: { user: Identity; onSignOut: () => void }) {
+function AccountMenu({ user, owner, onSignOut }: { user: Identity; owner: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -43,6 +43,7 @@ function AccountMenu({ user, onSignOut }: { user: Identity; onSignOut: () => voi
     {open && <div className="account-popover" id="account-popover">
       <Link href="/account" onClick={() => setOpen(false)}><Icon name="account"/>Account</Link>
       <Link href="/billing" onClick={() => setOpen(false)}><Icon name="card"/>Billing</Link>
+      {owner && <Link href="/studio" onClick={() => setOpen(false)}><Icon name="spark"/>Studio</Link>}
       <ThemeButton/>
       <button type="button" className="quiet" onClick={onSignOut}><Icon name="logout"/>Sign out</button>
     </div>}
@@ -53,7 +54,7 @@ function AccountMenu({ user, onSignOut }: { user: Identity; onSignOut: () => voi
   </div>;
 }
 
-export function AppSidebar({ user, path, open, onClose, onNavigate, onSignOut }: { user?: Identity | null; path: string; open: boolean; onClose: () => void; onNavigate: () => void; onSignOut: () => void }) {
+export function AppSidebar({ user, owner = false, path, open, onClose, onNavigate, onSignOut }: { user?: Identity | null; owner?: boolean; path: string; open: boolean; onClose: () => void; onNavigate: () => void; onSignOut: () => void }) {
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -68,7 +69,7 @@ export function AppSidebar({ user, path, open, onClose, onNavigate, onSignOut }:
       <Brand href="/home"/>
       <Link className="button primary new-conversation" href="/home"><Icon name="plus"/>New conversation</Link>
       <RecentConversations path={path}/>
-      {user && <AccountMenu user={user} onSignOut={onSignOut}/>}
+      {user && <AccountMenu user={user} owner={owner} onSignOut={onSignOut}/>}
     </aside>
   </>;
 }
