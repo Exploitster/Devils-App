@@ -5,11 +5,15 @@ import { AppError, unauthorized } from '../errors';
 import { errorResponse } from '../http';
 import { LocalStore } from '../store/local';
 import { SupabaseStore } from '../store/supabase';
+import type { KnowledgeStore } from '../knowledge/store';
+import { LocalKnowledgeStore } from '../knowledge/local-store';
+import { SupabaseKnowledgeStore } from '../knowledge/supabase-store';
 import { LocalAuth } from './local';
 import { SupabaseAuth, createSupabaseContext, applySupabaseCookies, type SupabaseContext } from './supabase';
 interface Context {config:RuntimeConfig;auth:AuthService;local?:LocalStore;supabase?:SupabaseContext;identity?:Promise<Identity|null>;store?:Promise<Store>;}
 const contexts=new WeakMap<Request,Context>();
 const localStores=new Map<string,LocalStore>();
+const localKnowledgeStores=new Map<string,LocalKnowledgeStore>();
 function context(request:Request):Context {
  if(typeof window!=='undefined')throw new Error('Server services cannot run in a browser.');
  const existing=contexts.get(request);if(existing)return existing;
@@ -35,4 +39,11 @@ export function getAdminStore():Store {
  if(typeof window!=='undefined')throw new Error('Server services cannot run in a browser.');
  const config=readConfig();if(config.mode==='local'){let store=localStores.get(config.sqlitePath);if(!store){store=new LocalStore(config.sqlitePath);localStores.set(config.sqlitePath,store);}return store;}
  const admin=createClient(config.supabaseUrl,config.supabaseServiceRoleKey,{auth:{persistSession:false,autoRefreshToken:false}});return new SupabaseStore(admin,admin,null,true);
+}
+
+/** Owner knowledge and question sets, shared by every user's turns. Server-only; uses the service role in services mode. */
+export function getKnowledgeStore(config:RuntimeConfig):KnowledgeStore {
+ if(typeof window!=='undefined')throw new Error('Server services cannot run in a browser.');
+ if(config.mode==='local'){let store=localKnowledgeStores.get(config.sqlitePath);if(!store){store=new LocalKnowledgeStore(config.sqlitePath);localKnowledgeStores.set(config.sqlitePath,store);}return store;}
+ return new SupabaseKnowledgeStore(createClient(config.supabaseUrl,config.supabaseServiceRoleKey,{auth:{persistSession:false,autoRefreshToken:false}}));
 }

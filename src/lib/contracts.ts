@@ -68,7 +68,25 @@ export type AssessmentProse = z.infer<typeof AssessmentProseSchema>;
 export const ModelOutputSchema = z.object({ state: SessionStateSchema, response: TextSchema, citations: z.array(CitationSchema).max(9).default([]), card: HandBackCardSchema.optional(), casePrep: CasePrepProposalSchema.optional(), assessment: AssessmentProseSchema.optional() }).strict();
 export type ModelOutput = z.infer<typeof ModelOutputSchema>;
 
-export interface Identity { id: string; email: string; name?: string; onboarded?: boolean; }
+// Owner knowledge: private guidance for case prep. Never citable, never shown to users.
+export const KnowledgeKindSchema = z.enum(['text', 'pdf', 'audio']);
+export type KnowledgeKind = z.infer<typeof KnowledgeKindSchema>;
+export const KnowledgeStatusSchema = z.enum(['uploading', 'processing', 'review', 'approved', 'rejected', 'failed']);
+export type KnowledgeStatus = z.infer<typeof KnowledgeStatusSchema>;
+export const KnowledgeItemSchema = z.object({ id: IdSchema, kind: KnowledgeKindSchema, status: KnowledgeStatusSchema, title: z.string().min(1).max(200), text: z.string().max(1000000), mimeType: z.string().min(1).max(100), fileName: z.string().min(1).max(255).optional(), sizeBytes: z.number().int().nonnegative(), failureReason: z.string().max(500).optional(), processingStartedAt: z.string().datetime().optional(), createdAt: z.string().datetime(), updatedAt: z.string().datetime() }).strict();
+export type KnowledgeItem = z.infer<typeof KnowledgeItemSchema>;
+export type KnowledgeItemSummary = Omit<KnowledgeItem, 'text'>;
+/** What a search hands to a prompt: passage text only, with no id, title or file name. */
+export const KnowledgePassageSchema = z.object({ text: z.string().min(1).max(10000) }).strict();
+export type KnowledgePassage = z.infer<typeof KnowledgePassageSchema>;
+export const FrameworkAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), establishes: z.string().min(1).max(2000), strongSignals: z.array(z.string().min(1).max(500)).max(10), followUps: z.array(z.string().min(1).max(1000)).max(10), opening: z.string().min(1).max(1000) }).strict();
+export type FrameworkArea = z.infer<typeof FrameworkAreaSchema>;
+/** A published question set. Version 0 is the built-in default in code and is never stored. */
+export const FrameworkVersionSchema = z.object({ mode: ModeSchema, version: z.number().int().positive(), areas: z.array(FrameworkAreaSchema).min(1).max(12), note: z.string().max(500).optional(), createdAt: z.string().datetime() }).strict();
+export type FrameworkVersion = z.infer<typeof FrameworkVersionSchema>;
+export type FrameworkVersionSummary = Omit<FrameworkVersion, 'areas'>;
+
+export interface Identity { id: string; email: string; emailConfirmed: boolean; name?: string; onboarded?: boolean; }
 export interface UserProfile { id: string; email: string; disabled: boolean; deletionState: 'none' | 'pending' | 'complete'; createdAt: string; name?: string; onboarded?: boolean; }
 export interface Invite { userId: string; expiresAt: string; enabled: boolean; }
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
