@@ -216,7 +216,6 @@ function currentRecord(record: CasePrep): CaseAreaRecord {
   return area;
 }
 
-/** The area with this id in the case's question set. */
 export function catalogueArea(areas: readonly CaseArea[], id: string): CaseArea {
   const area = areas.find(candidate => candidate.id === id);
   if (!area) throw new Error(`Unknown case-prep area: ${id}`);

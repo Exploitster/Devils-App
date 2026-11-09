@@ -117,15 +117,12 @@ test('an opening without a question mark is shown next to its area and publishes
   await expect(problem.getByRole('alert')).toContainText('the opening must be one question ending in “?”');
   await expect(area(page, 'Who the customer is').getByRole('alert')).toHaveCount(0);
   await expect(history(page).getByRole('listitem')).toHaveCount(before);
-  // The edit stays in place for the owner to fix.
   await expect(problem.getByLabel('Opening question')).toHaveValue('Tell me about the problem.');
 
-  // The last follow-up and the last sign of a strong answer cannot be removed.
   const customer = area(page, 'Who the customer is');
   for (let n = 3; n > 1; n--) await customer.getByRole('button', { name: `Remove follow-up ${n}`, exact: true }).click();
   await expect(customer.getByRole('button', { name: 'Remove follow-up 1', exact: true })).toBeDisabled();
 
-  // Leaving the mode with unsaved edits asks first.
   await page.getByRole('button', { name: 'Personal', exact: true }).click();
   const discard = page.getByRole('dialog', { name: 'Discard unsaved changes?' });
   await expect(discard).toBeVisible();

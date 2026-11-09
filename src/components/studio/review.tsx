@@ -1,16 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { api, ErrorNotice } from '@/components/app';
-import type { KnowledgeItem, KnowledgeItemSummary } from '@/lib/contracts';
+import type { KnowledgeItem, KnowledgeItemSummary, StatusAction } from '@/lib/contracts';
+import { PROCESSING_LEASE_MS } from '@/lib/limits';
 
-/** A processing item older than this belongs to a request that never finished, and may be processed again. */
-export const PROCESSING_LEASE_MS = 10 * 60_000;
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
-/** The one-line state shown for items that are not yet ready to review. */
 export function statusDetail(item: KnowledgeItemSummary, now: number): string | undefined {
   if (item.status === 'uploading') return 'Upload not finished';
   if (item.status === 'failed') return item.failureReason ?? 'This file could not be processed.';
@@ -22,15 +20,13 @@ export function statusDetail(item: KnowledgeItemSummary, now: number): string | 
 }
 export function errorMessage(error: unknown): string { return error instanceof Error ? error.message : 'The request could not complete.'; }
 
-type Action = 'approve' | 'reject' | 'withdraw' | 'reopen';
-const done: Record<Action, (title: string) => string> = {
+const done: Record<StatusAction, (title: string) => string> = {
   approve: title => `“${title}” is live.`,
   reject: title => `“${title}” was rejected.`,
   withdraw: title => `“${title}” was withdrawn to review.`,
   reopen: title => `“${title}” is back in review.`,
 };
 
-/** One item: its text to read and correct, and the actions its status allows. */
 export function Review({ summary, now, readOnly, busy, file, onRetry, onRetryUpload, onChanged, onFail }: {
   summary: KnowledgeItemSummary; now: number; readOnly: boolean; busy: boolean; file?: File;
   onRetry: () => void; onRetryUpload: (file: File) => void;
@@ -70,7 +66,7 @@ export function Review({ summary, now, readOnly, busy, file, onRetry, onRetryUpl
     try { await work(); } catch (caught) { setError(errorMessage(caught)); } finally { setWorking(false); }
   }
   // Approving saves any unsaved correction first, so the corrected text is what gets indexed.
-  const change = (action: Action) => run(async () => {
+  const change = (action: StatusAction) => run(async () => {
     let name = item?.title ?? summary.title;
     if (action === 'approve' && dirty) { const saved = await save(); if (!saved) return; name = saved.title; }
     await api(`/api/studio/items/${id}/status`, 'POST', { action });

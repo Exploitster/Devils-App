@@ -46,7 +46,6 @@ export async function guidanceFor(knowledge: KnowledgeStore | undefined, request
 function words(text: string): string[] { return text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []; }
 function runs(list: string[]): string[] { return list.slice(0, Math.max(0, list.length - echoRunWords + 1)).map((_, index) => list.slice(index, index + echoRunWords).join(' ')); }
 
-/** True when any one text repeats a run of 12 or more consecutive words from a passage, ignoring case and punctuation. */
 export function echoesGuidance(texts: readonly string[], passages: readonly KnowledgePassage[]): boolean {
   const known = new Set(passages.flatMap(passage => runs(words(passage.text))));
   return known.size > 0 && texts.some(text => runs(words(text)).some(run => known.has(run)));

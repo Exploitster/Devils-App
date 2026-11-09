@@ -6,8 +6,7 @@ import { resolveFileType } from '../src/lib/knowledge/service';
 import { FILE_LIMIT_BYTES } from '../src/lib/knowledge/files';
 
 // Owner-run live check that Gemini accepts the recording formats the Studio takes, sent
-// inline exactly as the Studio sends them. Run it with a WebM sample, an M4A sample and a
-// recording near 50 MB. Transcripts are not printed or saved, only their length and cost.
+// inline exactly as the Studio sends them. Transcripts are not printed or saved, only their length and cost.
 const args = process.argv.slice(2);
 if (!args.includes('--confirm-live')) throw new Error('Add --confirm-live and the paths of your sample recordings to permit live, billed Gemini transcription requests.');
 const paths = args.filter(arg => arg !== '--confirm-live');

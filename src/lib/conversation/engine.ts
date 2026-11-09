@@ -44,14 +44,12 @@ export class ConversationEngine {
  const controller=new AbortController();const key=`${userId}:${request.operationId}`;active.set(key,controller);const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(abort,config.generationTimeoutMs);
  try{
  const session=reserved.session;
- // A case reads its pinned question set on every turn; a new case pins the live one.
  const set=await questionSetFor(this.services.knowledge,session);const areas=set.areas;
  const record=session.state.casePrep??startCase(session.mode,areas,set.version);
  const supportOutput=(response:string):ModelOutput=>{const state=structuredClone(session.state);state.phase='support';state.casePrep=record;return {state,response,citations:[]};};
- const fresh=support||turn?[]:await evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3});
  const context=caseContext(record,areas,turn?turn.action:'assessment',turn&&['message','correction'].includes(turn.action)?turn.text:undefined);
  // Searched before the spend reservation, which prices the guidance with the rest of the request.
- const ownerGuidance=support?[]:await guidanceFor(this.services.knowledge,{session,context,areas});
+ const [fresh,ownerGuidance]=await Promise.all([support||turn?[]:evidence.retrieve({mode:session.mode,query:[session.state.position,...record.areas.flatMap(a=>a.quotes)].join(' '),excludeIds:[],limit:3}),support?[]:guidanceFor(this.services.knowledge,{session,context,areas})]);
  let input=boundInput({session,request,task,evidence:fresh,now:now.toISOString(),caseAreas:areas,caseContext:context,ownerGuidance},config);
  const withNotice=(output:ModelOutput,qualified:boolean):ModelOutput=>{const prep=output.state.casePrep!;if(qualified&&!prep.qualifiedNoticeShown){prep.qualifiedNoticeShown=true;output.response=`${qualifiedNotice}\n\n${output.response}`;}return output;};
  const verify=async(result:ModelResult):Promise<ModelOutput>=>{

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, ErrorNotice } from '@/components/app';
 import type { FrameworkArea, FrameworkVersionSummary, Mode } from '@/lib/contracts';
+import { MAX_AREAS, MAX_LINES } from '@/lib/limits';
 import { errorMessage } from './review';
 
 interface QuestionSet { mode: Mode; version: number; areas: FrameworkArea[]; note?: string; createdAt?: string; }
@@ -10,9 +11,6 @@ interface Listing { mode: Mode; live: QuestionSet; versions: FrameworkVersionSum
 interface DraftArea { key: string; id?: string; label: string; establishes: string; opening: string; followUps: string[]; strongSignals: string[]; }
 type Lines = 'followUps' | 'strongSignals';
 
-// The question-set rules the server enforces, mirrored so the controls stop at them.
-const MAX_AREAS = 12;
-const MAX_LINES = 10;
 const modes: { value: Mode; label: string }[] = [{ value: 'business', label: 'Business' }, { value: 'philosophy', label: 'Personal' }];
 const lineNames: Record<Lines, { heading: string; one: string; add: string }> = {
   followUps: { heading: 'Follow-ups', one: 'follow-up', add: 'Add follow-up' },

@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Store, UserProfile, Invite, Subscription, Session, CreateSessionInput, ReserveTurnInput, ReserveTurnResult, CommitTurnInput, TurnOperation, UsageEvent, SpendAttempt, WebhookRecord } from '../contracts';
 import { AppError, conflict, notFound } from '../errors';
+import { immediateTransaction } from './sqlite';
 
 /** Server-only persistence. Each mutation commits under an immediate SQLite write lock. */
 export class LocalStore implements Store {
@@ -15,7 +16,7 @@ export class LocalStore implements Store {
   completeOnboarding(userId:string,name:string) { this.transaction(()=>{this.active(userId);const profile=this.get<UserProfile>('profiles',userId)!;this.put('profiles',userId,{...profile,name,onboarded:true});}); }
   changeCredential(userId:string,salt:string,hash:string) { this.transaction(()=>{this.active(userId);const profile=this.get<UserProfile>('profiles',userId)!;const credential=this.getCredential(profile.email);if(!credential||credential.userId!==userId)throw new AppError('AUTH_UNAVAILABLE','Password changes are unavailable for demo accounts.',400);this.put('credentials',profile.email,{userId,salt,hash});this.revokeUserAuthTokens(userId);}); }
   close() { this.db.close(); }
-  private transaction<T>(action: () => T): T { this.db.exec('BEGIN IMMEDIATE'); try { const value = action(); this.db.exec('COMMIT'); return value; } catch (error) { this.db.exec('ROLLBACK'); throw error; } }
+  private transaction<T>(action: () => T): T { return immediateTransaction(this.db, action); }
   private get<T>(kind: string, id: string): T | null { const row = this.db.prepare('SELECT data FROM records WHERE kind=? AND id=?').get(kind,id) as { data: string } | undefined; return row ? JSON.parse(row.data) as T : null; }
   private put(kind: string, id: string, data: unknown) { this.db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET data=excluded.data').run(kind,id,JSON.stringify(data)); }
   private all<T>(kind: string): T[] { return (this.db.prepare('SELECT data FROM records WHERE kind=?').all(kind) as {data:string}[]).map(row=>JSON.parse(row.data) as T); }

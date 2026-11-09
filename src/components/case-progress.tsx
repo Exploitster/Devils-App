@@ -10,7 +10,6 @@ const statusLabels: Record<AreaStatus, string> = {
   untested: 'Untested',
 };
 
-/** `areas` names each area as the case's own question-set version does; the server sends them with the session. */
 export function CaseProgress({ record, areas }: { record: CasePrep; areas: { id: string; label: string }[] }) {
   const [open, setOpen] = useState(false);
   const listId = useId();

@@ -1,12 +1,11 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import type { UploadTarget } from '../contracts';
 import type { RuntimeConfig } from '../config';
+import { createAdminClient } from '../auth/admin-client';
 import { AppError, notFound } from '../errors';
 
-/** Uploads never pass through the app's request body: the browser sends the file straight to this target. */
-export interface UploadTarget { method: 'PUT'; url: string; headers: Record<string, string>; }
-/** Stored uploads, keyed by item id. Server-only. */
 export interface FileStore {
   uploadTarget(itemId: string, mimeType: string): Promise<UploadTarget>;
   /** Null when nothing was uploaded. */
@@ -33,19 +32,17 @@ export class SupabaseFileStore implements FileStore {
   }
   async download(id: string): Promise<Uint8Array | null> {
     const { data, error } = await this.bucket().download(objectName(id));
-    if (error) { const status = (error as { status?: number; originalError?: { status?: number } }).status ?? (error as { originalError?: { status?: number } }).originalError?.status; if (status === 400 || status === 404) return null; throw storageUnavailable(); }
+    if (error) { const failure: { status?: number; originalError?: { status?: number } } = error; const status = failure.status ?? failure.originalError?.status; if (status === 400 || status === 404) return null; throw storageUnavailable(); }
     return new Uint8Array(await data.arrayBuffer());
   }
   async remove(id: string): Promise<void> { const { error } = await this.bucket().remove([objectName(id)]); if (error) throw storageUnavailable(); }
 }
 function storageUnavailable(): AppError { return new AppError('STORE_UNAVAILABLE', 'File storage is temporarily unavailable.', 503); }
 
-/** Local mode: files on disk beside the SQLite database, uploaded through the local-only PUT route. */
 export class LocalFileStore implements FileStore {
   constructor(private directory: string) {}
   private path(id: string) { return join(this.directory, objectName(id)); }
   async uploadTarget(id: string, mimeType: string): Promise<UploadTarget> { return { method: 'PUT', url: `/api/studio/items/${objectName(id)}/file`, headers: { 'Content-Type': mimeType } }; }
-  /** Streams the body to disk, refusing more than the size cap. Replaces any earlier upload. */
   async write(id: string, body: ReadableStream<Uint8Array> | null, kind: 'pdf' | 'audio'): Promise<number> {
     const target = this.path(id); const partial = `${target}.part`; await mkdir(dirname(target), { recursive: true });
     const file = await open(partial, 'w'); let size = 0;
@@ -65,5 +62,5 @@ export function localFileDirectory(config: RuntimeConfig): string { return join(
 export function createFileStore(config: RuntimeConfig): FileStore {
   if (typeof window !== 'undefined') throw new Error('Server services cannot run in a browser.');
   if (config.mode === 'local') return new LocalFileStore(localFileDirectory(config));
-  return new SupabaseFileStore(createClient(config.supabaseUrl, config.supabaseServiceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } }));
+  return new SupabaseFileStore(createAdminClient(config));
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readConfig } from '../src/lib/config';
-import { DeterministicTranscriber, GeminiTranscriber, createTranscriber, type Transcriber } from '../src/lib/knowledge/transcribe';
+import { DEADLINE_MS, DeterministicTranscriber, GeminiTranscriber, createTranscriber, type Transcriber } from '../src/lib/knowledge/transcribe';
+import { maxDuration } from '../src/app/api/studio/items/[id]/process/route';
 
 const local = readConfig({ DEVILS_RUNTIME_MODE: 'local', DEVILS_LOCAL_AUTH_SECRET: 'x'.repeat(32) });
 const services = { ...local, mode: 'services' as const, transcriptionModel: 'gemini-3.8-flash', transcriptionApiKey: 'private-key', transcriptionInputUsdPerMillion: 1, transcriptionOutputUsdPerMillion: 4, modelInputUsdPerMillion: 1000, modelOutputUsdPerMillion: 1000 };
@@ -24,7 +25,6 @@ describe('Gemini transcription', () => {
   });
   it('reserves the estimated audio tokens at the audio rate plus the output cap at the output rate', () => {
     const transcriber = new GeminiTranscriber(services, fetch);
-    // 16 kbps is 2,000 bytes a second; Gemini counts 32 tokens a second of audio.
     const seconds = 50 * 1024 * 1024 / 2000;
     expect(transcriber.reserveMicros(50 * 1024 * 1024)).toBe(Math.ceil(seconds * 32 * 1 + transcriber.maxOutputTokens * 4));
   });
@@ -44,6 +44,7 @@ describe('Gemini transcription', () => {
     await vi.advanceTimersByTimeAsync(239_000); expect(signal!.aborted).toBe(false);
     await vi.advanceTimersByTimeAsync(1_000); expect(signal!.aborted).toBe(true);
     await result;
+    expect(DEADLINE_MS).toBeLessThan(maxDuration * 1000);
   });
   it.each([[503, true], [429, true], [400, false]])('maps HTTP %s to a provider error that is transient: %s', async (status, transient) => {
     const transcriber = new GeminiTranscriber(services, async () => new Response('provider diagnostic', { status }));

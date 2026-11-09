@@ -69,7 +69,6 @@ export type AssessmentProse = z.infer<typeof AssessmentProseSchema>;
 export const ModelOutputSchema = z.object({ state: SessionStateSchema, response: TextSchema, citations: z.array(CitationSchema).max(9).default([]), card: HandBackCardSchema.optional(), casePrep: CasePrepProposalSchema.optional(), assessment: AssessmentProseSchema.optional() }).strict();
 export type ModelOutput = z.infer<typeof ModelOutputSchema>;
 
-// Owner knowledge: private guidance for case prep. Never citable, never shown to users.
 export const KnowledgeKindSchema = z.enum(['text', 'pdf', 'audio']);
 export type KnowledgeKind = z.infer<typeof KnowledgeKindSchema>;
 export const KnowledgeStatusSchema = z.enum(['uploading', 'processing', 'review', 'approved', 'rejected', 'failed']);
@@ -77,12 +76,14 @@ export type KnowledgeStatus = z.infer<typeof KnowledgeStatusSchema>;
 export const KnowledgeItemSchema = z.object({ id: IdSchema, kind: KnowledgeKindSchema, status: KnowledgeStatusSchema, title: z.string().min(1).max(200), text: z.string().max(1000000), mimeType: z.string().min(1).max(100), fileName: z.string().min(1).max(255).optional(), sizeBytes: z.number().int().nonnegative(), failureReason: z.string().max(500).optional(), processingStartedAt: z.string().datetime().optional(), createdAt: z.string().datetime(), updatedAt: z.string().datetime() }).strict();
 export type KnowledgeItem = z.infer<typeof KnowledgeItemSchema>;
 export type KnowledgeItemSummary = Omit<KnowledgeItem, 'text'>;
-/** What a search hands to a prompt: passage text only, with no id, title or file name. */
+export const STATUS_ACTIONS = ['approve', 'reject', 'withdraw', 'reopen'] as const;
+export type StatusAction = typeof STATUS_ACTIONS[number];
+/** Uploads never pass through the app's request body: the browser sends the file straight to this target. */
+export interface UploadTarget { method: 'PUT'; url: string; headers: Record<string, string>; }
 export const KnowledgePassageSchema = z.object({ text: z.string().min(1).max(10000) }).strict();
 export type KnowledgePassage = z.infer<typeof KnowledgePassageSchema>;
 export const FrameworkAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), establishes: z.string().min(1).max(2000), strongSignals: z.array(z.string().min(1).max(500)).max(10), followUps: z.array(z.string().min(1).max(1000)).max(10), opening: z.string().min(1).max(1000) }).strict();
 export type FrameworkArea = z.infer<typeof FrameworkAreaSchema>;
-/** A published question set. Version 0 is the built-in default in code and is never stored. */
 export const FrameworkVersionSchema = z.object({ mode: ModeSchema, version: z.number().int().positive(), areas: z.array(FrameworkAreaSchema).min(1).max(12), note: z.string().max(500).optional(), createdAt: z.string().datetime() }).strict();
 export type FrameworkVersion = z.infer<typeof FrameworkVersionSchema>;
 export type FrameworkVersionSummary = Omit<FrameworkVersion, 'areas'>;
@@ -142,11 +143,6 @@ export interface CaseContext {
   latestAnswer?: string;
   assessment?: { areas: { id: string; label: string; score: z.infer<typeof AssessmentScoreSchema>; reason: string }[] };
 }
-/**
- * `caseAreas` is the case's full pinned question set. Server-only: it is never part of a provider payload.
- * `ownerGuidance` is private coaching text from the owner's approved library. It is kept apart from
- * `evidence` so it can never be cited, and the model is told never to quote or mention it.
- */
 export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; caseAreas?: FrameworkArea[]; ownerGuidance?: KnowledgePassage[]; }
 export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }

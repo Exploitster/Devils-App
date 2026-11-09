@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { IdSchema, type FrameworkArea, type Mode } from '../contracts';
+import { MAX_AREAS, MAX_LINES } from '../limits';
 import { AppError } from '../errors';
 
 /**
@@ -145,13 +146,10 @@ const philosophy: CaseArea[] = [
 /** The built-in question sets: version 0 of each mode, which is never stored. */
 export const caseAreas: Record<Mode, CaseArea[]> = { business, philosophy };
 
-/** The built-in question set for a mode. */
 export function areasFor(mode: Mode): CaseArea[] {
   return caseAreas[mode];
 }
 
-
-export const MAX_AREAS = 12;
 const lines = (max: number, length: number) => z.array(z.string().trim().max(length)).max(max).transform(list => list.filter(Boolean));
 /**
  * One area as the owner edits it. A kept area sends back its id; a new area has none and is
@@ -162,8 +160,8 @@ export const CaseAreaSchema = z.object({
   label: z.string().trim().max(200),
   establishes: z.string().trim().max(2000),
   opening: z.string().trim().max(1000),
-  followUps: lines(10, 1000),
-  strongSignals: lines(10, 500),
+  followUps: lines(MAX_LINES, 1000),
+  strongSignals: lines(MAX_LINES, 500),
 }).strict();
 // Generous enough that an over-long set reaches the area-count rule with its own message.
 const QuestionSetInputSchema = z.array(z.unknown()).max(100);
@@ -174,11 +172,6 @@ const fieldNames: Record<string, string> = {
 };
 const fieldLimits: Record<string, string> = { label: 'keep the name under 200 characters', establishes: 'keep what the area must establish under 2,000 characters', opening: 'keep the opening question under 1,000 characters' };
 
-/**
- * Checks an owner-edited question set and returns it ready to publish. A set has 1 to 12 areas
- * with unique names; each opening is one question ending in "?", and each area has at least one
- * follow-up and one sign of a strong answer. Each rejection names the area and the rule it broke.
- */
 export function parseQuestionSet(input: unknown): CaseArea[] {
   const list = QuestionSetInputSchema.safeParse(input);
   const count = Array.isArray(input) ? input.length : 0;

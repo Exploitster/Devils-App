@@ -23,7 +23,6 @@ describe('chunking owner notes into passages', () => {
     const pricing = passages.filter(p => p.includes('Pricing p')); const channels = passages.filter(p => p.includes('Channels p'));
     expect(pricing[0].startsWith('Setting the price\n\nPricing p0')).toBe(true); expect(channels[0].startsWith('Finding customers\n\nChannels p0')).toBe(true);
     for (const section of [pricing, channels]) for (let i = 1; i < section.length; i++) expect(section[i].startsWith(lastSentence(section[i - 1]))).toBe(true);
-    // Nothing is lost: every sentence appears in some passage.
     for (const sentence of note.split('\n').filter(line => !line.startsWith('#')).join(' ').trim().split(/(?<=\.)\s+/)) expect(passages.some(p => p.includes(sentence))).toBe(true);
   });
   it('splits one long paragraph on sentence boundaries', () => {

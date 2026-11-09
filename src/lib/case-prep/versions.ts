@@ -4,12 +4,7 @@ import type { KnowledgeStore } from '../knowledge/store';
 import { logEvent } from '../logging';
 import { areasFor, parseQuestionSet, type CaseArea } from './frameworks';
 
-/**
- * Question-set versions. Version 0 is the built-in set in code and is never stored; every publish
- * appends the next version, and the highest one is live. A case keeps the version that was live
- * when it started, so its pinned version is read on every turn and the live one only for a new case.
- * Server code only: the sets stay out of the browser bundle.
- */
+/** Server code only: the sets stay out of the browser bundle. */
 export interface QuestionSet { mode: Mode; version: number; areas: CaseArea[]; note?: string; createdAt?: string; }
 
 function builtIn(mode: Mode): QuestionSet { return { mode, version: 0, areas: areasFor(mode) }; }
@@ -36,7 +31,6 @@ export async function pinnedQuestionSet(knowledge: KnowledgeStore | undefined, m
   return fromStored(stored);
 }
 
-/** The pinned set for a case, or the live set when the session has no case yet. */
 export async function questionSetFor(knowledge: KnowledgeStore | undefined, session: Session): Promise<QuestionSet> {
   const record = session.state.casePrep;
   return record ? pinnedQuestionSet(knowledge, session.mode, record.frameworkVersion) : liveQuestionSet(knowledge, session.mode);
@@ -49,7 +43,6 @@ export async function caseAreaLabels(knowledge: KnowledgeStore | undefined, sess
   return (await pinnedQuestionSet(knowledge, session.mode, record.frameworkVersion)).areas.map(({ id, label }) => ({ id, label }));
 }
 
-/** Checks the set and appends it as the new live version. */
 export async function publishQuestionSet(knowledge: KnowledgeStore, mode: Mode, input: unknown, note: string | undefined, now: string): Promise<FrameworkVersion> {
   const published = await knowledge.publishVersion(mode, parseQuestionSet(input), note, now);
   logEvent('framework_published');
@@ -63,7 +56,6 @@ export async function restoreQuestionSet(knowledge: KnowledgeStore, mode: Mode, 
   return publishQuestionSet(knowledge, mode, source.areas, version === 0 ? 'Restored built-in default' : `Restored from version ${version}`, now);
 }
 
-/** The live set and every stored version, newest first, for the Studio. */
 export async function listQuestionSets(knowledge: KnowledgeStore, mode: Mode): Promise<{ mode: Mode; live: QuestionSet; versions: FrameworkVersionSummary[] }> {
   const [live, versions] = await Promise.all([knowledge.getVersion(mode), knowledge.listVersions(mode)]);
   return { mode, live: live ? fromStored(live) : builtIn(mode), versions };

@@ -386,7 +386,6 @@ describe('owner guidance', () => {
     }
     return knowledge;
   }
-  /** The deterministic model, with every input recorded and an optional change to what it returns. */
   function recorded(change?: (output: ModelOutput, input: ModelInput) => void) {
     const local = new DeterministicModel();
     const inputs: ModelInput[] = [];

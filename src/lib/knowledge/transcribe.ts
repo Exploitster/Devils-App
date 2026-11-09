@@ -4,20 +4,16 @@ import { ProviderError } from '../model/provider';
 
 export interface TranscriptionInput { audio: Uint8Array; mimeType: string; fileName: string; }
 export interface Transcription { text: string; inputTokens: number; outputTokens: number; costMicros: number; }
-/** Turns a recording into text. Spend is reserved by the caller from reserveMicros before transcribe runs. */
 export interface Transcriber {
-  /** The most this recording can cost. Throws TRANSCRIPTION_UNAVAILABLE when transcription is not set up. */
   reserveMicros(sizeBytes: number): number;
   transcribe(input: TranscriptionInput): Promise<Transcription>;
 }
-/** A failure whose provider cost is known, so the reservation is reconciled to it. */
 export class TranscriptionError extends AppError {
   constructor(code: string, message: string, public readonly costMicros?: number) { super(code, message, 422); }
 }
 export const tooLong = (costMicros?: number) => new TranscriptionError('RECORDING_TOO_LONG', 'Recording too long: split it into shorter parts', costMicros);
 
-// The transcription call has its own deadline inside the processing route's 300 seconds.
-const DEADLINE_MS = 240_000;
+export const DEADLINE_MS = 240_000;
 // The reservation assumes the slowest likely bitrate, 16 kbps, and Gemini's 32 audio tokens a second.
 const AUDIO_BYTES_PER_SECOND = 16_000 / 8;
 const AUDIO_TOKENS_PER_SECOND = 32;
@@ -29,9 +25,7 @@ interface GeminiResponse {
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
 }
 
-/** One native generateContent call with the audio inline. Always Gemini, whatever the chat provider. */
 export class GeminiTranscriber implements Transcriber {
-  /** About an hour of speech; a longer recording stops at this cap and is reported as too long. */
   readonly maxOutputTokens = 32_768;
   constructor(private config: RuntimeConfig, private fetcher: typeof fetch = fetch) { if (typeof window !== 'undefined') throw new Error('Transcription is server-only.'); }
   private prices(): { input: number; output: number } {
@@ -54,7 +48,7 @@ export class GeminiTranscriber implements Transcriber {
       try {
         response = await this.fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
           method: 'POST', signal: controller.signal, headers: { 'x-goog-api-key': this.config.transcriptionApiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: instruction }, { inlineData: { mimeType, data: Buffer.from(audio).toString('base64') } }] }], generationConfig: { candidateCount: 1, maxOutputTokens: this.maxOutputTokens, ...thinking } }),
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: instruction }, { inlineData: { mimeType, data: Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength).toString('base64') } }] }], generationConfig: { candidateCount: 1, maxOutputTokens: this.maxOutputTokens, ...thinking } }),
         });
       } catch { if (controller.signal.aborted) throw tooLong(); throw new ProviderError(true, 'Transcription could not complete. Try again.'); }
       if (!response.ok) throw response.status === 429 || response.status >= 500 ? new ProviderError(true, 'Transcription could not complete. Try again.') : new ProviderError(false, 'The transcription service rejected this recording.');
@@ -72,7 +66,6 @@ export class GeminiTranscriber implements Transcriber {
   }
 }
 
-/** Local mode never calls a provider: every recording gets the same sentence plus its file name. */
 export class DeterministicTranscriber implements Transcriber {
   reserveMicros(): number { return 0; }
   async transcribe({ fileName }: TranscriptionInput): Promise<Transcription> {

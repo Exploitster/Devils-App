@@ -1,11 +1,9 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, ApiError, ErrorNotice } from '@/components/app';
-import type { KnowledgeItem, KnowledgeItemSummary } from '@/lib/contracts';
+import type { KnowledgeItem, KnowledgeItemSummary, UploadTarget } from '@/lib/contracts';
 import { Review, errorMessage, formatSize, statusDetail } from './review';
 
-/** Where the browser sends a file: a signed storage URL in production, the app's own upload route locally. */
-export interface UploadTarget { method: 'PUT'; url: string; headers: Record<string, string>; }
 interface Created { item: KnowledgeItem; upload?: UploadTarget; }
 interface Processed { item: KnowledgeItem; failure?: { code: string; message: string }; }
 
@@ -61,7 +59,6 @@ export function Library({ readOnly, onUnavailable }: { readOnly: boolean; onUnav
     setNow(Date.now());
   }
 
-  /** Sends the file to its upload target, then asks the server to extract or transcribe it. */
   async function uploadAndProcess(item: KnowledgeItem, chosen: File, upload: UploadTarget, total: number) {
     const first = total - 1;
     setStep(`Step ${first} of ${total}: uploading ${chosen.name}…`);
@@ -82,6 +79,12 @@ export function Library({ readOnly, onUnavailable }: { readOnly: boolean; onUnav
     if (!result.failure) files.current.delete(item.id);
   }
 
+  async function createFileItem(chosen: File, title?: string): Promise<Created> {
+    const created = await api<Created>('/api/studio/items', 'POST', { kind: 'file', ...(title ? { title } : {}), fileName: chosen.name, mimeType: chosen.type, sizeBytes: chosen.size });
+    files.current.set(created.item.id, chosen);
+    return created;
+  }
+
   async function add(event: FormEvent) {
     event.preventDefault();
     if (!file && !note.trim()) { setError('Paste a note or choose a file to add.'); return; }
@@ -91,8 +94,8 @@ export function Library({ readOnly, onUnavailable }: { readOnly: boolean; onUnav
       const named = title.trim() || undefined;
       if (file && !isTextFile(file.name)) {
         setStep('Step 1 of 3: adding the item…');
-        const created = await api<Created>('/api/studio/items', 'POST', { kind: 'file', ...(named ? { title: named } : {}), fileName: file.name, mimeType: file.type, sizeBytes: file.size });
-        id = created.item.id; files.current.set(id, file);
+        const created = await createFileItem(file, named);
+        id = created.item.id;
         await load();
         await uploadAndProcess(created.item, file, created.upload!, 3);
       } else {
@@ -111,8 +114,7 @@ export function Library({ readOnly, onUnavailable }: { readOnly: boolean; onUnav
     setBusy(true); setError(''); setAnnouncement('');
     try {
       // A fresh upload target, since a signed upload URL expires.
-      const created = await api<Created>('/api/studio/items', 'POST', { kind: 'file', title: item.title, fileName: chosen.name, mimeType: chosen.type, sizeBytes: chosen.size });
-      files.current.set(created.item.id, chosen);
+      const created = await createFileItem(chosen, item.title);
       await api(`/api/studio/items/${item.id}`, 'DELETE');
       files.current.delete(item.id);
       await load(); setSelected(created.item.id);

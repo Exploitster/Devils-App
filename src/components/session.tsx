@@ -12,7 +12,6 @@ import { handOverFirstMessage, takeFirstMessage } from '@/lib/pending-message';
 import '@/styles/chat.css';
 const DONT_KNOW = 'I don’t know yet';
 type CaseAreaLabel = { id: string; label: string };
-/** Every session response carries the area names of the case's own question-set version. */
 type SessionResponse = { session: Session; caseAreas: CaseAreaLabel[] };
 async function markdown(card: HandBackCard) {
     const sources = await citedSources(card.counterpoints);

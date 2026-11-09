@@ -10,7 +10,6 @@ const UNIT = LIMIT / 2;
 
 const countWords = (text: string) => text.split(' ').filter(Boolean).length;
 
-/** NFC, control characters removed, spaces collapsed, at most one blank line between paragraphs. */
 export function normaliseText(text: string): string {
   return text.normalize('NFC').replace(/\r\n?|[\u2028\u2029]/g, '\n').replace(/\t/g, ' ')
     .replace(/[^\P{Cc}\n]/gu, '')
@@ -23,7 +22,6 @@ interface Unit { text: string; paragraph: number; heading?: boolean; }
 function sentencesOf(paragraph: string): string[] {
   return paragraph.split(/(?<=[.!?…]["'”’)\]]*)\s+/u).filter(Boolean);
 }
-/** Splits a sentence longer than UNIT words into word runs. */
 function pieces(sentence: string): string[] {
   const words = sentence.split(' '); if (words.length <= UNIT) return [sentence];
   const result: string[] = []; for (let i = 0; i < words.length; i += UNIT) result.push(words.slice(i, i + UNIT).join(' ')); return result;

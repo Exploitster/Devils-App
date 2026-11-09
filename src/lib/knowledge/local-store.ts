@@ -4,11 +4,10 @@ import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { FrameworkArea, FrameworkVersion, FrameworkVersionSummary, KnowledgeItem, KnowledgeItemSummary, KnowledgePassage, Mode } from '../contracts';
 import { notFound } from '../errors';
+import { immediateTransaction } from '../store/sqlite';
 import { ftsMatch, searchTerms } from './query';
 import { invalidStatus, passageId, type KnowledgeItemPatch, type KnowledgeSearch, type KnowledgeStatusChange, type KnowledgeStore, type NewKnowledgeItem } from './store';
 
-// Lives in the same SQLite file as LocalStore, in its own tables. The FTS5 index reads
-// passage text from knowledge_passages and triggers keep it in step.
 const schema = `PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
 CREATE TABLE IF NOT EXISTS knowledge_items (id TEXT PRIMARY KEY, status TEXT NOT NULL, created_at TEXT NOT NULL, data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS knowledge_passages (pk INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, item_id TEXT NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL);
@@ -21,12 +20,11 @@ CREATE TABLE IF NOT EXISTS framework_versions (mode TEXT NOT NULL, version INTEG
 // Title words count double against passage text, matching the weighted index in PostgreSQL.
 const rank = 'bm25(knowledge_fts, 2.0, 1.0)';
 
-/** Server-only local knowledge store. Each mutation commits under an immediate SQLite write lock. */
 export class LocalKnowledgeStore implements KnowledgeStore {
   private db: DatabaseSync;
   constructor(path: string) { mkdirSync(dirname(path), { recursive: true }); this.db = new DatabaseSync(path); this.db.exec(schema); }
   close() { this.db.close(); }
-  private transaction<T>(action: () => T): T { this.db.exec('BEGIN IMMEDIATE'); try { const value = action(); this.db.exec('COMMIT'); return value; } catch (error) { this.db.exec('ROLLBACK'); throw error; } }
+  private transaction<T>(action: () => T): T { return immediateTransaction(this.db, action); }
   private read(id: string): KnowledgeItem | null { const row = this.db.prepare('SELECT data FROM knowledge_items WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) as KnowledgeItem : null; }
   private existing(id: string): KnowledgeItem { const item = this.read(id); if (!item) throw notFound(); return item; }
   private save(item: KnowledgeItem): KnowledgeItem { this.db.prepare('INSERT INTO knowledge_items VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, data=excluded.data').run(item.id, item.status, item.createdAt, JSON.stringify(item)); return item; }
@@ -52,7 +50,7 @@ export class LocalKnowledgeStore implements KnowledgeStore {
   async deleteItem(id: string) { this.transaction(() => { this.existing(id); this.removePassages(id); this.db.prepare('DELETE FROM knowledge_items WHERE id=?').run(id); }); }
   async getItem(id: string) { return this.read(id); }
   async listItems(): Promise<KnowledgeItemSummary[]> {
-    return (this.db.prepare('SELECT data FROM knowledge_items ORDER BY created_at DESC, id').all() as { data: string }[]).map(row => { const { text: _text, ...summary } = JSON.parse(row.data) as KnowledgeItem; void _text; return summary; });
+    return (this.db.prepare("SELECT json_remove(data, '$.text') AS data FROM knowledge_items ORDER BY created_at DESC, id").all() as { data: string }[]).map(row => JSON.parse(row.data) as KnowledgeItemSummary);
   }
   async search(query: KnowledgeSearch, limit: number): Promise<KnowledgePassage[]> {
     const match = searchTerms(query.match); if (!match.length) return [];

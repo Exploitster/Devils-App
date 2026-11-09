@@ -1,27 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import type { KnowledgeItem, KnowledgeItemSummary, Store } from '../contracts';
+import { STATUS_ACTIONS, type KnowledgeItem, type KnowledgeItemSummary, type StatusAction, type Store, type UploadTarget } from '../contracts';
 import type { RuntimeConfig } from '../config';
+import { PROCESSING_LEASE_MS } from '../limits';
 import { AppError, notFound } from '../errors';
-import { sameOrigin } from '../http';
 import { logEvent } from '../logging';
-import { getKnowledgeStore, getRuntimeConfig, getStore } from '../auth/service';
-import { assertStudioWritable, requireOwner } from '../studio/access';
+import { getKnowledgeStore, getStore } from '../auth/service';
+import { authorizeStudio } from '../studio/access';
 import { chunkText } from './chunk';
 import { extractPdfText } from './extract';
-import { FILE_LIMIT_BYTES, createFileStore, fileTooLarge, type FileStore, type UploadTarget } from './files';
+import { FILE_LIMIT_BYTES, createFileStore, fileTooLarge, type FileStore } from './files';
 import { invalidStatus, type KnowledgeStore } from './store';
 import { TranscriptionError, createTranscriber, type Transcriber } from './transcribe';
 
-/** Pasted notes and .txt/.md files arrive as JSON text, up to this many characters. */
 export const NOTE_CHARACTER_LIMIT = 200_000;
 /** Enough request body for a note at the character limit after UTF-8 and JSON escaping. */
 export const CREATE_BODY_LIMIT = 850_000;
 /** Item text is capped by the stored item format; edits send the whole text back. */
 const ITEM_TEXT_LIMIT = 1_000_000;
 export const UPDATE_BODY_LIMIT = 4_400_000;
-/** A processing item older than this is taken to belong to a killed function and may be processed again. */
-const PROCESSING_LEASE_MS = 10 * 60_000;
+const PROCESSABLE: readonly KnowledgeItem['status'][] = ['uploading', 'failed', 'processing'];
 
 const Title = z.string().trim().min(1).max(200);
 const FileName = z.string().trim().min(1).max(255);
@@ -32,8 +30,7 @@ export const CreateItemSchema = z.discriminatedUnion('kind', [
 ]);
 export type CreateItemInput = z.infer<typeof CreateItemSchema>;
 export const UpdateItemSchema = z.object({ title: Title.optional(), text: z.string().max(ITEM_TEXT_LIMIT).optional() }).strict();
-export const StatusActionSchema = z.object({ action: z.enum(['approve', 'reject', 'withdraw', 'reopen']) }).strict();
-export type StatusAction = z.infer<typeof StatusActionSchema>['action'];
+export const StatusActionSchema = z.object({ action: z.enum(STATUS_ACTIONS) }).strict();
 
 // Browsers report the same format under several names. Each resolves to one canonical type,
 // which is stored and sent to the transcriber. An empty type is resolved by extension.
@@ -57,13 +54,11 @@ const stem = (fileName: string) => fileName.replace(/\.[^.]*$/, '').trim().slice
 
 export interface KnowledgeServiceDeps {
   store: KnowledgeStore; files: FileStore; transcriber: Transcriber;
-  /** Transcription spend shares the app's daily provider budget. */
   spend: Pick<Store, 'reserveSpend' | 'reconcileSpend'>;
   config: RuntimeConfig; ownerId: string; now?: () => Date;
 }
 export interface ProcessResult { item: KnowledgeItem; failure?: { code: string; message: string }; }
 
-/** The owner's item lifecycle: create, upload, process, review, approve or reject, withdraw, delete. */
 export class KnowledgeService {
   private now: () => Date;
   constructor(private deps: KnowledgeServiceDeps) { this.now = deps.now ?? (() => new Date()); }
@@ -110,12 +105,11 @@ export class KnowledgeService {
     return store.approveItem(id, chunkText(item.text), now);
   }
 
-  /** Extracts or transcribes an uploaded file into text for review. A failure is saved on the item with its reason. */
   async process(id: string): Promise<ProcessResult> {
     const { store, files } = this.deps; const item = await this.existing(id);
     if (item.kind === 'text') throw invalidStatus();
     if (item.status === 'processing' && item.processingStartedAt && this.now().getTime() - Date.parse(item.processingStartedAt) < PROCESSING_LEASE_MS) throw new AppError('PROCESSING', 'This item is still being processed. Try again in a few minutes.', 409);
-    if (!['uploading', 'failed', 'processing'].includes(item.status)) throw invalidStatus();
+    if (!PROCESSABLE.includes(item.status)) throw invalidStatus();
     const started = this.now(); await store.setStatus(id, { status: 'processing', processingStartedAt: started.toISOString() }, started.toISOString());
     let costMicros = 0;
     try {
@@ -153,9 +147,7 @@ export class KnowledgeService {
   }
 }
 
-/** The Studio's service for one request. Only the owner gets past here; writes also need a same-origin request outside the rehearsal site. */
 export async function studioService(request: Request, options: { write: boolean }): Promise<KnowledgeService> {
-  const owner = await requireOwner(request); const config = getRuntimeConfig(request);
-  if (options.write) { sameOrigin(request, config.appUrl); assertStudioWritable(config); }
+  const { owner, config } = await authorizeStudio(request, options);
   return new KnowledgeService({ store: getKnowledgeStore(config), files: createFileStore(config), transcriber: createTranscriber(config), spend: await getStore(request), config, ownerId: owner.id });
 }

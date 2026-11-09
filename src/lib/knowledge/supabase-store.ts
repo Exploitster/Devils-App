@@ -9,7 +9,6 @@ import { invalidStatus, type KnowledgeItemPatch, type KnowledgeSearch, type Know
 const missingFunction = new Set(['PGRST202', '42883']);
 export function studioUnavailable(): AppError { return new AppError('STUDIO_UNAVAILABLE', 'The Studio needs its database update. Apply migration 005.', 503); }
 
-/** Server-only. Every call goes through the service-only knowledge_operation function. */
 export class SupabaseKnowledgeStore implements KnowledgeStore {
   constructor(private admin: SupabaseClient) {}
   private async call<T>(action: string, value: unknown): Promise<T> {

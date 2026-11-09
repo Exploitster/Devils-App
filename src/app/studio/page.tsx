@@ -8,7 +8,6 @@ import { QuestionSets } from '@/components/studio/question-sets';
 const tabs = [{ id: 'library', label: 'Library' }, { id: 'question-sets', label: 'Question sets' }] as const;
 type Tab = (typeof tabs)[number]['id'];
 
-/** The owner's private page. Anyone else, signed in or not, gets the standard not-found page. */
 export default function StudioPage() {
   const [access, setAccess] = useState<'checking' | 'owner' | 'missing' | 'failed'>('checking');
   const [readOnly, setReadOnly] = useState(false);
