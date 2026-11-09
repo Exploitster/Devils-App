@@ -80,7 +80,7 @@ The owner also intends users to bring their own AI model later, so their convers
 ### Acceptance Examples
 
 - AE1. **Covers R5, R9.** Given an approved note about pricing, when a user answers the money area with "I'll charge $10 a month", then the next question's prompt carries that note's best passage as guidance. A pending or rejected note is never carried.
-- AE2. **Covers R11.** Given guidance in a turn, when the AI replies, then the reply's sources list and the assessment's citations hold only reviewed Stack Exchange evidence. Text matching an owner passage verbatim is not a planned outcome and is checked in the live evaluation.
+- AE2. **Covers R11, R12.** Given guidance in a turn, when the AI replies, then the reply's sources list and the assessment's citations hold only reviewed Stack Exchange evidence. A reply that repeats an owner passage word for word is never saved.
 - AE3. **Covers R15.** Given a case started on business version 3, when the owner publishes version 4 with the "Why you" area removed, then the case keeps asking and assessing all nine version 3 areas. A case started afterwards has eight.
 - AE4. **Covers R7.** Given no transcription key, when the owner uploads a recording, then the item shows "Transcription isn't set up" with the setting it needs. Uploading a PDF in the same session still works.
 - AE5. **Covers R1.** Given `alex@example.test` is not on the allowlist, when they open `/studio` or call any studio API, then they get the standard not-found response and see no Studio link.
@@ -98,11 +98,18 @@ The owner also intends users to bring their own AI model later, so their convers
 - Not built: several owners with different permissions, or an audit trail beyond the version history.
 - Not built: editing an approved item in place. Withdraw it, edit it, approve it again (R6). Saves one screen, and the extra click is cheap.
 - Not built: URLs, web pages, Word documents or images as sources.
+- Not built: an in-process cache of question-set versions. Each turn's version read is a single row lookup, which is cheap next to the guidance search the turn already makes. Add a cache if turn latency shows it matters.
+- Not built: separate page or time caps on PDF extraction. The 50 MB cap and the route's time limit already bound the work.
+- Not built: protection against paraphrase. The echo check (KTD3) stops word-for-word recital, but a user may still coax a close paraphrase of an owner passage from the model. The owner should approve material with that in mind.
 
 #### Deferred to Follow-Up Work
 
 - **The "this isn't right" flag (plan 3).** Users flag a question or an assessment line. A check drafts a fix and the owner approves it into the library or a question set. It builds on this plan's library and versioned question sets.
-- **Bring-your-own AI (plan 4).** Users connect their own ChatGPT, Claude, Gemini or other model with their own key or account. This plan keeps the knowledge layer model-independent so that plan needs no changes here (KTD1, KTD3).
+- **Bring-your-own AI (plan 4).** Users connect their own ChatGPT, Claude, Gemini or other model with their own key or account. This plan keeps the knowledge layer model-independent, so retrieval works unchanged on any provider (KTD1, KTD3). Plan 4 still has to settle one owner decision: a user who owns the provider account can read every prompt it receives, so on those turns owner guidance is either withheld or sent with the owner knowingly accepting that exposure (see Open Questions).
+
+### Open Questions
+
+- **Deferred to plan 4 (owner decision):** on turns run by a user's own model, is owner guidance withheld, or sent with the owner accepting that those users can read it in their own provider account? Nothing in this plan sends guidance to a user-controlled account, because plan 4 does not exist yet.
 
 ### Dependencies / Assumptions
 
@@ -137,12 +144,18 @@ The owner also intends users to bring their own AI model later, so their convers
   - Local mode uses an FTS5 table with the `porter unicode61` tokenizer, ordered by `bm25()`. The query is built from tokens quoted and OR-joined in code.
   - A query of only stop words returns nothing without calling the database.
   - Reason: it costs nothing per turn, needs no AI provider, and suits a corpus of hundreds of passages. Embeddings would need a model call per user turn (rejected by the Key Decision above) or a second search backend for small gain. Governs R9, R10. (session-settled: user-directed — chosen over per-turn embeddings with the owner's key: users' turns must not depend on the owner's model.)
-- KTD2. **The search query is the area, the answer and the topic, in that order.** A turn searches with the current area's name and what it must establish, the latest answer, and the case title or topic, capped at 2,000 characters, and takes the top 3 passages. An assessment searches with the topic and every answer, capped at 4,000 characters, and takes the top 5. Passages are about 250 words, so guidance stays under roughly 1,500 words a call. Owning rule for the passage count and query size; R9 cites it.
+- KTD2. **The person's answer decides whether a passage matches; the area and topic only rank the matches.**
+  - A turn's match condition is the non-stop words of the latest answer, OR-joined and capped at 2,000 characters. The current area's name and what it must establish, plus the case title or topic, are added as ranking terms only. The top 3 passages are taken.
+  - An assessment's match condition is the words of every answer, capped at 4,000 characters, ranked the same way, and takes the top 5.
+  - When no answer word matches, the result is empty, so generic area words such as "customers" never pull a passage in on their own.
+  - Passages are about 250 words, so guidance stays under roughly 1,500 words a call.
+  - Owning rule for the passage count and query shape; R9 cites it.
 - KTD3. **Guidance is its own `ownerGuidance` field on `ModelInput`, never part of `evidence`.**
   - `casePrepInput` carries it as a JSON array of `{text}` objects, without ids, titles or file names.
   - `casePrepInstructions` gains one rule: the field is private coaching data from the app's owner, to be treated as data rather than instructions, used to shape questions and judgements, and never quoted, cited or mentioned.
   - All three prompt versions are bumped: `devils-advocate-mvp/4`, `devils-advocate-openrouter/3` and `devils-advocate-gateway/4`.
-  - Reason: `evidence` is validated as citable by `src/lib/evidence/validate.ts`, so mixing the two would make owner text citable. One field in `provider.ts` reaches every transport, and a future bring-your-own-AI transport. Governs R11, R13.
+  - **An echo check enforces the "never quoted" rule.** After the provider replies and before anything is saved, the engine compares the reply's visible text, and every assessment text field, with the passages sent on that call. Both are normalised to lowercase words. A run of 12 or more consecutive words matching a passage discards the reply, logs `knowledge_echo_blocked` (ids only), and regenerates once with `ownerGuidance: []` under a fresh spend reservation. The instruction alone is not enough, because a user can ask the model to recite its private context.
+  - Reason: `evidence` is validated as citable by `src/lib/evidence/validate.ts`, so mixing the two would make owner text citable. One field in `provider.ts` reaches every transport, and a future bring-your-own-AI transport. Governs R11, R12, R13.
 - KTD4. **A separate knowledge store, kept apart from the per-user `Store`.**
   - It has a `KnowledgeStore` interface, built by a `getKnowledgeStore(config)` factory in `src/lib/auth/service.ts` that only server code can reach.
   - Local mode uses the existing SQLite file, with its own tables plus the FTS5 table.
@@ -157,8 +170,9 @@ The owner also intends users to bring their own AI model later, so their convers
   - Governs R14-R16.
 - KTD6. **The reducer takes the question set as an argument.**
   - The engine loads the case's pinned version before calling `startCase`, `applyAction`, `promptContext` or `assessmentAreas`. Those functions, and `catalogueArea`, take an area list rather than calling `areasFor` or `findArea`.
-  - Version rows are immutable, so a version can be cached in process by `(mode, version)` and never goes stale. The "live version" lookup happens once per new case, uncached, so a publish applies to the next case.
-  - The deterministic model reads area text from `caseContext`, not from code.
+  - The pinned version is read on each turn. The "live version" is read once per new case, so a publish applies to the next case.
+  - `AreaBrief` gains `opening`, built from the pinned version, so an owner's edited opening reaches every provider. `casePrepInstructions` says `nextAreaQuestion` should build on the next area's opening in the person's own words.
+  - `ModelInput` gains an optional server-only `caseAreas` (the pinned version's full areas). The engine sets it, `providerInput` and `casePrepInput` never serialise it, and `DeterministicModel` reads openings and `establishes` from it instead of `findArea`.
   - Reason: keeps the reducer pure and synchronous, as its tests assume.
 - KTD7. **Area labels reach the browser from the server.** The session API response gains `caseAreas: {id, label}[]` for the case's pinned version, and `case-progress.tsx` stops importing `frameworks.ts`. This also keeps the question sets out of the client bundle.
 - KTD8. **Files never pass through the app's request body.**
@@ -166,7 +180,8 @@ The owner also intends users to bring their own AI model later, so their convers
   - In production the target is a Supabase Storage signed upload URL into a private bucket `owner-knowledge`. The bucket is created in `005` with a 50 MB size limit and no `storage.objects` policies.
   - In local mode the target is `PUT /api/studio/items/[id]/file`, which streams to `.local/knowledge/` with the same size cap.
   - The browser PUTs the file to the target either way, then calls `POST /api/studio/items/[id]/process`.
-  - Pasted text and `.txt`/`.md` files go as JSON in the create call, capped at 200,000 characters. They skip storage and go straight to review.
+  - Pasted text and `.txt`/`.md` files go as JSON in the create call, capped at 200,000 characters. The create route passes `readJson` a body limit of 850,000 bytes, enough for that many characters after UTF-8 and JSON escaping. They skip storage and go straight to review.
+  - At create, each file resolves to one canonical MIME type from its extension plus a fixed alias table: `audio/x-m4a` becomes `audio/mp4`, `audio/x-wav` becomes `audio/wav`, `audio/mp3` becomes `audio/mpeg`, `audio/x-flac` becomes `audio/flac`, and an empty type is resolved by extension. The canonical type is stored and sent to Gemini.
 - KTD9. **Processing is one retryable request, with a status lease.**
   - `process` sets `processing` with a start time, downloads the file with the service role, extracts or transcribes it, and saves `review` with the text, or `failed` with a reason.
   - A `processing` item older than 10 minutes can be processed again, which recovers a killed function.
@@ -174,13 +189,14 @@ The owner also intends users to bring their own AI model later, so their convers
   - Reason: a background job queue is not worth building for a single owner's occasional uploads.
 - KTD10. **Transcription sits behind a `Transcriber` adapter, and its spend is reserved like a chat call.**
   - `GeminiTranscriber` copies the Gemini adapter's fetch, `ProviderError` and usage pattern. It sends one `generateContent` call with inline base64 audio and a verbatim-transcript instruction, and sets `maxOutputTokens` high enough for about an hour of speech.
-  - If the response stops with `MAX_TOKENS`, the item fails with "Recording too long: split it into shorter parts".
+  - The call has its own 240-second deadline through an `AbortSignal`, separate from `generationTimeoutMs` and inside the route's 300 seconds. A timeout, or a response that stops with `MAX_TOKENS`, fails the item with "Recording too long: split it into shorter parts" and reconciles the reservation.
   - The model is `DEVILS_TRANSCRIPTION_MODEL`, defaulting to `DEVILS_MODEL`'s Gemini default. The key is `DEVILS_GEMINI_API_KEY`.
-  - A missing key raises `TRANSCRIPTION_UNAVAILABLE` (503) at use, not at startup.
-  - Local mode uses a `DeterministicTranscriber`, which returns a fixed sentence plus the file name.
-  - Spend goes through `reserveSpend` and `reconcileSpend`, with the item id as the operation id. The reservation assumes the slowest likely bitrate (16 kbps) and 32 tokens a second, times the input price, then reconciles from `usageMetadata`.
+  - Prices are `DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION` (Gemini's audio input rate) and `DEVILS_TRANSCRIPTION_OUTPUT_USD_PER_MILLION`. The chat provider's prices are never used for transcription.
+  - A missing key or a missing price raises `TRANSCRIPTION_UNAVAILABLE` (503) at use, naming the setting, not at startup. That keeps a deployment that already sets `DEVILS_GEMINI_API_KEY` for chat booting.
+  - Services mode always uses `GeminiTranscriber`, and local mode always uses a `DeterministicTranscriber`, which returns a fixed sentence plus the file name.
+  - Spend goes through `reserveSpend` and `reconcileSpend`, with the item id as the operation id. The reservation is the estimated audio tokens times the audio price, plus `maxOutputTokens` times the output price. Audio tokens are estimated at the slowest likely bitrate (16 kbps) and 32 tokens a second. The real cost is reconciled from `usageMetadata` with the same two prices.
   - Before migration `005` is applied, studio calls return `STUDIO_UNAVAILABLE` (503, "Apply migration 005"). Case prep catches the same condition and runs with the code default and no guidance (R13).
-- KTD11. **PDF text comes from `unpdf`.** Extraction is capped at 300 pages and 30 seconds. A PDF with no extractable text, such as a scan, fails with "This PDF has no text layer". OCR is not attempted.
+- KTD11. **PDF text comes from `unpdf`.** The 50 MB size cap and the route's time limit bound the work, so there are no separate page or time caps. A PDF with no extractable text, such as a scan, fails with "This PDF has no text layer". OCR is not attempted.
 - KTD12. **Chunking splits on headings, then paragraphs, then sentences.** Passages target about 250 words, with a hard limit of 400, and the last sentence of one passage repeats at the start of the next. Text is normalised to NFC, control characters are stripped, and whitespace is collapsed before chunking and indexing.
 - KTD13. **Owner check and read-only rehearsal.**
   - `isOwner(identity, config)` compares the lowercased, trimmed email against `config.ownerEmails` and requires a confirmed email. `Identity` gains `emailConfirmed`: Supabase sets it from `email_confirmed_at`, and local sets it true.
@@ -195,6 +211,7 @@ Item lifecycle (R5-R7, KTD8-KTD9):
 ```mermaid
 stateDiagram-v2
   [*] --> uploading: file item created
+  uploading --> [*]: deleted
   [*] --> review: pasted or .txt/.md note
   uploading --> processing: process called after upload
   processing --> review: text extracted or transcribed
@@ -221,7 +238,10 @@ flowchart TB
   D -->|top 3, or none if search fails| E[ModelInput with caseContext and ownerGuidance]
   E --> F[provider.ts builds one prompt]
   F --> G[Gemini / OpenRouter / Gateway / later the user's own model]
-  G --> H[Reducer applies proposal; citations validated against evidence only]
+  G --> X{Reply repeats 12+ words of a passage?}
+  X -->|yes, once| E2[Regenerate with no guidance]
+  E2 --> H
+  X -->|no| H[Reducer applies proposal; citations validated against evidence only]
 ```
 
 Question-set versions (R14-R16, KTD5):
@@ -238,10 +258,10 @@ flowchart TB
 ### System-Wide Impact
 
 - **Prompt context:** every case-prep turn and assessment can carry up to about 1,500 more words. `reserveCost` already prices the serialised request, so spend reservation needs no change. The output limits are unchanged.
-- **Privacy:** owner material goes to the transcription provider when it is uploaded, and to the chat provider on every matching turn. Under bring-your-own AI those passages will go to each user's chosen provider. The privacy page, the account page's model disclosure and `docs/privacy.md` say so (R12).
+- **Privacy:** owner material goes to the transcription provider when it is uploaded, and to the chat provider on every matching turn. Under bring-your-own AI, passages sent to a user's own provider account would be readable by that user, so plan 4 decides whether to send them (Open Questions). The privacy page, the account page's model disclosure and `docs/privacy.md` say so (R12).
 - **Saved data:** existing cases have no `frameworkVersion` and read as version `0`, which is unchanged behaviour. No backfill is needed.
 - **Rehearsal site:** it shares the production database, so it is read-only for the Studio (KTD13).
-- **Logging:** new `logEvent` events (`knowledge_processed`, `knowledge_failed`, `framework_published`) carry ids, kinds and durations only, never text, file names or emails.
+- **Logging:** new `logEvent` events (`knowledge_processed`, `knowledge_failed`, `framework_published`, `knowledge_search_failed`, `knowledge_echo_blocked`) carry ids, kinds and durations only, never text, file names or emails.
 
 ### Assumptions
 
@@ -274,7 +294,7 @@ flowchart TB
   - Test: `tests/config.test.ts`, `tests/studio-access.test.ts`.
 - **Approach:**
   1. Parse `DEVILS_OWNER_EMAILS` like `DEVILS_DODO_TEST_USER_IDS`: comma-separated, lowercased, trimmed, each validated as an email, throwing on a malformed entry. Empty means no owner.
-  2. Add `DEVILS_TRANSCRIPTION_MODEL` and a transcription key read from `DEVILS_GEMINI_API_KEY` whatever the chat provider. It is not required at startup.
+  2. Add `DEVILS_TRANSCRIPTION_MODEL`, `DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION`, `DEVILS_TRANSCRIPTION_OUTPUT_USD_PER_MILLION`, and a transcription key read from `DEVILS_GEMINI_API_KEY` whatever the chat provider. None is required at startup (KTD10).
   3. Add `requireOwner(request)` in `access.ts`, which returns the identity or throws `notFound()`, and `assertStudioWritable(config)`.
   4. Add `owner` to the `/api/auth` response.
 - **Patterns to follow:** `dodoTestUserIds` in `src/lib/config.ts` and its `publicConfig` test in `tests/config.test.ts`. `sameOrigin` and `authResponse` in `src/lib/http.ts`.
@@ -296,7 +316,7 @@ flowchart TB
 - **Dependencies:** U1.
 - **Files:**
   - Create: `supabase/migrations/005_owner_knowledge.sql`, `src/lib/knowledge/store.ts` (interface and types), `src/lib/knowledge/local-store.ts`, `src/lib/knowledge/supabase-store.ts`, `src/lib/knowledge/query.ts` (OR-query building shared by both backends).
-  - Modify: `src/lib/contracts.ts` (item, passage and version schemas), `src/lib/auth/service.ts` (`getKnowledgeStore`), `tests/postgres/bootstrap.sql` (a `storage.buckets` stub), `tests/postgres/assertions.sql`, `docs/Devils-Advocate-Supabase-Setup.sql` (regenerated with `npm run db:setup:bundle`).
+  - Modify: `src/lib/contracts.ts` (item, passage and version schemas), `src/lib/auth/service.ts` (`getKnowledgeStore`), `tests/postgres/bootstrap.sql` (a `storage.buckets` stub), `tests/postgres/assertions.sql`, `docs/Devils-Advocate-Supabase-Setup.sql` (regenerated with `npm run db:setup:bundle -- docs/Devils-Advocate-Supabase-Setup.sql`, since the script's default output is under `.local/`).
   - Test: `tests/knowledge-store.test.ts`, `tests/knowledge-query.test.ts`.
 - **Approach:**
   1. Write `005`:
@@ -320,7 +340,7 @@ flowchart TB
   - Postgres assertions: `authenticated` cannot select from any knowledge table or execute `knowledge_operation`, and `service_role` can.
   - Postgres assertions: the search action with an OR-rewritten query returns the approved passage.
   - The bundle applies `005` after 001-004, and re-running it is a no-op.
-- **Verification:** unit tests pass, `npm run test:db` passes in CI, and the regenerated setup SQL matches `npm run db:setup:bundle` output.
+- **Verification:** unit tests pass, `npm run test:db` passes in CI, and the committed setup SQL matches the bundle script's output.
 
 ### U3. Ingestion: uploads, extraction, transcription and chunking
 
@@ -348,7 +368,7 @@ flowchart TB
   4. Allow PATCH only in `review`.
   5. Delete removes the stored file first, then the item. A missing file is ignored.
   6. Give `GeminiTranscriber` an injectable `fetcher`, like `GeminiModel`.
-- **Execution note:** Run `scripts/verify-transcription.ts` against a real key once, with one WebM and one M4A sample, before building the UI on top. Its result settles the Goal Capsule's stop condition.
+- **Execution note:** When a real Gemini key is available in the session, run `scripts/verify-transcription.ts` once with one WebM sample, one M4A sample and one recording near 50 MB. A rejection of both browser formats triggers the Goal Capsule's stop condition. Without a key, the check becomes an owner follow-up in the PR body. The UI does not depend on it: notes and PDFs work whatever it finds, and a rejected format shows up as a visible failed item.
 - **Patterns to follow:**
   - `src/lib/model/gemini.ts` for fetch, `ProviderError` and usage cost.
   - `src/app/api/sessions/[id]/turns/route.ts` for route shape.
@@ -358,8 +378,11 @@ flowchart TB
   - The chunker turns a single 900-word paragraph with no headings into several passages split on sentence boundaries.
   - The chunker strips control characters and collapses whitespace, and returns no passages for empty or whitespace-only text.
   - Pasted text over 200,000 characters is rejected with 413 `BODY_TOO_LARGE`. A 10,000-character note is created straight into `review`.
+  - A 150,000-character pasted note is created straight into `review`, which proves the raised body limit.
   - Creating a recording with `audio/mpeg` and 60 MB declared is rejected with "Recordings can be up to 50 MB". Creating one with `image/png` is rejected as an unsupported type.
-  - Covers AE4. `process` on a recording with no transcription key leaves the item `failed`, with reason code `TRANSCRIPTION_UNAVAILABLE`. A PDF processed in the same store reaches `review`.
+  - `audio/x-m4a`, `audio/x-wav`, `audio/mp3`, `audio/x-flac`, and an empty type on `memo.m4a`, each resolve to their canonical type, which is what reaches the transcriber.
+  - Covers AE4. With a services-mode configuration and no transcription key, `process` on a recording leaves the item `failed` with reason code `TRANSCRIPTION_UNAVAILABLE`. A PDF processed in the same store reaches `review`. The same happens with a key but no transcription prices.
+  - `GeminiTranscriber`, with a stubbed fetch that never answers, aborts at the deadline. The item becomes `failed` with the "split it" message, and the reservation is reconciled.
   - `GeminiTranscriber`, with a stubbed fetch returning text and `usageMetadata`, returns the text, and the reserved spend is reconciled to the reported tokens.
   - `GeminiTranscriber`, with a stubbed `finishReason: MAX_TOKENS`, fails the item with the "split it" message.
   - `GeminiTranscriber`, with a stubbed 503, gives a transient `ProviderError`. The item becomes `failed`, and a retry moves it to `processing` again.
@@ -382,15 +405,19 @@ flowchart TB
   1. Have the engine call `guidanceFor(...)` after the reducer builds the case context, and before cost reservation so the reservation includes the guidance bytes.
   2. Skip it on the safety path and for legacy conversations.
   3. Bound retrieval with a 1.5 s timeout. A timeout or error logs a `knowledge_search_failed` event and yields `[]` (R13).
-  4. Leave the deterministic model to ignore guidance, so offline evaluations stay stable.
+  4. Add the echo check from KTD3 after the provider call, for turns and assessments.
+  5. Leave the deterministic model to ignore guidance, so offline evaluations stay stable.
 - **Patterns to follow:** how `evidence` is threaded through `ModelInput` in `src/lib/conversation/engine.ts`, and `casePrepPurpose` text in `provider.ts`.
 - **Test scenarios:**
-  - Covers AE1. The search query for a money-area turn holds the area name, its "establishes" text, the latest answer and the title, in that order, and is cut at 2,000 characters.
-  - An assessment query holds the topic and every answer, is cut at 4,000 characters, and asks for 5 passages.
+  - Covers AE1. For a money-area turn, the match terms come from the latest answer, cut at 2,000 characters. The area name, its "establishes" text and the title are ranking terms only.
+  - A passage that shares only the word "customers" with the area text, answering an off-topic answer about a recipe blog's logo, is not returned.
+  - An assessment's match terms come from every answer, cut at 4,000 characters, and it asks for 5 passages.
+  - Covers AE2. A stubbed model reply that repeats 15 consecutive words of a passage is discarded. The regenerated reply, made with `ownerGuidance: []`, is saved instead, and one `knowledge_echo_blocked` event is logged. A reply sharing 8 words in a row with a passage is saved unchanged.
+  - The edited opening of the pinned version appears under `case.nextArea.opening` in each transport's request body, and `caseAreas` appears in none of them.
   - Covers AE2. For each of Gemini, OpenRouter and Gateway, the built request body contains the guidance text under `ownerGuidance`, the private-guidance rule in the system instructions, and the bumped prompt version.
   - Covers AE2. Guidance passages are absent from `input.evidence`. A model output citing an id that is not reviewed evidence is still rejected by `validate.ts`.
   - A knowledge store that throws, or takes 2 s, leaves the turn succeeding with `ownerGuidance: []` and logs one failure event.
-  - With no approved items, `ownerGuidance` is `[]`, and the request is byte-identical to the old one apart from the version string and the new empty field.
+  - With no approved items, `ownerGuidance` is `[]`, and the request is byte-identical to the old one apart from the bumped version strings, the private-guidance rule, the area `opening` field and the new empty field.
   - A safety-path reply makes no knowledge search.
   - The account page's model disclosure mentions the owner's private guidance.
 - **Verification:** engine and transport tests pass, and `npm run eval` passes unchanged.
@@ -428,9 +455,9 @@ flowchart TB
     Each rejection names the area and the rule.
   - Restoring version 1 when version 3 is live creates version 4, with version 1's areas and the restore note.
   - Restoring the default creates a new version equal to the code defaults.
-  - Version reads are cached by `(mode, version)`. The live lookup is not cached, so a publish is seen by the next `startCase`.
+  - A publish is seen by the next `startCase`, and an existing case still reads its own pinned version.
   - The session response carries `caseAreas` labels for the pinned version, and the progress strip shows a renamed area's new name only on cases started after the rename.
-  - The deterministic model's opening question for a custom area uses that area's own opening text.
+  - The deterministic model's opening question for a custom area uses that area's own opening text, read from `caseAreas`.
 - **Verification:** all case-prep tests pass with the defaults, and the client bundle no longer imports `frameworks.ts`.
 
 ### U6. Studio page
@@ -448,19 +475,32 @@ flowchart TB
      - an add area with a paste box, a file picker accepting text, PDF and audio, and a title field;
      - a list with status badges and sizes;
      - a review panel with an editable text area, plus Approve, Reject, Withdraw, Retry and Delete as each status allows.
-  3. Make the upload a two-step process with visible progress: create, PUT to the target, then process. While processing runs, show "Transcribing, this can take a few minutes" and keep the item in the list.
-  4. In Question sets: a mode switch, an ordered list of editable area cards with add, remove, move up and move down, a note field and Publish, and a version history list with Restore buttons.
-  5. Show R17 rejections next to the area they name.
-  6. In rehearsal, show a read-only banner and disable writes.
-  7. A non-owner visiting `/studio` sees the standard not-found page.
+  3. Make Approve save any unsaved title or text edits first, then approve, so a corrected transcript is what gets indexed. A failed save keeps the edits in place, shows the error, and does not approve.
+  4. Make the upload a two-step process with visible progress: create, PUT to the target, then process. The list refreshes every 10 seconds while any item is processing. Status changes are announced in a polite live region. Each status shows:
+     - `uploading`: "Upload not finished", with Retry upload and Delete.
+     - `processing` under 10 minutes: "Working, started N min ago", with no actions.
+     - `processing` over 10 minutes: "This looks stuck", with Retry.
+     - `failed`: the reason, with Retry and Delete.
+  5. In Question sets:
+     - a mode switch;
+     - an ordered list of editable area cards with add, remove, move up and move down;
+     - in each card, follow-ups and strong signals edited as lists of single-line inputs with add, remove and move buttons, where the last item cannot be removed (R17);
+     - a note field and Publish;
+     - a version history list with Restore buttons.
+  6. Keep one draft per mode in component state, loaded from the live version. Switching mode or restoring with unsaved edits asks "Discard unsaved changes?".
+  7. Show R17 rejections next to the area they name.
+  8. In rehearsal, show a read-only banner and disable writes.
+  9. When a studio API returns `STUDIO_UNAVAILABLE`, replace both tabs with "Studio isn't set up yet: apply migration 005", pointing to `docs/setup-guide.md`.
+  10. A non-owner visiting `/studio` sees the standard not-found page.
 - **Patterns to follow:** forms, busy and status states, and the `<dialog>` delete confirmation in `src/app/account/page.tsx`. `Shell` and the `api()` helper in `src/components/app.tsx`. The account menu in `src/components/sidebar.tsx`.
 - **Test scenarios:**
   - Owner journey (sam): paste a note, approve it, and see it marked live in the list.
-  - Owner journey (sam): upload a small WAV fixture with `setInputFiles`, see it reach review with the deterministic transcript, edit the title, and approve.
+  - Owner journey (sam): upload a small WAV fixture with `setInputFiles`, and see it reach review with the deterministic transcript. Correct a word in the text and press Approve without saving first. The library shows it live, and the item's stored text holds the correction.
   - Owner journey (sam): edit the business "Problem and why now" opening, publish, and see version 1 in the history. Restore the default and see version 2 noted "Restored built-in default".
   - An invalid edit (opening without `?`) shows the rule next to that area and publishes nothing.
+  - With a stubbed `STUDIO_UNAVAILABLE` response, the page shows "Studio isn't set up yet: apply migration 005" and no write controls.
   - Covers AE5. alex sees no Studio link, and `/studio` shows not-found.
-  - Integration: after sam approves a note and edits an opening, alex starts a business case and the first question is sam's new opening. Uses separate browser contexts.
+  - Integration: sam edits the business "Who the customer is" opening and publishes. alex starts a business case whose first message is strong (8 or more words, no filler words), so area 1 is answered. The first assistant question equals sam's new "Who the customer is" opening. Uses separate browser contexts.
   - The layout suite: `/studio` fits 375, 768, 1280 and 1440 px in both themes, with no serious axe violations.
 - **Verification:** the e2e studio spec and the layout suite pass in local mode.
 
@@ -471,7 +511,7 @@ flowchart TB
 - **Dependencies:** U1-U6.
 - **Files:** modify `docs/privacy.md`, `docs/operations.md`, `docs/setup-guide.md`, `docs/integrations.md`, `docs/evidence.md`, `docs/mvp-bot-behavior.md`, `docs/temporary-testing.md`, and `src/app/privacy/page.tsx` or its content source.
 - **Approach:**
-  1. In `setup-guide.md`: apply migration `005` (the regenerated bundle), set `DEVILS_OWNER_EMAILS`, set `DEVILS_GEMINI_API_KEY` for transcription even when chat uses another provider, and optionally `DEVILS_TRANSCRIPTION_MODEL`.
+  1. In `setup-guide.md`: apply migration `005` (the regenerated bundle), and set `DEVILS_OWNER_EMAILS`. For transcription, set `DEVILS_GEMINI_API_KEY` even when chat uses another provider, plus the two transcription prices. `DEVILS_TRANSCRIPTION_MODEL` is optional.
   2. In `operations.md`: a section on transcription cost and timeouts, and on retrieval.
   3. In `privacy.md` and the public privacy page: owner material, where it goes, and the bring-your-own-AI note.
   4. In `evidence.md`: owner guidance is separate from citable evidence.
@@ -494,7 +534,7 @@ flowchart TB
 | Browser | `npm run test:e2e` | Studio journeys, owner-only access, the cross-account effect and layout |
 | Live (owner) | `npm run test:transcription` | Gemini accepts WebM and M4A inline. Not part of CI |
 
-The setup SQL bundle `docs/Devils-Advocate-Supabase-Setup.sql` is regenerated with `npm run db:setup:bundle` and committed.
+The setup SQL bundle `docs/Devils-Advocate-Supabase-Setup.sql` is regenerated with `npm run db:setup:bundle -- docs/Devils-Advocate-Supabase-Setup.sql` and committed.
 
 ## Definition of Done
 
@@ -503,7 +543,7 @@ The setup SQL bundle `docs/Devils-Advocate-Supabase-Setup.sql` is regenerated wi
 - The PR body lists the owner steps:
   - apply migration `005`;
   - set `DEVILS_OWNER_EMAILS` on Vercel;
-  - make sure `DEVILS_GEMINI_API_KEY` is set for transcription;
+  - make sure `DEVILS_GEMINI_API_KEY` and the two transcription prices are set;
   - run `npm run test:transcription` once.
 - No owner text, file name or email appears in logs, the client bundle, `publicConfig` or any user-visible citation.
 - Code from abandoned approaches is removed from the diff, and the dead legacy prompt path recorded in PR #5 is left as it is, since that change is out of scope.
