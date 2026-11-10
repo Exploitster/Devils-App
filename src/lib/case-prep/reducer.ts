@@ -1,13 +1,15 @@
 import type { CaseAreaRecord, CasePrep, CasePrepProposal, Mode, TurnAction } from '../contracts';
 import { AppError } from '../errors';
-import { areasFor, findArea, type CaseArea } from './frameworks';
+import type { CaseArea } from './frameworks';
 
 /**
  * The app-owned case-prep state machine. Pure: no model calls and no I/O.
+ * Every function that needs area details takes the case's question set (its list of areas) as an
+ * argument; the engine loads the version the case is pinned to before calling in.
  *
  * One turn works in three steps:
  * 1. `assertActionAllowed` before any AI call, so a refused action costs nothing.
- * 2. The engine sends `promptContext(record)` (the current and next area, with their frameworks,
+ * 2. The engine sends `promptContext(record, areas)` (the current and next area, with their frameworks,
  *    plus the compact record) and the person's text to the AI.
  * 3. `applyAction` applies the action with the AI's proposal and returns the new record and the
  *    question to ask next. The app decides every transition; the AI only proposes.
@@ -50,10 +52,11 @@ export const MAX_QUOTES_PER_AREA = 3;
 export const MAX_QUOTE_LENGTH = 500;
 export const SUBSTANCE_FLOOR_WORDS = 8;
 
-export function startCase(perspective: Mode): CasePrep {
-  const areas = areasFor(perspective);
+/** A case on version 0, the built-in set, stores no version, exactly like a case saved before versions existed. */
+export function startCase(perspective: Mode, areas: readonly CaseArea[], frameworkVersion = 0): CasePrep {
   return {
     perspective,
+    ...(frameworkVersion > 0 ? { frameworkVersion } : {}),
     areas: areas.map(area => ({ id: area.id, status: 'not_asked', followUps: 0, quotes: [] })),
     currentAreaId: areas[0].id,
     complete: false,
@@ -61,16 +64,16 @@ export function startCase(perspective: Mode): CasePrep {
   };
 }
 
-export function targets(record: CasePrep): { current: CaseArea | null; next: CaseArea | null } {
-  const current = record.currentAreaId ? findArea(record.perspective, record.currentAreaId) ?? null : null;
-  return { current, next: nextArea(record) };
+export function targets(record: CasePrep, areas: readonly CaseArea[]): { current: CaseArea | null; next: CaseArea | null } {
+  const current = record.currentAreaId ? areas.find(area => area.id === record.currentAreaId) ?? null : null;
+  return { current, next: nextArea(record, areas) };
 }
 
-export function promptContext(record: CasePrep): CasePromptContext {
-  const { current, next } = targets(record);
+export function promptContext(record: CasePrep, areas: readonly CaseArea[]): CasePromptContext {
+  const { current, next } = targets(record, areas);
   return {
     perspective: record.perspective,
-    areas: record.areas.map(area => ({ id: area.id, label: catalogueArea(record, area.id).label, status: area.status, followUps: area.followUps, quotes: [...area.quotes] })),
+    areas: record.areas.map(area => ({ id: area.id, label: catalogueArea(areas, area.id).label, status: area.status, followUps: area.followUps, quotes: [...area.quotes] })),
     current,
     next,
   };
@@ -87,20 +90,20 @@ export function assertActionAllowed(record: CasePrep, action: TurnAction): void 
   }
 }
 
-export function applyAction(record: CasePrep, action: TurnAction, text: string, proposal: CasePrepProposal): TurnResult {
+export function applyAction(record: CasePrep, areas: readonly CaseArea[], action: TurnAction, text: string, proposal: CasePrepProposal): TurnResult {
   assertActionAllowed(record, action);
   const next = structuredClone(record);
   switch (action) {
-    case 'message': return applyAnswer(next, text, proposal);
-    case 'skip': return applySkip(next, proposal);
-    case 'pushback': return askCurrent(next, proposal.followUpQuestion);
-    case 'correction': return applyCorrection(next, proposal);
+    case 'message': return applyAnswer(next, areas, text, proposal);
+    case 'skip': return applySkip(next, areas, proposal);
+    case 'pushback': return askCurrent(next, areas, proposal.followUpQuestion);
+    case 'correction': return applyCorrection(next, areas, proposal);
   }
 }
 
-export function assessmentAreas(record: CasePrep): AssessmentAreaRow[] {
+export function assessmentAreas(record: CasePrep, areas: readonly CaseArea[]): AssessmentAreaRow[] {
   return record.areas.map(area => {
-    const framework = catalogueArea(record, area.id);
+    const framework = catalogueArea(areas, area.id);
     const latest = area.quotes.at(-1);
     const nextStep = `Work on this next: ${framework.establishes}`;
     switch (area.status) {
@@ -118,7 +121,7 @@ export function assessmentAreas(record: CasePrep): AssessmentAreaRow[] {
   });
 }
 
-function applyAnswer(record: CasePrep, text: string, proposal: CasePrepProposal): TurnResult {
+function applyAnswer(record: CasePrep, areas: readonly CaseArea[], text: string, proposal: CasePrepProposal): TurnResult {
   const area = currentRecord(record);
   area.status = 'probing';
   area.quotes = [...area.quotes, boundQuote(text)].slice(-MAX_QUOTES_PER_AREA);
@@ -127,30 +130,30 @@ function applyAnswer(record: CasePrep, text: string, proposal: CasePrepProposal)
   if (span !== null && wordCount(area.quotes.join(' ')) >= SUBSTANCE_FLOOR_WORDS) {
     area.quotes[area.quotes.length - 1] = boundQuote(span);
     area.status = 'strong';
-    return moveToNext(record, proposal.nextAreaQuestion);
+    return moveToNext(record, areas, proposal.nextAreaQuestion);
   }
 
   if (area.followUps >= MAX_FOLLOW_UPS) {
     area.status = 'weak';
-    return moveToNext(record, proposal.nextAreaQuestion);
+    return moveToNext(record, areas, proposal.nextAreaQuestion);
   }
   area.followUps += 1;
-  return askCurrent(record, proposal.followUpQuestion);
+  return askCurrent(record, areas, proposal.followUpQuestion);
 }
 
-function applySkip(record: CasePrep, proposal: CasePrepProposal): TurnResult {
+function applySkip(record: CasePrep, areas: readonly CaseArea[], proposal: CasePrepProposal): TurnResult {
   currentRecord(record).status = 'untested';
-  return moveToNext(record, proposal.nextAreaQuestion);
+  return moveToNext(record, areas, proposal.nextAreaQuestion);
 }
 
-function applyCorrection(record: CasePrep, proposal: CasePrepProposal): TurnResult {
+function applyCorrection(record: CasePrep, areas: readonly CaseArea[], proposal: CasePrepProposal): TurnResult {
   const named = new Set(proposal.invalidatedAreaIds ?? []);
   const known = record.areas.filter(area => named.has(area.id));
   const reset = known.filter(area => area.status !== 'not_asked');
 
   if (reset.length === 0) {
-    if (known.length === 0) return askCurrent(record, proposal.followUpQuestion);
-    return askCurrent(record, undefined);
+    if (known.length === 0) return askCurrent(record, areas, proposal.followUpQuestion);
+    return askCurrent(record, areas, undefined);
   }
 
   for (const area of reset) clearArea(area);
@@ -162,11 +165,11 @@ function applyCorrection(record: CasePrep, proposal: CasePrepProposal): TurnResu
   record.currentAreaId = target.id;
   record.complete = false;
   const aiTarget = known[0];
-  return ask(record, target.id, aiTarget.id === target.id ? proposal.nextAreaQuestion : undefined);
+  return ask(record, areas, target.id, aiTarget.id === target.id ? proposal.nextAreaQuestion : undefined);
 }
 
-function moveToNext(record: CasePrep, proposed: string | undefined): TurnResult {
-  const following = nextArea(record);
+function moveToNext(record: CasePrep, areas: readonly CaseArea[], proposed: string | undefined): TurnResult {
+  const following = nextArea(record, areas);
   if (!following) {
     record.currentAreaId = null;
     record.complete = true;
@@ -174,16 +177,16 @@ function moveToNext(record: CasePrep, proposed: string | undefined): TurnResult 
   }
   record.areas.find(area => area.id === following.id)!.status = 'probing';
   record.currentAreaId = following.id;
-  return ask(record, following.id, proposed);
+  return ask(record, areas, following.id, proposed);
 }
 
-function askCurrent(record: CasePrep, proposed: string | undefined): TurnResult {
+function askCurrent(record: CasePrep, areas: readonly CaseArea[], proposed: string | undefined): TurnResult {
   if (!record.currentAreaId) return { record, areaId: null, question: null, questionSource: null };
-  return ask(record, record.currentAreaId, proposed);
+  return ask(record, areas, record.currentAreaId, proposed);
 }
 
-function ask(record: CasePrep, areaId: string, proposed: string | undefined): TurnResult {
-  const framework = catalogueArea(record, areaId);
+function ask(record: CasePrep, areas: readonly CaseArea[], areaId: string, proposed: string | undefined): TurnResult {
+  const framework = catalogueArea(areas, areaId);
   if (proposed !== undefined && acceptableQuestion(proposed, framework)) {
     return { record, areaId, question: proposed.trim(), questionSource: 'ai' };
   }
@@ -202,9 +205,9 @@ function acceptableQuestion(question: string, area: CaseArea): boolean {
   });
 }
 
-function nextArea(record: CasePrep): CaseArea | null {
+function nextArea(record: CasePrep, areas: readonly CaseArea[]): CaseArea | null {
   const found = record.areas.find(area => area.status === 'not_asked' && area.id !== record.currentAreaId);
-  return found ? catalogueArea(record, found.id) : null;
+  return found ? catalogueArea(areas, found.id) : null;
 }
 
 function currentRecord(record: CasePrep): CaseAreaRecord {
@@ -213,8 +216,8 @@ function currentRecord(record: CasePrep): CaseAreaRecord {
   return area;
 }
 
-function catalogueArea(record: CasePrep, id: string): CaseArea {
-  const area = findArea(record.perspective, id);
+export function catalogueArea(areas: readonly CaseArea[], id: string): CaseArea {
+  const area = areas.find(candidate => candidate.id === id);
   if (!area) throw new Error(`Unknown case-prep area: ${id}`);
   return area;
 }

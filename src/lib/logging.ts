@@ -1,6 +1,6 @@
-export type LogEvent='generation_completed'|'generation_failed'|'deletion_completed'|'deletion_pending'|'health_checked';
+export type LogEvent='generation_completed'|'generation_failed'|'deletion_completed'|'deletion_pending'|'health_checked'|'knowledge_processed'|'knowledge_failed'|'framework_published'|'knowledge_search_failed'|'knowledge_echo_blocked';
 export interface LogFields {code?:string;id?:string;elapsedMs?:number;costMicros?:number;}
-const events=new Set<LogEvent>(['generation_completed','generation_failed','deletion_completed','deletion_pending','health_checked']);
+const events=new Set<LogEvent>(['generation_completed','generation_failed','deletion_completed','deletion_pending','health_checked','knowledge_processed','knowledge_failed','framework_published','knowledge_search_failed','knowledge_echo_blocked']);
 /** Explicitly construct telemetry; never spread request, provider, or Error objects. IDs must be opaque IDs, never email or prompt text. */
 export function logEvent(event:LogEvent,fields:LogFields={},write:(line:string)=>void=console.info):void {
  if(!events.has(event))return;

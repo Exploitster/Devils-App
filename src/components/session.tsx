@@ -11,6 +11,8 @@ import { SourceButton } from './source';
 import { handOverFirstMessage, takeFirstMessage } from '@/lib/pending-message';
 import '@/styles/chat.css';
 const DONT_KNOW = 'I don’t know yet';
+type CaseAreaLabel = { id: string; label: string };
+type SessionResponse = { session: Session; caseAreas: CaseAreaLabel[] };
 async function markdown(card: HandBackCard) {
     const sources = await citedSources(card.counterpoints);
     return `# Hand-back card · version ${card.version}\n\n## Your position\n${card.position}\n\n## Strengths\n${card.strengths.map(s => `- ${s}`).join('\n')}\n\n## Counterpoints\n${card.counterpoints.map(p => `- ${p.text}\n  Interpretation: ${p.interpretation ?? ''}`).join('\n')}\n\n## Open questions\n${card.openQuestions.map(s => `- ${s}`).join('\n')}\n\n## A next step this month\n${card.nextStep}\n\n## Sources\n${sources.map(({ source: s, locators }) => `${s.author}. ${s.work}. ${s.edition}. ${s.publicationDate ?? 'Date unspecified'}. ${s.url}\n${locators.join('; ')}`).join('\n\n')}\n\n${card.closing}\n`;
@@ -42,6 +44,7 @@ export function SessionView({ id }: {
 }) {
     const router = useRouter();
     const [session, setSession] = useState<Session>();
+    const [caseAreas, setCaseAreas] = useState<CaseAreaLabel[]>([]);
     const [error, setError] = useState('');
     const [assessmentError, setAssessmentError] = useState('');
     const [stale, setStale] = useState(false);
@@ -66,10 +69,10 @@ export function SessionView({ id }: {
         expectedRevision: number;
     } | null>(null);
     function load(isCurrent: () => boolean = () => true) {
-        return api<{session: Session}>(`/api/sessions/${id}`).then(data => {
+        return api<SessionResponse>(`/api/sessions/${id}`).then(data => {
             // A load whose page effect was already cleaned up must not overwrite newer state.
             if (!isCurrent()) return;
-            setSession(data.session); setTitle(data.session.title); setStale(false); setError('');
+            setSession(data.session); setCaseAreas(data.caseAreas); setTitle(data.session.title); setStale(false); setError('');
             const first = takeFirstMessage(id);
             if (first && data.session.messages.length === 0) { setText(first); void generate('turns', false, { session: data.session, text: first }); }
         }).catch((e: Error) => { if (isCurrent()) setError(e.message); });
@@ -95,10 +98,8 @@ export function SessionView({ id }: {
         return; followReply.current = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 420; setBusy(kind); setError(''); setAssessmentError(''); setExpired(false); setStale(false); setSending(kind === 'turns' && !skip ? submittedText : ''); const body = { operationId: crypto.randomUUID(), expectedRevision: current.revision }; operation.current = body; abort.current = new AbortController();
         const turnAction = skip ? 'skip' : first ? 'message' : current.state.casePrep?.complete ? 'correction' : action;
         try {
-        const data = await api<{
-            session: Session;
-        }>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? DONT_KNOW : submittedText, action: turnAction } : {}) }, abort.current.signal);
-        setSession(data.session);
+        const data = await api<SessionResponse>(`/api/sessions/${id}/${kind}`, 'POST', { ...body, ...(kind === 'turns' ? { text: skip ? DONT_KNOW : submittedText, action: turnAction } : {}) }, abort.current.signal);
+        setSession(data.session); setCaseAreas(data.caseAreas);
         if (kind === 'turns') {
             setText(current => current === submittedText ? '' : current);
             setAction('message');
@@ -120,10 +121,8 @@ export function SessionView({ id }: {
     } }
     async function cancel() { if (busy === 'card') setAssessmentError('Writing was cancelled.'); cancelling.current = true; const body = operation.current; abort.current?.abort(); if (body) {
         try {
-            const result = await api<{
-                session: Session;
-            }>(`/api/sessions/${id}/cancel`, 'POST', body);
-            setSession(result.session);
+            const result = await api<SessionResponse>(`/api/sessions/${id}/cancel`, 'POST', body);
+            setSession(result.session); setCaseAreas(result.caseAreas);
         }
         catch (e) {
             setError((e as Error).message);
@@ -168,7 +167,7 @@ export function SessionView({ id }: {
     async function rename(event: React.FormEvent) {
         event.preventDefault();
         if (!session) return;
-        try { const data = await api<{ session: Session }>(`/api/sessions/${id}`, 'PATCH', { title, expectedRevision: session.revision }); setSession(data.session); setRenaming(false); }
+        try { const data = await api<SessionResponse>(`/api/sessions/${id}`, 'PATCH', { title, expectedRevision: session.revision }); setSession(data.session); setCaseAreas(data.caseAreas); setRenaming(false); }
         catch (e) { setError((e as Error).message); }
     }
     async function startCase() {
@@ -249,7 +248,7 @@ export function SessionView({ id }: {
         <p>It was saved before conversations became case prep, so it stays as it was. Start a case to work through your idea area by area, beginning with the position you gave here.</p>
         <button type="button" className="primary" disabled={starting} onClick={() => void startCase()}>Start a case</button>
       </section> : <>
-      {prep && messages.length > 0 && <CaseProgress mode={session.mode} record={prep}/>}
+      {prep && messages.length > 0 && <CaseProgress record={prep} areas={caseAreas}/>}
       <Composer sticky value={text} onChange={setText} onSubmit={() => void generate('turns')} inputRef={composer} disabled={stale}
         busy={Boolean(busy)} onCancel={cancel} tag={prep?.complete ? undefined : tags[action]} onClearTag={() => setAction('message')}
         placeholder={!messages.length ? 'Describe your idea or decision in your own words.' : prep?.complete ? 'Correct your position to revisit the case…' : 'Answer in your own words…'}

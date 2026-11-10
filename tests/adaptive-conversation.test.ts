@@ -4,6 +4,7 @@ import { DeterministicModel } from '../src/lib/model/deterministic';
 import { decisionFocus } from '../src/lib/model/playbooks';
 import { caseContext } from '../src/lib/conversation/state';
 import { applyAction, startCase } from '../src/lib/case-prep/reducer';
+import { areasFor } from '../src/lib/case-prep/frameworks';
 import { createEvidenceService } from '../src/lib/evidence/service';
 
 function input(record: CasePrep, action: TurnAction | 'assessment', text = '', position = ''): ModelInput {
@@ -14,7 +15,8 @@ function input(record: CasePrep, action: TurnAction | 'assessment', text = '', p
     task: turn ? 'turn' : 'card',
     evidence: [],
     now: '2026-10-15T00:00:00Z',
-    caseContext: caseContext(record, action, turn && ['message', 'correction'].includes(action) ? text : undefined),
+    caseAreas: areasFor(record.perspective),
+    caseContext: caseContext(record, areasFor(record.perspective), action, turn && ['message', 'correction'].includes(action) ? text : undefined),
   };
 }
 async function generate(value: ModelInput) {
@@ -24,8 +26,8 @@ async function generate(value: ModelInput) {
 }
 const strong = 'Dental clinics in Porto lose about six hours a week phoning patients. It hurts most on Mondays.';
 function answered(ids: number) {
-  let record = startCase('business');
-  for (let i = 0; i < ids; i++) record = applyAction(record, 'message', strong, { rating: 'strong', quote: 'lose about six hours a week', nextAreaQuestion: 'Next?' }).record;
+  let record = startCase('business', areasFor('business'));
+  for (let i = 0; i < ids; i++) record = applyAction(record, areasFor(record.perspective), 'message', strong, { rating: 'strong', quote: 'lose about six hours a week', nextAreaQuestion: 'Next?' }).record;
   return record;
 }
 
@@ -44,13 +46,13 @@ describe('simulated AI for case prep', () => {
 
   it('uses the next follow-up pattern as the area collects follow-ups', async () => {
     let record = answered(1);
-    record = applyAction(record, 'message', 'Clinics, mostly.', { rating: 'vague' }).record;
+    record = applyAction(record, areasFor(record.perspective), 'message', 'Clinics, mostly.', { rating: 'vague' }).record;
     const output = await generate(input(record, 'message', 'Busy ones.'));
     expect(output.casePrep!.followUpQuestion).toBe('You said “Busy ones”. Can you tell me who signs off on the purchase?');
   });
 
   it('rates a specific answer strong and quotes its first sentence verbatim', async () => {
-    const output = await generate(input(startCase('business'), 'message', strong));
+    const output = await generate(input(startCase('business', areasFor('business')), 'message', strong));
     expect(output.casePrep).toMatchObject({ rating: 'strong', quote: 'Dental clinics in Porto lose about six hours a week phoning patients.', nextAreaQuestion: 'Who exactly feels this problem most, and would pay to make it go away first?' });
   });
 
@@ -66,14 +68,14 @@ describe('simulated AI for case prep', () => {
   });
 
   it('asks philosophy areas from their own catalogue', async () => {
-    const output = await generate(input(startCase('philosophy'), 'message', 'Maybe I should move.'));
+    const output = await generate(input(startCase('philosophy', areasFor('philosophy')), 'message', 'Maybe I should move.'));
     expect(output.casePrep).toMatchObject({ rating: 'vague', nextAreaQuestion: 'What matters most to you in this choice, if you could protect only one thing?' });
     expect(output.casePrep!.followUpQuestion).toBe('You said “Maybe I should move”. Can you state the choice in one sentence?');
   });
 
   it('writes template assessment prose from the scores and the supplied evidence', async () => {
     let record = answered(2);
-    record = applyAction(record, 'skip', 'I don’t know yet', {}).record;
+    record = applyAction(record, areasFor(record.perspective), 'skip', 'I don’t know yet', {}).record;
     const value = input(record, 'assessment', '', 'Clinics pay for a reminder service');
     const prose = (await generate(value)).assessment!;
     expect(prose.statement).toBe('Clinics pay for a reminder service');
@@ -93,7 +95,7 @@ describe('simulated AI for case prep', () => {
 });
 
 it('keeps a subscription business idea in discovery unless pricing is the decision for the general prompt', () => {
-  const value = (title: string): ModelInput => { const base = input(startCase('business'), 'message', 'A subscription voice AI assistant for dentists'); return { ...base, session: { ...base.session, title } }; };
+  const value = (title: string): ModelInput => { const base = input(startCase('business', areasFor('business')), 'message', 'A subscription voice AI assistant for dentists'); return { ...base, session: { ...base.session, title } }; };
   expect(decisionFocus(value('Business idea'))).toBe('business');
   expect(decisionFocus(value('Pricing decision'))).toBe('pricing');
 });

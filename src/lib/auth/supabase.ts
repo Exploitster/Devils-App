@@ -25,7 +25,7 @@ export class SupabaseAuth implements AuthService {
     if(created.error)throw new AppError('STORE_UNAVAILABLE','Your account could not be prepared. Please try again.',503);
   }
   const name=user.user_metadata?.display_name??user.user_metadata?.full_name;
-  return {id:user.id,email:user.email??'',...(typeof name==='string'?{name:name.slice(0,80)}:{}),onboarded:user.user_metadata?.devils_onboarded===true};
+  return {id:user.id,email:user.email??'',emailConfirmed:!!user.email_confirmed_at,...(typeof name==='string'?{name:name.slice(0,80)}:{}),onboarded:user.user_metadata?.devils_onboarded===true};
  }
  async authenticate(input:AccountAuthRequest,_request:Request):Promise<Response> {
   void _request;

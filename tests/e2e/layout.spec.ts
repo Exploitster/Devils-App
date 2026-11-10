@@ -66,6 +66,31 @@ for (const theme of themes) {
     });
   }
 
+  test(`the owner's Studio fits every width (${theme})`, async ({ page }) => {
+    test.setTimeout(120000);
+    await useTheme(page, theme);
+    await page.goto('/login');
+    await page.getByLabel('Email address').fill('sam@example.test');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page).toHaveURL(/\/home/);
+    // One item, so the list and the review panel are on screen too.
+    await page.evaluate(async () => {
+      const response = await fetch('/api/studio/items', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'text', title: 'A long note title that has to wrap on a narrow phone screen', text: 'Ask what one support ticket costs before agreeing on a price.' }) });
+      if (!response.ok) throw new Error(`create failed: ${response.status}`);
+    });
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/studio');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await page.getByRole('list', { name: 'Library items' }).getByRole('button').first().click();
+      await expect(page.getByRole('region', { name: 'Review' }).getByLabel('Text', { exact: true })).toBeVisible();
+      await checkScreen(page, '/studio library', width);
+      await page.getByRole('tab', { name: 'Question sets', exact: true }).click();
+      await expect(page.getByRole('group', { name: /^Area 1: / })).toBeVisible();
+      await checkScreen(page, '/studio question sets', width);
+    }
+  });
+
   test(`signed-in screens fit every width (${theme})`, async ({ page }) => {
     test.setTimeout(240000);
     await useTheme(page, theme);

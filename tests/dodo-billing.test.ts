@@ -33,7 +33,7 @@ async function setup() {
     store.close();
     rmSync(dir, { recursive: true, force: true });
   });
-  const user = { id: "alex", email: "alex@example.test" };
+  const user = { id: "alex", email: "alex@example.test", emailConfirmed: true };
   await store.putProfile({
     ...user,
     disabled: false,

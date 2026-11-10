@@ -17,7 +17,7 @@ export async function deleteAccount(userId:string,{store,cancelRenewal,deleteIde
 }
 export const privacyDisclosure={
  storage:'Conversations, messages, summaries, cards and usage are stored with access controls. They are not end-to-end encrypted.',
- model:'Bounded conversation context and selected evidence are sent to the model provider. Provider routing, retention and training policies depend on the configured AI service and account.',
+ model:'Bounded conversation context, selected evidence and private guidance from the app’s owner are sent to the model provider. Provider routing, retention and training policies depend on the configured AI service and account.',
  retention:'Private conversations remain until you delete them. Shared public evidence is retained. Provider billing records, pseudonymous billing links and aggregate provider-attempt spend remain for accounting and abuse controls. Backups may retain deleted data until their retention window expires; no immediate backup erasure is promised.',
  deletion:'Deleting a conversation removes its saved messages, cards, summary, operations and usage. Account deletion disables access and pending writes, stops renewal, removes private content and the authentication identity. Service failures leave closure pending and retryable. No payment is required to request deletion. Unresolved checkouts or provider failures can keep closure pending until future charges can be ruled out.',
 } as const;

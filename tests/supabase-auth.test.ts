@@ -2,8 +2,8 @@ import { expect, it, vi } from 'vitest';
 import { SupabaseAuth, type SupabaseContext } from '../src/lib/auth/supabase';
 import { AccountAuthSchema } from '../src/lib/contracts';
 import { readConfig } from '../src/lib/config';
-function setup(existing: unknown = null, google = true) {
-  const user = { id: 'verified-provider-id', email: 'verified@example.test', user_metadata: { id: 'forged-metadata-id', display_name: 'Alex', devils_onboarded: true } };
+function setup(existing: unknown = null, google = true, emailConfirmedAt: string | null = null) {
+  const user = { id: 'verified-provider-id', email: 'verified@example.test', email_confirmed_at: emailConfirmedAt, user_metadata: { id: 'forged-metadata-id', display_name: 'Alex', devils_onboarded: true } };
   const upsert = vi.fn().mockResolvedValue({ error: null });
   const getUser = vi.fn().mockResolvedValue({ data: { user }, error: null });
   const signUp = vi.fn().mockResolvedValue({ data: { session: null }, error: null });
@@ -21,7 +21,8 @@ function setup(existing: unknown = null, google = true) {
 }
 it('bootstraps only the verified identity with an insert that cannot overwrite disabled profiles', async () => {
   const { auth, upsert } = setup();
-  expect(await auth.getIdentity()).toMatchObject({ id: 'verified-provider-id', email: 'verified@example.test', name: 'Alex', onboarded: true });
+  expect(await auth.getIdentity()).toMatchObject({ id: 'verified-provider-id', email: 'verified@example.test', name: 'Alex', onboarded: true, emailConfirmed: false });
+  expect(await setup(null, true, '2026-10-14T09:00:00Z').auth.getIdentity()).toMatchObject({ emailConfirmed: true });
   expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'verified-provider-id', data: expect.objectContaining({ id: 'verified-provider-id', disabled: false }) }), { onConflict: 'user_id', ignoreDuplicates: true });
   const disabled = setup({ data: { disabled: true, deletionState: 'pending' } });
   await disabled.auth.getIdentity(); expect(disabled.upsert).not.toHaveBeenCalled();

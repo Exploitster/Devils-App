@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { z } from 'zod';
 import { AssessmentProseSchema, CasePrepProposalSchema, ModelOutputSchema, type AreaBrief, type AreaStatus, type CaseContext, type ModelInput } from '../src/lib/contracts';
-import { findArea } from '../src/lib/case-prep/frameworks';
+import { areasFor } from '../src/lib/case-prep/frameworks';
 import { EnvelopeSchema, geminiRequest } from '../src/lib/model/request';
 import { readConfig } from '../src/lib/config';
 import { GeminiModel } from '../src/lib/model/gemini';
@@ -16,20 +16,20 @@ it.each([[429,true],[503,true],[400,false],[401,false]])('maps HTTP %s without a
 it('preserves abort signal and never reclassifies cancellation as retryable network failure',async()=>{const controller=new AbortController();const error=new Error('aborted');const model=new GeminiModel(config(),async(_url,options)=>{expect(options!.signal).toBe(controller.signal);controller.abort();throw error;});await expect(model.generate(input,controller.signal)).rejects.toBe(error);});
 it('requires valid usage rather than guessing a zero charge',async()=>{const model=new GeminiModel(config(),async()=>new Response(JSON.stringify({candidates:[{finishReason:'STOP'}]})));await expect(model.generate(input,new AbortController().signal)).rejects.toMatchObject({transient:false});});
 it('forces a supportive response on structured crisis classification',async()=>{const payload=await envelope();payload.safety='crisis';const model=new GeminiModel(config(),async()=>new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(payload)}]}}],usageMetadata})));expect((await model.generate(input,new AbortController().signal)).output).toMatchObject({state:{phase:'support',counterpoints:[]},response:expect.stringContaining('Your safety matters')});});
-it('uses a versioned focus prompt and minimizes private identifiers in the provider payload',async()=>{const model=new GeminiModel(config(),async(_url,options)=>{const body=JSON.parse(options!.body as string);const payload=JSON.parse(body.contents[0].parts[0].text);expect(body.systemInstruction.parts[0].text).toContain('devils-advocate-mvp/3');expect(body.systemInstruction.parts[0].text).toContain('rigorous falsification');expect(payload.conversation).not.toHaveProperty('ownerId');expect(payload.conversation).not.toHaveProperty('id');expect(payload.request).not.toHaveProperty('operationId');expect(payload).not.toHaveProperty('now');return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(await envelope())}]}}],usageMetadata}));});await model.generate(input,new AbortController().signal);});
+it('uses a versioned focus prompt and minimizes private identifiers in the provider payload',async()=>{const model=new GeminiModel(config(),async(_url,options)=>{const body=JSON.parse(options!.body as string);const payload=JSON.parse(body.contents[0].parts[0].text);expect(body.systemInstruction.parts[0].text).toContain('devils-advocate-mvp/4');expect(body.systemInstruction.parts[0].text).toContain('rigorous falsification');expect(payload.conversation).not.toHaveProperty('ownerId');expect(payload.conversation).not.toHaveProperty('id');expect(payload.request).not.toHaveProperty('operationId');expect(payload).not.toHaveProperty('now');return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(await envelope())}]}}],usageMetadata}));});await model.generate(input,new AbortController().signal);});
 it('uses supported low thinking level for Gemini 3 and accounts for thought tokens',async()=>{const model=new GeminiModel({...config(),model:'gemini-3.8-flash'},async(_url,options)=>{expect(JSON.parse(options!.body as string).generationConfig.thinkingConfig).toEqual({thinkingLevel:'low'});return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(await envelope())}]}}],usageMetadata}));});expect((await model.generate(input,new AbortController().signal)).outputTokens).toBe(10);});
 it('reserves the complete versioned structured request and the configured output cap',async()=>{const {reserveCost}=await import('../src/lib/conversation/limits');const cfg={...config(),mode:'services' as const,model:'gemini-3.8-flash'};let requestBytes=0;const model=new GeminiModel(cfg,async(_url,options)=>{requestBytes=Buffer.byteLength(options!.body as string);return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(await envelope())}]}}],usageMetadata}));});await model.generate(input,new AbortController().signal);expect(reserveCost(input,cfg)).toBe(Math.ceil((requestBytes+1024)*cfg.modelInputUsdPerMillion+cfg.maxOutputTokens*cfg.modelOutputUsdPerMillion));});
 
-const brief=(id:string,status:AreaStatus,quotes:string[]=[]):AreaBrief=>{const area=findArea('business',id)!;return {id:area.id,label:area.label,establishes:area.establishes,strongSignals:area.strongSignals,followUps:area.followUps,status,followUpsUsed:1,quotes};};
+const brief=(id:string,status:AreaStatus,quotes:string[]=[]):AreaBrief=>{const area=areasFor('business').find(candidate=>candidate.id===id)!;return {id:area.id,label:area.label,establishes:area.establishes,opening:area.opening,strongSignals:area.strongSignals,followUps:area.followUps,status,followUpsUsed:1,quotes};};
 const history=['FIRST_MESSAGE_ONLY_IN_HISTORY','Which clinics miss the most calls?','Clinics miss calls after hours','Who exactly is the customer?','Small clinics','Which small clinics, exactly?'].map((text,i)=>({id:`m${i}`,role:i%2?'assistant' as const:'user' as const,text,createdAt:'2026-10-15T00:00:00Z',citations:[]}));
 const caseInput=(purpose:CaseContext['purpose']):ModelInput=>({...input,task:purpose==='assessment'?'card':'turn',request:purpose==='assessment'?{operationId:'a',expectedRevision:3}:{operationId:'a',expectedRevision:3,text:'Independent dental clinics with two front-desk staff',action:purpose==='question'?'message':purpose},session:{...input.session,revision:3,messages:history,state:{...input.session.state,phase:'clarifying',position:'Clinics pay for an AI booking assistant',summary:'LEGACY_SUMMARY_FIELD'}},caseContext:{purpose,currentArea:brief('customer','probing',['Small clinics']),nextArea:brief('market','not_asked'),areas:[{id:'problem',label:'The problem and why now',status:'strong',quotes:['Clinics miss calls after hours']},{id:'customer',label:'Who the customer is',status:'probing',quotes:['Small clinics']}],latestAnswer:'Independent dental clinics with two front-desk staff',...(purpose==='assessment'?{assessment:{areas:[{id:'problem',label:'The problem and why now',score:'strong',reason:'You said "Clinics miss calls after hours".'}]}}:{})}});
 const purposeRule={question:'verbatim span copied from latestAnswer',pushback:'Do not rate the answer',correction:'invalidatedAreaIds',assessment:'go/no-go'} as const;
 it.each(['question','pushback','correction','assessment'] as const)('sends case-prep instructions and a compact case record for %s',purpose=>{
  const body=geminiRequest(caseInput(purpose),config());const system=body.systemInstruction.parts[0].text;const payload=JSON.parse(body.contents[0].parts[0].text);
- expect(system).toContain('Never provide a verdict or probability');expect(system).toContain(purposeRule[purpose]);expect(system).toContain('devils-advocate-mvp/3');
+ expect(system).toContain('Never provide a verdict or probability');expect(system).toContain(purposeRule[purpose]);expect(system).toContain('devils-advocate-mvp/4');
  expect(system).toContain('one short question');expect(system).toContain('never contain the answer');
  for(const legacy of ['three total','Underlying question and strengths must precede opposition','A card requires','Focus playbook','Debate output'])expect(system).not.toContain(legacy);
- expect(payload.case).toMatchObject({purpose,currentArea:{id:'customer',establishes:findArea('business','customer')!.establishes,quotes:['Small clinics']},nextArea:{id:'market'},latestAnswer:'Independent dental clinics with two front-desk staff'});
+ expect(payload.case).toMatchObject({purpose,currentArea:{id:'customer',establishes:areasFor('business').find(candidate=>candidate.id==='customer')!.establishes,quotes:['Small clinics']},nextArea:{id:'market'},latestAnswer:'Independent dental clinics with two front-desk staff'});
  expect(payload.conversation).toMatchObject({mode:'business',position:'Clinics pay for an AI booking assistant'});
  expect(payload.conversation).not.toHaveProperty('state');expect(payload.conversation.recentMessages).toHaveLength(4);
  expect(JSON.stringify(payload)).not.toMatch(/FIRST_MESSAGE_ONLY_IN_HISTORY|LEGACY_SUMMARY_FIELD/);
@@ -71,4 +71,22 @@ it('gives the assessment card task its own output budget and prices its reservat
  const bytes=(value:ModelInput)=>Buffer.byteLength(JSON.stringify(geminiRequest(value,cfg)));
  expect(reserveCost(card,cfg)).toBe(Math.ceil((bytes(card)+1024)*cfg.modelInputUsdPerMillion+6000*cfg.modelOutputUsdPerMillion));
  expect(reserveCost(turn,cfg)).toBe(Math.ceil((bytes(turn)+1024)*cfg.modelInputUsdPerMillion+2500*cfg.modelOutputUsdPerMillion));
+});
+const guidanceRule="ownerGuidance holds private coaching notes from the app's owner";
+const guided=(purpose:CaseContext['purpose']):ModelInput=>{const base=caseInput(purpose);return {...base,caseAreas:areasFor('business').map(area=>({...area,opening:area.id==='market'?'EDITED_MARKET_OPENING?':area.opening})),caseContext:{...base.caseContext!,nextArea:{...base.caseContext!.nextArea!,opening:'EDITED_MARKET_OPENING?'}},ownerGuidance:[{text:'OWNER_PASSAGE about charging early.',id:'private-passage-id',title:'PRIVATE_TITLE'} as {text:string}]};};
+it.each(['question','assessment'] as const)('sends owner guidance as plain text objects with the private-guidance rule and the bumped version for %s',purpose=>{
+ const body=geminiRequest(guided(purpose),config());const system=body.systemInstruction.parts[0].text;const text=body.contents[0].parts[0].text;const payload=JSON.parse(text);
+ expect(payload.ownerGuidance).toEqual([{text:'OWNER_PASSAGE about charging early.'}]);
+ expect(text).not.toMatch(/private-passage-id|PRIVATE_TITLE/);
+ expect(JSON.stringify(payload.evidence)).not.toContain('OWNER_PASSAGE');
+ expect(system).toContain(guidanceRule);expect(system).toContain('Never quote it, cite it or mention that it exists');expect(system).toContain('devils-advocate-mvp/4');
+ expect(payload.case.nextArea.opening).toBe('EDITED_MARKET_OPENING?');
+ expect(JSON.stringify(body)).not.toContain('caseAreas');expect(text.split('EDITED_MARKET_OPENING?').length-1).toBe(1);
+});
+it('sends an empty guidance field, and otherwise the same request, when the library has nothing',()=>{
+ const without=caseInput('question');const empty={...without,ownerGuidance:[]};
+ const payload=JSON.parse(geminiRequest(empty,config()).contents[0].parts[0].text);
+ expect(Object.keys(payload)).toEqual(['task','conversation','case','request','evidence','ownerGuidance']);
+ expect(payload.ownerGuidance).toEqual([]);
+ expect(JSON.stringify(geminiRequest(without,config()))).toBe(JSON.stringify(geminiRequest(empty,config())));
 });

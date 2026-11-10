@@ -21,10 +21,11 @@ export type AreaStatus = z.infer<typeof AreaStatusSchema>;
 export const CaseAreaRecordSchema = z.object({ id: IdSchema, status: AreaStatusSchema, followUps: z.number().int().min(0).max(3), quotes: z.array(z.string().min(1).max(500)).max(3) }).strict();
 export type CaseAreaRecord = z.infer<typeof CaseAreaRecordSchema>;
 export const AssessmentScoreSchema = z.enum(['strong', 'weak', 'untested', 'not_covered']);
-export const AssessmentAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), score: AssessmentScoreSchema, reason: z.string().min(1).max(1000), nextStep: z.string().max(1000).optional() }).strict();
+export const AssessmentAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), score: AssessmentScoreSchema, reason: z.string().min(1).max(1000), nextStep: z.string().max(2100).optional() }).strict();
 export const AssessmentSchema = z.object({ id: IdSchema, createdAt: z.string().datetime(), complete: z.boolean(), statement: TextSchema, areas: z.array(AssessmentAreaSchema).min(1).max(12), good: z.array(TextSchema).max(5), bad: z.array(TextSchema).max(5), mustBeTrue: z.array(TextSchema).max(5), loopholes: z.array(CounterpointSchema).max(3), closing: z.literal('Your call. Always.') }).strict();
 export type Assessment = z.infer<typeof AssessmentSchema>;
-export const CasePrepSchema = z.object({ perspective: ModeSchema, areas: z.array(CaseAreaRecordSchema).min(1).max(12), currentAreaId: IdSchema.nullable(), complete: z.boolean(), qualifiedNoticeShown: z.boolean(), assessment: AssessmentSchema.optional(), completedAt: z.string().datetime().optional() }).strict();
+/** `frameworkVersion` is the question-set version the case started on; absent means version 0, the built-in set. */
+export const CasePrepSchema = z.object({ perspective: ModeSchema, frameworkVersion: z.number().int().nonnegative().optional(), areas: z.array(CaseAreaRecordSchema).min(1).max(12), currentAreaId: IdSchema.nullable(), complete: z.boolean(), qualifiedNoticeShown: z.boolean(), assessment: AssessmentSchema.optional(), completedAt: z.string().datetime().optional() }).strict();
 export type CasePrep = z.infer<typeof CasePrepSchema>;
 export const SessionStateSchema = z.object({ phase: z.enum(['description', 'clarifying', 'debate', 'card', 'support']), position: z.string().max(12000), underlyingQuestion: z.string().max(3000), clarifications: z.array(ClarificationSchema).max(3), strengths: z.array(TextSchema).max(5), counterpoints: z.array(CounterpointSchema).max(3), openQuestions: z.array(TextSchema).max(5), nextStep: z.string().max(3000), usedArgumentIds: z.array(IdSchema).max(200), usedEvidenceIds: z.array(IdSchema).max(200), coverageNote: z.string().max(2000).optional(), summary: z.string().max(6000), casePrep: CasePrepSchema.optional() }).strict();
 export type SessionState = z.infer<typeof SessionStateSchema>;
@@ -68,7 +69,26 @@ export type AssessmentProse = z.infer<typeof AssessmentProseSchema>;
 export const ModelOutputSchema = z.object({ state: SessionStateSchema, response: TextSchema, citations: z.array(CitationSchema).max(9).default([]), card: HandBackCardSchema.optional(), casePrep: CasePrepProposalSchema.optional(), assessment: AssessmentProseSchema.optional() }).strict();
 export type ModelOutput = z.infer<typeof ModelOutputSchema>;
 
-export interface Identity { id: string; email: string; name?: string; onboarded?: boolean; }
+export const KnowledgeKindSchema = z.enum(['text', 'pdf', 'audio']);
+export type KnowledgeKind = z.infer<typeof KnowledgeKindSchema>;
+export const KnowledgeStatusSchema = z.enum(['uploading', 'processing', 'review', 'approved', 'rejected', 'failed']);
+export type KnowledgeStatus = z.infer<typeof KnowledgeStatusSchema>;
+export const KnowledgeItemSchema = z.object({ id: IdSchema, kind: KnowledgeKindSchema, status: KnowledgeStatusSchema, title: z.string().min(1).max(200), text: z.string().max(1000000), mimeType: z.string().min(1).max(100), fileName: z.string().min(1).max(255).optional(), sizeBytes: z.number().int().nonnegative(), failureReason: z.string().max(500).optional(), processingStartedAt: z.string().datetime().optional(), createdAt: z.string().datetime(), updatedAt: z.string().datetime() }).strict();
+export type KnowledgeItem = z.infer<typeof KnowledgeItemSchema>;
+export type KnowledgeItemSummary = Omit<KnowledgeItem, 'text'>;
+export const STATUS_ACTIONS = ['approve', 'reject', 'withdraw', 'reopen'] as const;
+export type StatusAction = typeof STATUS_ACTIONS[number];
+/** Uploads never pass through the app's request body: the browser sends the file straight to this target. */
+export interface UploadTarget { method: 'PUT'; url: string; headers: Record<string, string>; }
+export const KnowledgePassageSchema = z.object({ text: z.string().min(1).max(10000) }).strict();
+export type KnowledgePassage = z.infer<typeof KnowledgePassageSchema>;
+export const FrameworkAreaSchema = z.object({ id: IdSchema, label: z.string().min(1).max(200), establishes: z.string().min(1).max(2000), strongSignals: z.array(z.string().min(1).max(500)).max(10), followUps: z.array(z.string().min(1).max(1000)).max(10), opening: z.string().min(1).max(1000) }).strict();
+export type FrameworkArea = z.infer<typeof FrameworkAreaSchema>;
+export const FrameworkVersionSchema = z.object({ mode: ModeSchema, version: z.number().int().positive(), areas: z.array(FrameworkAreaSchema).min(1).max(12), note: z.string().max(500).optional(), createdAt: z.string().datetime() }).strict();
+export type FrameworkVersion = z.infer<typeof FrameworkVersionSchema>;
+export type FrameworkVersionSummary = Omit<FrameworkVersion, 'areas'>;
+
+export interface Identity { id: string; email: string; emailConfirmed: boolean; name?: string; onboarded?: boolean; }
 export interface UserProfile { id: string; email: string; disabled: boolean; deletionState: 'none' | 'pending' | 'complete'; createdAt: string; name?: string; onboarded?: boolean; }
 export interface Invite { userId: string; expiresAt: string; enabled: boolean; }
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
@@ -114,7 +134,7 @@ export interface Store {
 export interface AuthService { authenticate(input: AccountAuthRequest, request: Request): Promise<Response>; getIdentity(request: Request): Promise<Identity | null>; signIn(email: string, request: Request): Promise<Response>; signOut(request: Request): Promise<Response>; deleteIdentity(userId: string): Promise<void>; }
 export interface Clock { now(): Date; }
 export interface EvidenceService { retrieve(input: { mode: Mode; query: string; excludeIds: string[]; limit: number }): Promise<Evidence[]>; get(id: string): Promise<Evidence | null>; validate(output: ModelOutput, retrieved: Evidence[]): Promise<ModelOutput>; }
-export interface AreaBrief { id: string; label: string; establishes: string; strongSignals: string[]; followUps: string[]; status: AreaStatus; followUpsUsed: number; quotes: string[]; }
+export interface AreaBrief { id: string; label: string; establishes: string; opening: string; strongSignals: string[]; followUps: string[]; status: AreaStatus; followUpsUsed: number; quotes: string[]; }
 export interface CaseContext {
   purpose: 'question' | 'pushback' | 'correction' | 'assessment';
   currentArea: AreaBrief | null;
@@ -123,7 +143,7 @@ export interface CaseContext {
   latestAnswer?: string;
   assessment?: { areas: { id: string; label: string; score: z.infer<typeof AssessmentScoreSchema>; reason: string }[] };
 }
-export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; }
+export interface ModelInput { session: Session; request: TurnRequest | z.infer<typeof CardRequestSchema>; task: 'turn' | 'card'; evidence: Evidence[]; now: string; caseContext?: CaseContext; caseAreas?: FrameworkArea[]; ownerGuidance?: KnowledgePassage[]; }
 export interface ModelResult { output: unknown; inputTokens: number; outputTokens: number; costMicros: number; costKnown?: boolean; }
 export interface ModelService { generate(input: ModelInput, signal: AbortSignal): Promise<ModelResult>; }
 export interface BillingService { checkout(user: Identity, plan: 'monthly' | 'yearly'): Promise<{ url: string }>; portal(user: Identity): Promise<{ url: string }>; processWebhook(rawBody: string, signature: string): Promise<void>; cancelRenewal(userId: string): Promise<void>; }

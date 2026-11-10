@@ -1,18 +1,13 @@
-import type { Mode } from '../contracts';
+import { z } from 'zod';
+import { IdSchema, type FrameworkArea, type Mode } from '../contracts';
+import { MAX_AREAS, MAX_LINES } from '../limits';
+import { AppError } from '../errors';
 
 /**
- * One case-prep area: what a guiding question must help the person establish.
- * Kept as plain data so an owner-facing editor can manage it later.
+ * One case-prep area: what a guiding question must help the person establish. `strongSignals`
+ * are what a strong answer shows; questions must never hand these over as answers.
  */
-export interface CaseArea {
-  id: string;
-  label: string;
-  establishes: string;
-  /** What a strong answer shows. Questions must never hand these over as answers. */
-  strongSignals: string[];
-  followUps: string[];
-  opening: string;
-}
+export type CaseArea = FrameworkArea;
 
 const business: CaseArea[] = [
   {
@@ -148,12 +143,71 @@ const philosophy: CaseArea[] = [
   },
 ];
 
+/** The built-in question sets: version 0 of each mode, which is never stored. */
 export const caseAreas: Record<Mode, CaseArea[]> = { business, philosophy };
 
 export function areasFor(mode: Mode): CaseArea[] {
   return caseAreas[mode];
 }
 
-export function findArea(mode: Mode, id: string): CaseArea | undefined {
-  return caseAreas[mode].find(area => area.id === id);
+const lines = (max: number, length: number) => z.array(z.string().trim().max(length)).max(max).transform(list => list.filter(Boolean));
+/**
+ * One area as the owner edits it. A kept area sends back its id; a new area has none and is
+ * given one from its name, so a case record's area ids stay readable against later versions.
+ */
+export const CaseAreaSchema = z.object({
+  id: IdSchema.optional(),
+  label: z.string().trim().max(200),
+  establishes: z.string().trim().max(2000),
+  opening: z.string().trim().max(1000),
+  followUps: lines(MAX_LINES, 1000),
+  strongSignals: lines(MAX_LINES, 500),
+}).strict();
+// Generous enough that an over-long set reaches the area-count rule with its own message.
+const QuestionSetInputSchema = z.array(z.unknown()).max(100);
+
+const fieldNames: Record<string, string> = {
+  label: 'give the area a name', establishes: 'fill in what the area must establish', opening: 'write an opening question',
+  followUps: 'keep the follow-ups to at most 10, each under 1,000 characters', strongSignals: 'keep the signs of a strong answer to at most 10, each under 500 characters', id: 'keep the area id it was given',
+};
+const fieldLimits: Record<string, string> = { label: 'keep the name under 200 characters', establishes: 'keep what the area must establish under 2,000 characters', opening: 'keep the opening question under 1,000 characters' };
+
+export function parseQuestionSet(input: unknown): CaseArea[] {
+  const list = QuestionSetInputSchema.safeParse(input);
+  const count = Array.isArray(input) ? input.length : 0;
+  if (!list.success || count < 1 || count > MAX_AREAS) throw invalid(`A question set needs between 1 and ${MAX_AREAS} areas; this one has ${count}.`);
+  const areas = list.data.map((raw, index) => {
+    const label = (raw as { label?: unknown } | null)?.label;
+    const name = typeof label === 'string' && label.trim() ? `“${label.trim()}”` : `Area ${index + 1}`;
+    const parsed = CaseAreaSchema.safeParse(raw);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]; const field = String(issue.path[0] ?? '');
+      throw invalid(`${name}: ${issue.code === 'too_big' ? fieldLimits[field] ?? fieldNames[field] ?? 'check its fields' : fieldNames[field] ?? 'check its fields'}.`);
+    }
+    const area = parsed.data;
+    if (!area.label) throw invalid(`${name}: give the area a name.`);
+    if (!area.establishes) throw invalid(`${name}: fill in what the area must establish.`);
+    if (!area.opening.endsWith('?') || area.opening.split('?').length !== 2) throw invalid(`${name}: the opening must be one question ending in “?”.`);
+    if (area.followUps.length === 0) throw invalid(`${name}: add at least one follow-up.`);
+    if (area.strongSignals.length === 0) throw invalid(`${name}: add at least one sign of a strong answer.`);
+    return { area, name };
+  });
+  const names = new Set<string>(); const ids = new Set<string>();
+  for (const { area, name } of areas) {
+    const key = area.label.toLowerCase().replace(/\s+/g, ' ');
+    if (names.has(key)) throw invalid(`${name}: another area already has this name.`);
+    names.add(key);
+    if (area.id !== undefined) { if (ids.has(area.id)) throw invalid(`${name}: another area already has this id.`); ids.add(area.id); }
+  }
+  return areas.map(({ area }) => {
+    let id = area.id;
+    if (id === undefined) { const base = slug(area.label); id = base; for (let n = 2; ids.has(id); n++) id = `${base}-${n}`; ids.add(id); }
+    return { id, label: area.label, establishes: area.establishes, strongSignals: area.strongSignals, followUps: area.followUps, opening: area.opening };
+  });
 }
+
+function slug(label: string): string {
+  return label.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48).replace(/^-+|-+$/g, '') || 'area';
+}
+
+function invalid(message: string): AppError { return new AppError('INVALID_QUESTION_SET', message, 400); }

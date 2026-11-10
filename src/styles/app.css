@@ -2715,3 +2715,208 @@ p {
     white-space: nowrap;
   }
 }
+/* Studio: the owner's library and question-set editor. */
+.studio-tabs,
+.studio-mode {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  margin-bottom: var(--space-5);
+}
+.studio-tabs button,
+.studio-mode button {
+  font-size: var(--text-sm);
+  border: 0;
+  background: 0 0;
+  border-radius: 8px;
+  color: var(--muted);
+  padding: var(--space-2) var(--space-4);
+}
+.studio-tabs button[aria-selected="true"],
+.studio-mode button[aria-pressed="true"] {
+  background: var(--background);
+  color: var(--text);
+}
+.studio-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.studio-columns > .panel {
+  margin: 0;
+}
+.studio-add {
+  margin: 0 0 var(--space-5);
+}
+.studio-history {
+  position: sticky;
+  top: var(--space-6);
+}
+.studio-sets {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.studio-add label,
+.studio-review label,
+.studio-area label,
+.studio-publish label {
+  margin-top: var(--space-4);
+}
+.studio-add > button {
+  margin-top: var(--space-5);
+}
+.studio-announcement:empty {
+  display: none;
+}
+.studio-step {
+  margin: var(--space-3) 0 0;
+}
+.studio-list ul,
+.studio-history ol,
+.studio-lines ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.studio-list li + li {
+  margin-top: var(--space-2);
+}
+.studio-item {
+  width: 100%;
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  justify-content: stretch;
+  text-align: left;
+  border-radius: var(--radius-md);
+}
+.studio-item[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.studio-item-title {
+  overflow-wrap: anywhere;
+}
+.studio-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+.studio-item-detail {
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.studio-badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border-radius: 30px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--surface-soft);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.studio-badge.status-approved {
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-color: transparent;
+}
+.studio-badge.status-review {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.studio-badge.status-failed {
+  color: var(--danger);
+}
+.studio-history .studio-badge {
+  margin-left: var(--space-2);
+}
+.studio-review h2 {
+  overflow-wrap: anywhere;
+  margin-bottom: var(--space-1);
+}
+.studio-review-meta {
+  overflow-wrap: anywhere;
+}
+.studio-editor-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.studio-area {
+  margin: 0 0 var(--space-5);
+  min-width: 0;
+}
+/* Floated, the legend sits inside the card rather than on its border. */
+.studio-area legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: 650;
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+.studio-area legend + * {
+  clear: both;
+}
+.studio-lines h3 {
+  font-size: var(--text-sm);
+  margin: var(--space-5) 0 var(--space-2);
+}
+.studio-lines li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.studio-lines li input {
+  flex: 1 1 260px;
+}
+.studio-line-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+.studio-area-actions {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+.studio-publish {
+  margin: var(--space-5) 0 0;
+}
+.studio-publish button {
+  margin-top: var(--space-4);
+}
+.studio-history li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+.studio-history li p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.studio-history li .fine {
+  font-size: var(--text-xs);
+}
+@media (max-width: 1100px) {
+  .studio-columns,
+  .studio-sets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio-history {
+    position: static;
+  }
+}

@@ -76,4 +76,59 @@ DO $$ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;END;
 END $$;
 RESET ROLE;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM storage.buckets WHERE id='owner-knowledge' AND NOT public AND file_size_limit=52428800) THEN RAISE EXCEPTION 'Private knowledge bucket missing'; END IF;
+END $$;
+SET ROLE service_role;
+DO $$ DECLARE live jsonb; item jsonb; found jsonb; BEGIN
+ PERFORM public.knowledge_operation('createItem','{"id":"sql-approved","kind":"text","status":"review","title":"Pricing notes","text":"Monthly subscription pricing works.","mimeType":"text/plain","sizeBytes":35,"createdAt":"2026-11-09T10:00:00Z","updatedAt":"2026-11-09T10:00:00Z"}');
+ PERFORM public.knowledge_operation('createItem','{"id":"sql-pending","kind":"text","status":"review","title":"Draft","text":"Pending subscription pricing.","mimeType":"text/plain","sizeBytes":29,"createdAt":"2026-11-09T10:00:00Z","updatedAt":"2026-11-09T10:00:00Z"}');
+ item:=public.knowledge_operation('approveItem','{"id":"sql-approved","passages":["Monthly subscription pricing works."],"now":"2026-11-09T10:01:00Z"}');
+ IF item->>'status' <> 'approved' THEN RAISE EXCEPTION 'Approval did not change status'; END IF;
+ -- Answer words are ORed: one shared word is enough, and a pending item never matches.
+ found:=public.knowledge_operation('search','{"match":"charge ten dollars month subscription","rank":"money","limit":3}');
+ IF found <> '[{"text":"Monthly subscription pricing works."}]'::jsonb THEN RAISE EXCEPTION 'OR search returned %', found; END IF;
+ IF public.knowledge_operation('search','{"match":"nothing relevant","rank":"pricing","limit":3}') <> '[]'::jsonb THEN RAISE EXCEPTION 'Ranking words alone matched'; END IF;
+ BEGIN
+  PERFORM public.knowledge_operation('updateItem','{"id":"sql-approved","patch":{"text":"Changed"},"now":"2026-11-09T10:02:00Z"}');
+  RAISE EXCEPTION 'Approved item changed in place';
+ EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'INVALID_STATUS' THEN RAISE; END IF; END;
+ PERFORM public.knowledge_operation('withdrawItem','{"id":"sql-approved","now":"2026-11-09T10:03:00Z"}');
+ IF public.knowledge_operation('search','{"match":"subscription","limit":3}') <> '[]'::jsonb THEN RAISE EXCEPTION 'Withdrawn passage still searchable'; END IF;
+ PERFORM public.knowledge_operation('deleteItem','{"id":"sql-approved"}');
+ IF public.knowledge_operation('getItem','{"id":"sql-approved"}') IS NOT NULL OR EXISTS(SELECT 1 FROM public.knowledge_passages WHERE item_id='sql-approved') THEN RAISE EXCEPTION 'Deleted item remains'; END IF;
+ PERFORM public.knowledge_operation('publishVersion','{"mode":"business","areas":[{"id":"a"}],"note":"First","now":"2026-11-09T10:00:00Z"}');
+ PERFORM public.knowledge_operation('publishVersion','{"mode":"business","areas":[{"id":"b"}],"now":"2026-11-09T11:00:00Z"}');
+ live:=public.knowledge_operation('getVersion','{"mode":"business"}');
+ IF (live->>'version')::int <> 2 OR live->'areas' <> '[{"id":"b"}]'::jsonb OR live ? 'note' THEN RAISE EXCEPTION 'Live version is %', live; END IF;
+ IF public.knowledge_operation('getVersion','{"mode":"business","version":1}') <> '{"mode":"business","version":1,"areas":[{"id":"a"}],"note":"First","createdAt":"2026-11-09T10:00:00.000Z"}'::jsonb THEN RAISE EXCEPTION 'Earlier version changed'; END IF;
+ IF public.knowledge_operation('getVersion','{"mode":"philosophy"}') IS NOT NULL THEN RAISE EXCEPTION 'Unpublished mode has a live version'; END IF;
+ IF (SELECT count(*) FROM public.knowledge_items) <> 1 OR (SELECT count(*) FROM public.framework_versions) <> 2 THEN RAISE EXCEPTION 'Service role cannot read knowledge tables'; END IF;
+END $$;
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+DO $$ DECLARE target text; BEGIN
+ FOREACH target IN ARRAY ARRAY['public.knowledge_items','public.knowledge_passages','public.framework_versions'] LOOP
+  BEGIN
+   EXECUTE 'SELECT count(*) FROM ' || target;
+   RAISE EXCEPTION 'Signed-in users can read %', target;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ END LOOP;
+ BEGIN
+  PERFORM public.knowledge_operation('listItems','{}');
+  RAISE EXCEPTION 'Signed-in users can run the knowledge function';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+SET ROLE anon;
+DO $$ BEGIN
+ BEGIN
+  PERFORM count(*) FROM public.knowledge_passages;
+  RAISE EXCEPTION 'Anonymous knowledge access allowed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.knowledge_operation('search','{"match":"pricing","limit":3}');
+  RAISE EXCEPTION 'Anonymous knowledge search allowed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
 ROLLBACK;

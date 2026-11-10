@@ -82,6 +82,27 @@ describe('runtime configuration', () => {
     expect(readConfig({ ...local, DEVILS_MAX_ASSESSMENT_TOKENS: '9000' }).maxAssessmentTokens).toBe(9000);
     for (const value of ['many', '', '6000.5', '99', '16001']) expect(() => readConfig({ ...local, DEVILS_MAX_ASSESSMENT_TOKENS: value })).toThrow('DEVILS_MAX_ASSESSMENT_TOKENS must be an integer between 100 and 16000.');
   });
+  it('reads the owner allowlist as trimmed, lowercased emails and rejects malformed entries', () => {
+    expect(readConfig({ ...local, DEVILS_OWNER_EMAILS: ' Sam@Example.test , ' }).ownerEmails).toEqual(['sam@example.test']);
+    expect(readConfig(local).ownerEmails).toEqual([]);
+    expect(() => readConfig({ ...local, DEVILS_OWNER_EMAILS: 'not-an-email' })).toThrow('DEVILS_OWNER_EMAILS');
+  });
+  it('never puts an owner email in the public configuration', () => {
+    for (const bindings of [{ ...local, DEVILS_OWNER_EMAILS: 'owner@example.test' }, { ...services, DEVILS_OWNER_EMAILS: 'owner@example.test,second@example.test' }]) {
+      const result = JSON.stringify(publicConfig(readConfig(bindings)));
+      expect(result).not.toContain('owner@example.test'); expect(result).not.toContain('second@example.test'); expect(result).not.toContain('example.test');
+    }
+  });
+  it('parses transcription settings without requiring them at startup', () => {
+    expect(readConfig(local)).toMatchObject({ transcriptionApiKey: '', transcriptionModel: 'gemini-3.8-flash', transcriptionInputUsdPerMillion: undefined, transcriptionOutputUsdPerMillion: undefined });
+    const router = readConfig({ ...services, DEVILS_MODEL_PROVIDER: 'openrouter', DEVILS_OPENROUTER_API_KEY: 'router-secret', DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION: '3', DEVILS_TRANSCRIPTION_OUTPUT_USD_PER_MILLION: '2.5' });
+    expect(router).toMatchObject({ transcriptionApiKey: 'provider-secret', transcriptionModel: 'gemini-2.5-flash', transcriptionInputUsdPerMillion: 3, transcriptionOutputUsdPerMillion: 2.5 });
+    expect(readConfig({ ...services, DEVILS_MODEL_PROVIDER: 'gateway', DEVILS_MODEL: 'not-gemini' }).transcriptionModel).toBe('gemini-3.8-flash');
+    expect(readConfig({ ...services, DEVILS_TRANSCRIPTION_MODEL: 'gemini-2.5-pro' }).transcriptionModel).toBe('gemini-2.5-pro');
+    expect(() => readConfig({ ...services, DEVILS_TRANSCRIPTION_MODEL: 'openai/gpt-5.4-mini' })).toThrow('DEVILS_TRANSCRIPTION_MODEL');
+    expect(() => readConfig({ ...local, DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION: 'free' })).toThrow('DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION');
+    expect(JSON.stringify(publicConfig(router))).not.toContain('provider-secret');
+  });
   it('exports a public allowlist without privileged bindings', () => {
     const result = publicConfig(readConfig(local));
     expect(result.runtimeMode).toBe('local');

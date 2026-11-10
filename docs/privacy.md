@@ -2,7 +2,20 @@
 
 Conversations are stored with account access controls. They are not end-to-end encrypted. Messages, summaries, your answers area by area (the case record, with each area's status and rating), the assessment and its scores, loopholes and next steps, and saved citation associations are private account data stored with the conversation. Legacy card versions are private account data too. Shared, reviewed public source records belong to the evidence corpus and survive deletion of a conversation that cited them.
 
-Generation sends bounded conversation context and selected evidence to the configured model provider. The server calls the Gemini API without requesting tools or explicit caching. Retention and training policies depend on the configured Google account and API terms; this app does not establish those policies. Review the actual provider agreement and settings before using sensitive data. Local development uses fake test identities and the local model adapter; it sends no real email or model request.
+Generation sends bounded conversation context, selected evidence and, in case prep, private guidance from the app's owner to the configured model provider. The server calls the Gemini API without requesting tools or explicit caching. Retention and training policies depend on the configured Google account and API terms; this app does not establish those policies. Review the actual provider agreement and settings before using sensitive data. Local development uses fake test identities and the local model adapter; it sends no real email or model request.
+
+## Owner material
+
+The owner adds notes, PDFs and voice recordings in the Studio. This material goes to two places:
+
+- **The transcription provider, at upload.** A recording is sent once to Gemini, with `DEVILS_GEMINI_API_KEY`, to be transcribed. This happens even when chat runs through OpenRouter or AI Gateway. PDF text is extracted on the server, so notes and PDFs go to no AI provider at upload.
+- **The chat provider, on matching turns.** Once the owner approves an item, its passages can go to the configured model provider during any user's case prep. Each turn carries at most three passages, and each assessment at most five, chosen because the person's own answer shares words with them. Nothing in review, rejected or withdrawn is sent.
+
+Users never see owner material. The model is told to use it only to shape questions and judgements, and never to quote it, cite it or mention it. A reply that repeats 12 or more consecutive words of a passage is discarded and written again without guidance. This stops word-for-word recital, not a close paraphrase, so approve material with that in mind. Owner passages never appear in a message's sources or an assessment's citations. The privacy page and the account page's model disclosure tell users that private guidance from the app's owner may be sent to the model provider with their conversation.
+
+Owner material is stored apart from users' conversations: item text and passages in their own tables, and uploaded files in the private `owner-knowledge` storage bucket. Deleting an item removes its passages and its stored file. Logs carry IDs, error codes, durations and costs only, never text, file names or the owner's email.
+
+A later feature may let users connect their own AI account. Anyone who owns the provider account can read every prompt it receives, so the owner will decide then whether guidance is sent to users' own provider accounts. Until then guidance only goes to the app's configured provider.
 
 Saved private conversations remain until the user deletes them. Session deletion removes the session and its embedded messages, case record, assessment, cards, summaries and evidence references, plus turn operations and committed usage. Pending completion cannot recreate a deleted session. Usage totals for deleted conversations disappear; separate provider-attempt spend remains so failures, cancellation and deletion cannot bypass spending limits.
 

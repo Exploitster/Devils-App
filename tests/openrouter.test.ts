@@ -5,7 +5,7 @@ import { createEvidenceService } from '../src/lib/evidence/service';
 import { ConversationEngine } from '../src/lib/conversation/engine';
 import { OpenRouterModel } from '../src/lib/model/openrouter';
 import { decodeRouterOutput, openRouterRequest } from '../src/lib/model/openrouter-request';
-import { findArea } from '../src/lib/case-prep/frameworks';
+import { areasFor } from '../src/lib/case-prep/frameworks';
 import { AssessmentProseSchema, CasePrepProposalSchema, ModelOutputSchema, type CaseContext, type ModelInput } from '../src/lib/contracts';
 import { reserveCost } from '../src/lib/conversation/limits';
 
@@ -116,7 +116,7 @@ it('still rejects unknown sources in a cited clarification', async () => {
 });
 
 function caseInput(base: ModelInput, purpose: CaseContext['purpose']): ModelInput {
-  const brief = (id: string) => { const area = findArea('business', id)!; return { id, label: area.label, establishes: area.establishes, strongSignals: area.strongSignals, followUps: area.followUps, status: 'probing' as const, followUpsUsed: 0, quotes: [] }; };
+  const brief = (id: string) => { const area = areasFor('business').find(candidate => candidate.id === id)!; return { id, label: area.label, establishes: area.establishes, opening: area.opening, strongSignals: area.strongSignals, followUps: area.followUps, status: 'probing' as const, followUpsUsed: 0, quotes: [] }; };
   const card = purpose === 'assessment';
   return { ...base, task: card ? 'card' : 'turn', request: card ? { operationId: 'card', expectedRevision: 0 } : base.request,
     caseContext: { purpose, currentArea: card ? null : brief('customer'), nextArea: card ? null : brief('market'), areas: [{ id: 'customer', label: 'Who the customer is', status: 'probing', quotes: [] }], latestAnswer: 'Database developer tools customers pay because costs fall',
@@ -153,7 +153,7 @@ it('sends case-prep router instructions and gives the assessment its own budget 
   const { input } = await fixture(); const cfg = { ...config(), mode: 'services' as const };
   const card = caseInput(input, 'assessment'); const turn = caseInput(input, 'question');
   const cardRequest = openRouterRequest(card, cfg);
-  expect(cardRequest.messages[0].content).toContain('devils-advocate-openrouter/2');
+  expect(cardRequest.messages[0].content).toContain('devils-advocate-openrouter/3');
   expect(cardRequest.messages[0].content).toContain('output.assessment.loopholes');
   expect(cardRequest.messages[0].content).not.toContain('three total');
   expect(cardRequest.max_tokens).toBe(cfg.maxAssessmentTokens); expect(openRouterRequest(turn, cfg).max_tokens).toBe(cfg.maxOutputTokens);
@@ -161,4 +161,21 @@ it('sends case-prep router instructions and gives the assessment its own budget 
   const bytes = (value: ModelInput) => Buffer.byteLength(JSON.stringify(openRouterRequest(value, cfg)));
   expect(reserveCost(card, cfg)).toBe(Math.ceil((bytes(card) + 1024) * 1 + cfg.maxAssessmentTokens * 5));
   expect(reserveCost(turn, cfg)).toBe(Math.ceil((bytes(turn) + 1024) * 1 + cfg.maxOutputTokens * 5));
+});
+it.each(['question', 'assessment'] as const)('sends owner guidance with the private-guidance rule, the edited opening and the bumped version for %s, never the full question set', async purpose => {
+  const { input } = await fixture(); const base = caseInput(input, purpose);
+  const guided: ModelInput = { ...base, caseAreas: areasFor('business').map(area => ({ ...area, opening: area.id === 'market' ? 'EDITED_MARKET_OPENING?' : area.opening })),
+    caseContext: { ...base.caseContext!, nextArea: { ...areasFor('business').find(area => area.id === 'market')!, opening: 'EDITED_MARKET_OPENING?', status: 'not_asked', followUpsUsed: 0, quotes: [] } },
+    ownerGuidance: [{ text: 'OWNER_PASSAGE about charging early.', id: 'private-passage-id' } as { text: string }] };
+  const body = openRouterRequest(guided, config());
+  const payload = JSON.parse(body.messages[1].content);
+  expect(payload.ownerGuidance).toEqual([{ text: 'OWNER_PASSAGE about charging early.' }]);
+  expect(body.messages[1].content).not.toContain('private-passage-id');
+  expect(JSON.stringify(payload.evidence)).not.toContain('OWNER_PASSAGE');
+  expect(body.messages[0].content).toContain("ownerGuidance holds private coaching notes from the app's owner");
+  expect(body.messages[0].content).toContain('Never quote it, cite it or mention that it exists');
+  expect(body.messages[0].content).toContain('devils-advocate-mvp/4');
+  expect(body.messages[0].content).toContain('Transport version: devils-advocate-openrouter/3');
+  expect(payload.case.nextArea.opening).toBe('EDITED_MARKET_OPENING?');
+  expect(JSON.stringify(body)).not.toContain('caseAreas');
 });
