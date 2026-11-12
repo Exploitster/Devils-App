@@ -79,6 +79,7 @@ export const publicPages: PublicPage[] = [
     questions: [
       { question: 'Does Devils Advocate disagree with everything?', answer: 'No. It asks guiding questions, probes weak answers and then scores each area of your case. Loopholes are there to help you reason, and the decision remains yours.' },
       { question: 'How much does it cost?', answer: 'The planned membership is ₹200 INR per month before applicable taxes shown at checkout. There is no yearly plan. Live subscriptions are currently closed while verification is completed.' },
+      { question: 'Can I use my own Claude or ChatGPT?', answer: 'Yes. Connect your own Claude or OpenAI API key on the Account page and your conversations run on your account, without the shared daily allowance. Your provider bills you for what you use. An API key is separate from a Claude or ChatGPT subscription.' },
       { question: 'Can I try it without a payment card?', answer: 'Current access remains free while subscriptions are disabled. When paid access opens, new verified accounts receive a 24-hour cardless trial that ends without an automatic charge.' },
       { question: 'Are sources available for every topic?', answer: 'No. The reviewed source collection is currently small. The app should explain coverage limits rather than invent a source or treat an unrelated example as evidence.' },
       { question: 'Is this professional advice?', answer: 'No. It is a tool for reflection, not medical, legal, financial or mental health advice. Consult qualified support for decisions that require it.' },

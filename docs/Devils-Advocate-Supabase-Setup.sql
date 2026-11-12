@@ -15,7 +15,7 @@ GRANT SELECT ON public.devils_schema_migrations TO service_role;
 DO $devils_setup$
 DECLARE installed text; pending_seen boolean := false;
 BEGIN
-  IF EXISTS (SELECT 1 FROM public.devils_schema_migrations WHERE version NOT IN ('001_application.sql', '002_billing.sql', '003_privacy.sql', '004_dodo_billing.sql', '005_owner_knowledge.sql')) THEN
+  IF EXISTS (SELECT 1 FROM public.devils_schema_migrations WHERE version NOT IN ('001_application.sql', '002_billing.sql', '003_privacy.sql', '004_dodo_billing.sql', '005_owner_knowledge.sql', '006_user_model_keys.sql')) THEN
     RAISE EXCEPTION 'Database has migrations absent from this file. Generate the newest setup; do not downgrade.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.devils_schema_migrations)
@@ -437,6 +437,35 @@ $migration_c2a56478fabee12d$;
     END IF;
     IF installed <> 'c2a56478fabee12d48391512f36395bcfaff7e490c922f4c0b8ac28e419ae281' THEN
       RAISE EXCEPTION 'Applied migration % has changed. Add a new migration; do not edit applied files.', '005_owner_knowledge.sql';
+    END IF;
+  END IF;
+
+  -- 006_user_model_keys.sql
+  SELECT checksum INTO installed FROM public.devils_schema_migrations WHERE version = '006_user_model_keys.sql';
+  IF installed IS NULL THEN
+    pending_seen := true;
+    EXECUTE $migration_42898f5b10f2f32d$
+-- A person's own AI provider key (bring your own Claude or GPT). One row per account.
+-- The app server encrypts the key before it is stored; the database never holds it in
+-- the clear. Only the server's service role reaches this table. This migration only adds
+-- objects; until it runs, every conversation uses the app's own AI.
+create table public.user_model_keys (
+ user_id uuid primary key references public.profiles(user_id) on delete cascade,
+ data jsonb not null,
+ updated_at timestamptz not null
+);
+alter table public.user_model_keys enable row level security;
+revoke all on public.user_model_keys from anon, authenticated;
+grant all on public.user_model_keys to service_role;
+
+$migration_42898f5b10f2f32d$;
+    INSERT INTO public.devils_schema_migrations(version, checksum) VALUES ('006_user_model_keys.sql', '42898f5b10f2f32d8716fc84fc039d9f52d8a6a1278877a4453817d642a0bb03');
+  ELSE
+    IF pending_seen THEN
+      RAISE EXCEPTION 'Migration history has a gap before %. Stop and review the database.', '006_user_model_keys.sql';
+    END IF;
+    IF installed <> '42898f5b10f2f32d8716fc84fc039d9f52d8a6a1278877a4453817d642a0bb03' THEN
+      RAISE EXCEPTION 'Applied migration % has changed. Add a new migration; do not edit applied files.', '006_user_model_keys.sql';
     END IF;
   END IF;
 END;
