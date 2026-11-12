@@ -1,6 +1,6 @@
 # Dodo billing verification — 2026-10-21
 
-The implementation prepares one INR ₹2,000 monthly product, a cardless 24-hour trial, hosted Dodo checkout and portal, renewal cancellation, and signed canonical payment reconciliation. Public payment collection remains disabled, including in the release guard. This is not certification of a live merchant account or a completed paid launch.
+The implementation prepares one INR ₹200 monthly product, a cardless 24-hour trial, hosted Dodo checkout and portal, renewal cancellation, and signed canonical payment reconciliation. Public payment collection remains disabled, including in the release guard. This is not certification of a live merchant account or a completed paid launch.
 
 Validation completed locally:
 

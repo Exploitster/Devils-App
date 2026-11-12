@@ -11,7 +11,7 @@ and homepage navigation to the samples and FAQ.
 
 The reference's waitlist, December opening message, $59 monthly / $150 yearly
 plans and unlimited-evidence promises are superseded by the existing working
-sign-up and agreed INR 2,000 monthly membership. Hypothetical sample companies
+sign-up and agreed INR 200 monthly membership. Hypothetical sample companies
 are not imported into the reviewed evidence corpus. Samples are demonstrations,
 not live model evaluations. They require no login and store no visitor answers.
 
@@ -35,7 +35,7 @@ Owner explicitly deferred restoring missing Preview payment variables.
 Keep public payments disabled. Do not activate a paid plan from display estimates.
 
 Before accepting subscribers:
-1. Read back Live Dodo product through an authorized server-side check: INR 200000
+1. Read back Live Dodo product through an authorized server-side check: INR 20000
    minor units, every one month, lifetime 20 years/240 months, no provider trial,
    no discounts/PPP/fixed localized price overrides.
 2. Add a reviewed owner-only live-checkout verification path while public billing

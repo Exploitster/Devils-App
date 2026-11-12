@@ -15,10 +15,10 @@ export default function Landing() {
         <p className="lead">Bring an idea or a decision. We’ll ask one good question at a time, show you where your thinking is strong or thin, and hand the call back to you.</p>
         <div className="actions">
           <Link className="button primary" href="/signup">Find your perspective<Icon name="arrow"/></Link>
-          <a className="button quiet" href="#pricing">View pricing · ₹2,000/month</a>
+          <a className="button quiet" href="#pricing">View pricing · ₹200/month</a>
         </div>
         <p><a className="text-link" href="#try-sample">Try a sample first, no account needed <Icon name="arrow"/></a></p>
-        <p className="hero-note">{paid ? 'Free for your first 24 hours. Then ₹2,000/month.' : 'Free while subscriptions are being prepared.'}</p>
+        <p className="hero-note">{paid ? 'Free for your first 24 hours. Then ₹200/month.' : 'Free while subscriptions are being prepared.'}</p>
       </div>
       <IdeaVisual/>
     </section>

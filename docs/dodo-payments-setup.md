@@ -1,4 +1,4 @@
-# Connect Dodo Payments: ₹2,000 every month
+# Connect Dodo Payments: ₹200 every month
 
 Current state: application code is prepared; public payments remain disabled. The supplied product `pdt_0NqAtRm0gZXBQTwdAy6Br` belongs to **Test Mode** and cannot collect real money. Do not call the payment integration live until the checks below pass. Existing API keys and legacy billing records must be retained.
 
@@ -9,7 +9,7 @@ Current state: application code is prepared; public payments remain disabled. Th
 In your Dodo dashboard, keep **Test Mode** selected. Open Products → your Devils Advocate Monthly product.
 
 - Base currency: **INR**.
-- Price: **₹2,000**. If an API asks for the smallest currency unit, that is `200000` paise.
+- Price: **₹200**. If an API asks for the smallest currency unit, that is `20000` paise.
 - Payment frequency: **every 1 month**. No annual product.
 - No discount or purchasing power pricing. International customers should receive a currency conversion of the INR price, rather than a different regional price.
 - No Dodo trial. The app supplies the 24-hour trial without collecting a card; subscribing early starts paid billing immediately.
@@ -70,7 +70,7 @@ Use the replacement test product ID instead if step 5 required a new product. Ke
 
 Sign in → Billing → Open test checkout. Use Dodo's documented test payment details. Check:
 
-1. INR price ₹2,000 and an international currency checkout show the intended base price/conversion and taxes.
+1. INR price ₹200 and an international currency checkout show the intended base price/conversion and taxes.
 2. A verified payment appears in Dodo and its webhook delivery returns HTTP 200. Billing → Refresh payment status shows a test subscription.
 3. Refreshing checkout does not create duplicate subscriptions. Returning to the app without paying does not confirm payment.
 4. Test renewal, failed renewal, customer portal, payment-method recovery, invoices, cancel renewal, refund and dispute. Read back that renewal is canceled.

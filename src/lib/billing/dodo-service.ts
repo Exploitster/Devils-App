@@ -134,7 +134,7 @@ export class DodoBilling implements BillingService {
     if (plan !== "monthly")
       throw new AppError(
         "INVALID_PLAN",
-        "Only the INR 2,000 monthly plan is available.",
+        "Only the INR 200 monthly plan is available.",
         400,
       );
     const guard = await this.lease(user.id);

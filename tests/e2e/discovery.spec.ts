@@ -30,5 +30,5 @@ test('local price uses regional estimates, allows override and keeps the INR che
   await expect(price).toContainText('16.00 GBP / month');
   await price.getByRole('combobox').selectOption('JPY');
   await expect(price).toContainText('Local estimate unavailable');
-  await expect(page.getByRole('link', { name: /Subscribe for ₹2,000/ })).toHaveAttribute('href', '/billing');
+  await expect(page.getByRole('link', { name: /Subscribe for ₹200/ })).toHaveAttribute('href', '/billing');
 });

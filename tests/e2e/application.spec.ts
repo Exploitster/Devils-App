@@ -54,11 +54,11 @@ test('billing shows the INR monthly plan while payment collection stays disabled
   await login(page);
   await page.goto('/billing');
   await expect(page.getByRole('heading',{name:'Your subscription'})).toBeVisible();
-  await expect(page.getByText('₹2,000',{exact:true})).toBeVisible();
+  await expect(page.getByText('₹200',{exact:true})).toBeVisible();
   await expect(page.getByText('Free access is currently active.')).toBeVisible();
   await expect(page.getByRole('button',{name:/Subscribe|test checkout/})).toHaveCount(0);
   const billing=await (await page.request.get('/api/billing')).json();
-  expect(billing.plans).toEqual({monthly:{amount:200000,currency:'INR',interval:'month'}});
+  expect(billing.plans).toEqual({monthly:{amount:20000,currency:'INR',interval:'month'}});
   expect(billing.checkoutAvailable).toBe(false);
   await page.setViewportSize({width:360,height:780});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

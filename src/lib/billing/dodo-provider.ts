@@ -6,6 +6,7 @@ import type { Subscription, SubscriptionListResponse } from 'dodopayments/resour
 import type { Payment, PaymentListResponse } from 'dodopayments/resources/payments';
 import type { UnwrapWebhookEvent } from 'dodopayments/resources/webhooks/webhooks';
 import { AppError } from '@/lib/errors';
+import { MONTHLY_PRICE_INR, MONTHLY_PRICE_PAISE } from './price';
 
 export type { Product as SDKProduct, Customer as SDKCustomer, CheckoutSessionStatus as SDKCheckoutSessionStatus, Subscription as SDKSubscription, SubscriptionListResponse as SDKSubscriptionListResponse, Payment as SDKPayment, PaymentListResponse as SDKPaymentListResponse, UnwrapWebhookEvent as SDKWebhookEvent };
 export interface DodoProviderConfig {
@@ -69,7 +70,7 @@ export class DodoProvider {
     if (product.product_id !== this.config.productId) fixes.push('Product: select the configured product in the correct Dodo mode');
     if (!product.is_recurring || p.type !== 'recurring_price') fixes.push('Plan type: select recurring subscription');
     if (p.type === 'recurring_price') {
-      if (p.currency !== 'INR' || p.price !== 200000) fixes.push('Price: set INR 2,000');
+      if (p.currency !== 'INR' || p.price !== MONTHLY_PRICE_PAISE) fixes.push(`Price: set INR ${MONTHLY_PRICE_INR}`);
       if (p.payment_frequency_count !== 1 || p.payment_frequency_interval !== 'Month') fixes.push('Payment frequency: set every 1 month');
       if (!lifetimeIsOngoing) fixes.push('Subscription lifetime: set 20 years (or 240 months)');
       if ((p.discount ?? 0) !== 0 || (p.discount_bps ?? 0) !== 0) fixes.push('Discount: set 0');
