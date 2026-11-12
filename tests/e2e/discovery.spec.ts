@@ -25,9 +25,9 @@ test('local price uses regional estimates, allows override and keeps the INR che
   await page.route('**/api/pricing', route => route.fulfill({ json: { currency: 'USD', locationDetected: true, date: '2026-10-26', rates: { INR: 1, USD: 0.01, GBP: 0.008 } } }));
   await page.goto('/');
   const price = page.locator('.local-price');
-  await expect(price).toContainText('$20.00 USD / month');
+  await expect(price).toContainText('$2.00 USD / month');
   await price.getByRole('combobox').selectOption('GBP');
-  await expect(price).toContainText('16.00 GBP / month');
+  await expect(price).toContainText('1.60 GBP / month');
   await price.getByRole('combobox').selectOption('JPY');
   await expect(price).toContainText('Local estimate unavailable');
   await expect(page.getByRole('link', { name: /Subscribe for ₹200/ })).toHaveAttribute('href', '/billing');
