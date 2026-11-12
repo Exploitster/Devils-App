@@ -71,7 +71,7 @@ async function setup() {
     business_id: "biz_app",
     customer: { customer_id: "cus_alex" },
     status: "succeeded",
-    total_amount: 200000,
+    total_amount: 20000,
     subscription_ids: ["sub_one"],
     is_update_payment_method: false,
     refunds: [],

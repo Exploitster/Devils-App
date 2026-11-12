@@ -27,6 +27,7 @@
     "report:return-rate": "NODE_USE_ENV_PROXY=1 tsx scripts/case-prep-return-rate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.3",
     "@vercel/oidc": "4.0.1",

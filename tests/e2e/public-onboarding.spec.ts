@@ -87,7 +87,7 @@ test('a delayed onboarding account check cannot redirect after leaving the page'
 
 test('homepage subscription entry survives email signup without requiring conversation onboarding', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: /Subscribe for ₹2,000/ }).click();
+  await page.getByRole('link', { name: /Subscribe for ₹200/ }).click();
   await expect(page).toHaveURL(/login\?next=%2Fbilling/);
   await page.getByRole('link', { name: 'Create an account', exact: true }).click();
   await expect(page).toHaveURL(/signup\?next=%2Fbilling/);
@@ -97,7 +97,7 @@ test('homepage subscription entry survives email signup without requiring conver
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page).toHaveURL(/\/billing$/);
   await expect(page.getByRole('heading', { name: 'Your subscription' })).toBeVisible();
-  await expect(page.getByText('₹2,000', { exact: true })).toBeVisible();
+  await expect(page.getByText('₹200', { exact: true })).toBeVisible();
   expect((await (await page.request.get('/api/auth')).json()).user.onboarded === true).toBe(false);
   await expect(page.getByRole('button', { name: /Subscribe|checkout/ })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -126,7 +126,7 @@ test('pricing is readable on desktop and mobile with a direct subscription link'
   for (const width of [360, 1440]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto('/');
     const pricing = page.getByRole('region', { name: 'Invest in a clearer next step.' });
-    await expect(pricing).toContainText('₹2,000');
+    await expect(pricing).toContainText('₹200');
     await expect(pricing).toContainText('once every month');
     await expect(pricing).toContainText('no real payment is collected');
     await expect(pricing.getByRole('link', { name: /Subscribe/ })).toHaveAttribute('href', '/billing');

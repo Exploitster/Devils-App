@@ -89,7 +89,7 @@ export default function BillingPage() {
             </span>
             <h2>Devils Advocate</h2>
             <p>
-              <strong style={{ fontSize: "2.5rem" }}>₹2,000</strong> / month
+              <strong style={{ fontSize: "2.5rem" }}>₹200</strong> / month
             </p>
             <p>One monthly payment. No annual plan.</p><LocalPrice/>
             <ul>
@@ -152,7 +152,7 @@ export default function BillingPage() {
                   ? "Opening checkout…"
                   : data.testMode
                     ? "Open test checkout"
-                    : "Subscribe for ₹2,000/month"}
+                    : "Subscribe for ₹200/month"}
               </button>
             )}
             <p className="fine">

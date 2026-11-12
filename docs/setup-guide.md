@@ -55,6 +55,16 @@ The Studio at `/studio` is where the owner adds notes, PDFs and recordings to a 
 
 In local mode the Studio works without these settings. `DEVILS_OWNER_EMAILS` still decides who is the owner, recordings get a fixed sample transcript, and files are kept under `.local/knowledge/`.
 
+## Let people connect their own AI
+
+People can connect their own Claude or OpenAI API key on the Account page. Their turns then run on their account, and the app's daily AI budget is not used. Everyone else shares that budget; when it runs out, the message points them to connecting a key.
+
+1. **Apply migration 006** the same way as migration 005 above. It only adds the `user_model_keys` table. Until it runs, saving a key reports that the feature is not available and conversations carry on with the app's AI.
+2. **Set `DEVILS_KEY_ENCRYPTION_SECRET`** to a random value of at least 32 characters, for example from `openssl rand -base64 48`, and redeploy. Without it the Account page says the feature is not available yet. Changing it later makes saved keys unreadable and people are asked to enter theirs again.
+3. **Decide about Studio guidance.** By default (`DEVILS_OWN_AI_GUIDANCE=withhold`) the owner's private guidance is left out of turns that run on a person's own key, because that person's provider account can log its prompts. Set `send` to include it. See [privacy.md](privacy.md).
+
+The Claude connection uses the official Anthropic SDK with adaptive thinking, JSON output and the provider's default fallback when a request is declined. The OpenAI connection uses Chat Completions with a strict JSON schema. Both were tested with stubbed providers only; send one real message with each kind of key before announcing the feature. In local mode a key that starts with `local-` is accepted and no provider is called.
+
 ## Legacy operator-only invite records (not needed for the free MVP)
 
 After creating the authentication user, use its exact UUID with the service-only `public.app_store` RPC. `putProfile` accepts `{profile:{id,email,disabled:false,deletionState:"none",createdAt}}`; `putInvite` accepts `{invite:{userId,enabled:true,expiresAt}}`. Timestamps must be ISO strings, and the invite expiry must be in the future. Make these calls only from a trusted server/admin environment, never from a browser. Owner RLS does not allow users to grant themselves invites or subscriptions.

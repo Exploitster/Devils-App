@@ -4,7 +4,7 @@ import { DodoProvider, type DodoProviderConfig } from '@/lib/billing/dodo-provid
 
 const secret = `whsec_${Buffer.from('synthetic-webhook-secret-32-bytes!').toString('base64')}`;
 const config: DodoProviderConfig = { apiKey: 'synthetic-api-token', environment: 'test_mode', productId: 'pdt_test', webhookSecret: secret, appUrl: 'https://www.devils-advocate.app' };
-const price = { type: 'recurring_price', currency: 'INR', price: 200000, payment_frequency_count: 1, payment_frequency_interval: 'Month', subscription_period_count: 20, subscription_period_interval: 'Year', trial_period_days: 0 };
+const price = { type: 'recurring_price', currency: 'INR', price: 20000, payment_frequency_count: 1, payment_frequency_interval: 'Month', subscription_period_count: 20, subscription_period_interval: 'Year', trial_period_days: 0 };
 const product = { product_id: 'pdt_test', is_recurring: true, price };
 function harness(responses: unknown[]) {
   const requests: Request[] = [];
@@ -22,7 +22,7 @@ function signed(raw: string, timestamp = Math.floor(Date.now() / 1000), id = 'ev
 }
 
 describe('official Dodo SDK adapter', () => {
-  it('accepts INR 2000 monthly with a long renewable lifetime', async () => {
+  it('accepts INR 200 monthly with a long renewable lifetime', async () => {
     const { provider, requests } = harness([product]);
     await expect(provider.verifyProduct()).resolves.toEqual(product);
     expect(requests[0].url).toBe('https://test.dodopayments.com/products/pdt_test');
@@ -108,6 +108,6 @@ describe('official Dodo SDK adapter', () => {
 
 it('identifies the mismatched product settings without leaking provider data', async () => {
   const { provider } = harness([{ ...product, name: 'private provider text', price: { ...price, price: 50000, subscription_period_count: 1 } }]);
-  await expect(provider.verifyProduct()).rejects.toMatchObject({ code: 'DODO_PRODUCT_MISMATCH', message: expect.stringContaining('Price: set INR 2,000') });
+  await expect(provider.verifyProduct()).rejects.toMatchObject({ code: 'DODO_PRODUCT_MISMATCH', message: expect.stringContaining('Price: set INR 200') });
   await expect(harness([{ ...product, price: { ...price, trial_period_days: 1 } }]).provider.verifyProduct()).rejects.toMatchObject({ message: expect.stringContaining('Provider trial: set 0 days') });
 });

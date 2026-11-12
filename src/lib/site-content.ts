@@ -58,11 +58,11 @@ export const publicPages: PublicPage[] = [
     ], related: ['features', 'help', 'faq'],
   },
   {
-    slug: 'pricing', title: 'Pricing — ₹2,000 monthly membership', heading: 'One monthly plan. Both perspectives.',
-    description: 'Devils Advocate membership costs ₹2,000 INR per month with supported international currency conversion. Review renewals and access details.',
+    slug: 'pricing', title: 'Pricing — ₹200 monthly membership', heading: 'One monthly plan. Both perspectives.',
+    description: 'Devils Advocate membership costs ₹200 INR per month with supported international currency conversion. Review renewals and access details.',
     intro: 'Business validation and philosophical reflection are included together. No yearly plan or introductory discount.',
     sections: [
-      section('What the membership costs', 'The base price is ₹2,000 INR charged once every month. Applicable taxes and the final payable amount appear at Dodo checkout before you confirm. Supported countries may see a converted local-currency total. Website currency estimates are indicative; the checkout quote and any bank conversion fees can differ.'),
+      section('What the membership costs', 'The base price is ₹200 INR charged once every month. Applicable taxes and the final payable amount appear at Dodo checkout before you confirm. Supported countries may see a converted local-currency total. Website currency estimates are indicative; the checkout quote and any bank conversion fees can differ.'),
       section('What is included', 'The plan covers both conversation perspectives, available reviewed sources, saved history, assessments and Markdown exports. Usage is subject to fair-use safeguards, context limits, operating budgets and provider availability. We do not promise unlimited generations, complete industry coverage or error-free AI responses.'),
       section('Access and renewal', 'Live subscriptions remain closed while payment verification is being completed; current free access continues. When paid access is enabled, new verified accounts receive a 24-hour cardless trial that ends without an automatic charge. Choosing a paid subscription authorizes monthly renewals until canceled. Cancel renewal from Billing before the next payment date.'),
     ], related: ['subscription-and-cancellation', 'refunds', 'faq'],
@@ -78,7 +78,8 @@ export const publicPages: PublicPage[] = [
     ], related: ['help', 'pricing', 'security'],
     questions: [
       { question: 'Does Devils Advocate disagree with everything?', answer: 'No. It asks guiding questions, probes weak answers and then scores each area of your case. Loopholes are there to help you reason, and the decision remains yours.' },
-      { question: 'How much does it cost?', answer: 'The planned membership is ₹2,000 INR per month before applicable taxes shown at checkout. There is no yearly plan. Live subscriptions are currently closed while verification is completed.' },
+      { question: 'How much does it cost?', answer: 'The planned membership is ₹200 INR per month before applicable taxes shown at checkout. There is no yearly plan. Live subscriptions are currently closed while verification is completed.' },
+      { question: 'Can I use my own Claude or ChatGPT?', answer: 'Yes. Connect your own Claude or OpenAI API key on the Account page and your conversations run on your account, without the shared daily allowance. Your provider bills you for what you use. An API key is separate from a Claude or ChatGPT subscription.' },
       { question: 'Can I try it without a payment card?', answer: 'Current access remains free while subscriptions are disabled. When paid access opens, new verified accounts receive a 24-hour cardless trial that ends without an automatic charge.' },
       { question: 'Are sources available for every topic?', answer: 'No. The reviewed source collection is currently small. The app should explain coverage limits rather than invent a source or treat an unrelated example as evidence.' },
       { question: 'Is this professional advice?', answer: 'No. It is a tool for reflection, not medical, legal, financial or mental health advice. Consult qualified support for decisions that require it.' },
@@ -128,7 +129,7 @@ export const publicPages: PublicPage[] = [
   {
     slug: 'subscription-and-cancellation', title: 'Subscriptions, renewals and cancellation', heading: 'Know how monthly access works.',
     description: 'Understand monthly renewal, the cardless trial, payment verification, cancellation and account deletion.',
-    intro: 'The base plan is ₹2,000 INR per month, with no annual plan or long-term purchase commitment.',
+    intro: 'The base plan is ₹200 INR per month, with no annual plan or long-term purchase commitment.',
     sections: [
       section('Trial and payment', 'Live subscriptions remain closed while verification is completed. When paid access opens, new verified accounts receive a 24-hour trial without a payment card. It ends without automatically charging you. You can choose to subscribe before or after the trial ends. Dodo shows the payable amount, supported payment methods and any applicable taxes before confirmation.'),
       section('Monthly renewals', 'Confirming a subscription authorizes recurring monthly payments until canceled. Provider configuration may permit ongoing renewal for up to a twenty-year subscription lifetime; that is not an annual charge or a commitment to pay for twenty years. International conversion and supported recurring payment methods depend on the country, currency and provider.'),

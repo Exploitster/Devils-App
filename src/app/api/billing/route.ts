@@ -2,6 +2,7 @@ import { authResponse, requireIdentity, getStore, getRuntimeConfig } from '../..
 import { accessDecision } from '../../../lib/auth/access';
 import { json } from '../../../lib/http';
 import { checkoutAllowed } from '../../../lib/billing/dodo-config';
+import { MONTHLY_PRICE_PAISE } from '../../../lib/billing/price';
 export const runtime='nodejs';
 export async function GET(request:Request){return authResponse(request,async()=>{
  const user=await requireIdentity(request);const store=await getStore(request);const config=getRuntimeConfig(request);
@@ -9,5 +10,5 @@ export async function GET(request:Request){return authResponse(request,async()=>
  const checkoutAvailable=config.billingProvider==='dodo'&&checkoutAllowed(config,user.id);
  const verificationCheckout=checkoutAvailable&&!config.paymentsEnabled&&!testMode;
  const subscription=await store.getSubscription(user.id);
- return json({subscription:subscription?{status:subscription.status,currentPeriodEnd:subscription.currentPeriodEnd,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd,testMode:subscription.environment==='test_mode'}:null,access:await accessDecision(store,user.id,config),paymentsEnabled:config.paymentsEnabled,checkoutAvailable:Boolean(checkoutAvailable),verificationCheckout,plans:{monthly:{amount:200000,currency:'INR',interval:'month'}},testMode});
+ return json({subscription:subscription?{status:subscription.status,currentPeriodEnd:subscription.currentPeriodEnd,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd,testMode:subscription.environment==='test_mode'}:null,access:await accessDecision(store,user.id,config),paymentsEnabled:config.paymentsEnabled,checkoutAvailable:Boolean(checkoutAvailable),verificationCheckout,plans:{monthly:{amount:MONTHLY_PRICE_PAISE,currency:'INR',interval:'month'}},testMode});
 });}

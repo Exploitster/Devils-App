@@ -1,4 +1,4 @@
-> Current Dodo integration and ₹2,000 monthly setup: see [dodo-payments-setup.md](dodo-payments-setup.md). Public payments remain disabled. The Stripe USD/annual behavior documented below is retained only for legacy records and isolated tests; it is not the current advertised offer. The new signed Dodo endpoint can reconcile test events while public payments are off.
+> Current Dodo integration and ₹200 monthly setup: see [dodo-payments-setup.md](dodo-payments-setup.md). Public payments remain disabled. The Stripe USD/annual behavior documented below is retained only for legacy records and isolated tests; it is not the current advertised offer. The new signed Dodo endpoint can reconcile test events while public payments are off.
 
 # Billing integration point
 

@@ -22,7 +22,7 @@ The main website stays at https://www.devils-advocate.app on its existing deploy
 - Open the testing address. Confirm the temporary-site notice and both business validation and philosophical reflection on the homepage.
 - Sign in with Google and with email/password. New email accounts still need email confirmation. Verify onboarding and password reset return to the testing address.
 - Try both conversation modes. Review sources, generate a decision card, reload, resume from History and export a card. Report provider capacity errors rather than bypassing citation validation.
-- Open Billing. Verify ₹2,000/month, no annual plan and an explicit test-checkout label. Your account must match a configured `DEVILS_DODO_TEST_USER_IDS` UUID.
+- Open Billing. Verify ₹200/month, no annual plan and an explicit test-checkout label. Your account must match a configured `DEVILS_DODO_TEST_USER_IDS` UUID.
 - Use Dodo's official Test Mode payment details. Verify the final amount, international currency conversion where available, consent to monthly renewal, successful return to this testing address and a successful webhook delivery in Dodo.
 - Refresh billing and verify a **test** subscription. Try the customer portal, invoice/payment-method controls, cancellation and readback. Test a failed payment, renewal, refund and dispute with Dodo's supported test controls. Open checkouts and unknown provider outcomes are held for reconciliation rather than retried into duplicate subscriptions.
 
@@ -31,7 +31,7 @@ While `DEVILS_PAYMENTS_ENABLED=false`, existing free AI access continues. A test
 ## After testing: production steps
 
 1. Confirm the test flows and actual product recurrence, INR base price, taxes, supported recurring methods and conversion are correct. Confirm hosted AI availability and a budget/capacity suitable for paying customers.
-2. Complete Dodo's merchant approval. Create a **Live Mode** recurring product for INR ₹2,000 every month, with no annual plan and no Dodo-managed trial. The app supplies the cardless trial. Preserve all Test Mode settings separately.
+2. Complete Dodo's merchant approval. Create a **Live Mode** recurring product for INR ₹200 every month, with no annual plan and no Dodo-managed trial. The app supplies the cardless trial. Preserve all Test Mode settings separately.
 3. Create a Live Mode webhook for `https://www.devils-advocate.app/api/billing/dodo/webhook`. Configure the Live Mode API key, product ID, mode and signing secret privately in Vercel **Production only**. Keep Preview test bindings separate; never change a shared Test/Live secret in place.
 4. Stage a reviewed production build with the canonical production origin and production database, keeping public payment collection disabled. Verify authentication, product readiness, signed deliveries, invoices and cancellation through an owner-controlled live rehearsal before opening payments publicly. Any privileged live rehearsal must remain restricted to the verified owner account.
 5. Make a reviewed release enabling the one-day trial and paid access. The existing release guard intentionally rejects `DEVILS_PAYMENTS_ENABLED=true` until that activation change is reviewed and verified. Do not bypass the guard by editing dashboard flags alone.
@@ -47,7 +47,7 @@ In Dodo **Test Mode**, edit the configured product (`pdt_0NqAtRm0gZXBQTwdAy6Br`)
 | --- | --- |
 | Type | Recurring subscription |
 | Base currency | INR |
-| Price shown in dashboard | ₹2,000 (API uses 200000 paise) |
+| Price shown in dashboard | ₹200 (API uses 20000 paise) |
 | Payment frequency | Every 1 Month |
 | Subscription lifetime / total subscription duration | 20 Year, or 240 Month |
 | Discount | 0; no discount codes at checkout |

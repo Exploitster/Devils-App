@@ -14,7 +14,7 @@ describe('customer information content', () => {
   });
   it('describes the actual monthly offer and never invents refund guarantees', () => {
     const pricing = publicPages.find(page => page.slug === 'pricing')!;
-    expect(JSON.stringify(pricing)).toContain('₹2,000');
+    expect(JSON.stringify(pricing)).toContain('₹200');
     expect(JSON.stringify(pricing)).toContain('No yearly plan');
     expect(JSON.stringify(publicPages.find(page => page.slug === 'refunds'))).toContain('purchase terms');
     expect(JSON.stringify(pageJsonLd(pricing))).not.toContain('InStock');

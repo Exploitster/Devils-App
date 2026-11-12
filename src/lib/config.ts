@@ -11,6 +11,10 @@ export interface RuntimeConfig {
   maxInputCharacters: number; maxContextMessages: number; submissionsPerMinute: number;
   /** Server-only: never returned to clients. Lowercased, confirmed-email allowlist for the Studio. */
   ownerEmails: string[];
+  /** Encrypts people's own AI keys at rest. Empty means connecting your own AI is switched off. */
+  keyEncryptionSecret: string;
+  /** Whether the owner's private Studio guidance travels on turns paid for by a person's own key, whose account can log its prompts. */
+  ownAiGuidance: 'withhold' | 'send';
   /** Transcription always uses Gemini, whatever the chat provider. Key and prices are checked at use, not at startup. */
   transcriptionModel: string; transcriptionApiKey: string; transcriptionInputUsdPerMillion?: number; transcriptionOutputUsdPerMillion?: number;
 }
@@ -50,6 +54,11 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(launchDate) || Number.isNaN(Date.parse(launchDate))) throw new Error('DEVILS_LAUNCH_DATE must be an ISO calendar date.');
   const ownerEmails = (env.DEVILS_OWNER_EMAILS ?? '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
   if (ownerEmails.some(value => !z.email().safeParse(value).success)) throw new Error('DEVILS_OWNER_EMAILS must be a comma-separated list of email addresses.');
+  // Local development reuses its signing secret, so the feature works without extra setup.
+  const keyEncryptionSecret = env.DEVILS_KEY_ENCRYPTION_SECRET?.trim() || (mode === 'local' ? env.DEVILS_LOCAL_AUTH_SECRET ?? '' : '');
+  if (keyEncryptionSecret && keyEncryptionSecret.length < 32) throw new Error('DEVILS_KEY_ENCRYPTION_SECRET must contain at least 32 characters.');
+  const ownAiGuidance = env.DEVILS_OWN_AI_GUIDANCE ?? 'withhold';
+  if (ownAiGuidance !== 'withhold' && ownAiGuidance !== 'send') throw new Error('DEVILS_OWN_AI_GUIDANCE must be withhold or send.');
   const geminiModel = /^gemini-[A-Za-z0-9._-]+$/;
   const transcriptionModel = env.DEVILS_TRANSCRIPTION_MODEL?.trim() || (geminiModel.test(env.DEVILS_MODEL ?? '') ? env.DEVILS_MODEL! : 'gemini-3.8-flash');
   if (!geminiModel.test(transcriptionModel)) throw new Error('DEVILS_TRANSCRIPTION_MODEL must be a Gemini model ID.');
@@ -59,6 +68,7 @@ export function readConfig(env: Environment = process.env): RuntimeConfig {
     supabaseUrl, supabaseAnonKey: env.DEVILS_SUPABASE_ANON_KEY ?? '', supabaseServiceRoleKey: env.DEVILS_SUPABASE_SERVICE_ROLE_KEY ?? '',
     modelProvider, gatewayProviders: ['vertex'], fallbackModels: [...new Set(fallbackModels)].filter(id => id !== model), modelApiKey: (modelProvider === 'gateway' ? env.AI_GATEWAY_API_KEY : modelProvider === 'openrouter' ? env.DEVILS_OPENROUTER_API_KEY : env.DEVILS_GEMINI_API_KEY) ?? '', model, modelInputUsdPerMillion: inputPrice, modelOutputUsdPerMillion: outputPrice, billingProvider: billingProvider as 'stripe'|'dodo', paidAccessStart, dodoTestUserIds: (env.DEVILS_DODO_TEST_USER_IDS ?? '').split(',').map(v=>v.trim()).filter(Boolean), maxOutputTokens: integer(env, 'DEVILS_MAX_OUTPUT_TOKENS', 2500, 100, 8000), maxAssessmentTokens: integer(env, 'DEVILS_MAX_ASSESSMENT_TOKENS', 6000, 100, 16000), paymentsEnabled, stripeSecretKey: env.DEVILS_STRIPE_SECRET_KEY ?? '', stripeWebhookSecret: env.DEVILS_STRIPE_WEBHOOK_SECRET ?? '', stripeMonthlyPriceId: env.DEVILS_STRIPE_MONTHLY_PRICE_ID ?? '', stripeYearlyPriceId: env.DEVILS_STRIPE_YEARLY_PRICE_ID ?? '',
     betaActive: beta === 'true', launchDate, generationTimeoutMs: integer(env, 'DEVILS_GENERATION_TIMEOUT_MS', modelProvider === 'gateway' ? 90000 : modelProvider === 'openrouter' ? 60000 : 30000, 1000, 120000), dailySpendLimitMicros: integer(env, 'DEVILS_DAILY_SPEND_LIMIT_MICROS', 5000000, 1, 1000000000), maxInputCharacters: 12000, maxContextMessages: 24, submissionsPerMinute: 10,
+    keyEncryptionSecret, ownAiGuidance,
     ownerEmails: [...new Set(ownerEmails)], transcriptionModel, transcriptionApiKey: env.DEVILS_GEMINI_API_KEY ?? '', transcriptionInputUsdPerMillion: optionalPrice(env, 'DEVILS_TRANSCRIPTION_INPUT_USD_PER_MILLION'), transcriptionOutputUsdPerMillion: optionalPrice(env, 'DEVILS_TRANSCRIPTION_OUTPUT_USD_PER_MILLION') };
 }
 export function outputTokenLimit(config: RuntimeConfig, task: 'turn' | 'card'): number { return task === 'card' ? config.maxAssessmentTokens : config.maxOutputTokens; }

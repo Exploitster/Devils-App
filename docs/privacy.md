@@ -15,7 +15,9 @@ Users never see owner material. The model is told to use it only to shape questi
 
 Owner material is stored apart from users' conversations: item text and passages in their own tables, and uploaded files in the private `owner-knowledge` storage bucket. Deleting an item removes its passages and its stored file. Logs carry IDs, error codes, durations and costs only, never text, file names or the owner's email.
 
-A later feature may let users connect their own AI account. Anyone who owns the provider account can read every prompt it receives, so the owner will decide then whether guidance is sent to users' own provider accounts. Until then guidance only goes to the app's configured provider.
+A person can connect their own Claude (Anthropic) or OpenAI API key on the Account page. Their turns then run on that provider under their own account and its terms, and the app's daily spend budget is not used. The key is checked with the provider once, stored encrypted with AES-256-GCM under `DEVILS_KEY_ENCRYPTION_SECRET`, bound to the account, and never returned to the browser: the page shows only its last four characters. Removing the key or deleting the account deletes it.
+
+Anyone who owns a provider account can read the prompts it receives. So on turns paid for by a person's own key, owner guidance is **left out by default** (`DEVILS_OWN_AI_GUIDANCE=withhold`). The owner can set `DEVILS_OWN_AI_GUIDANCE=send` to include it, accepting that those users could read it in their provider account. The question sets (area names, opening questions, strong-answer signals) are part of every prompt and go to the person's provider either way.
 
 Saved private conversations remain until the user deletes them. Session deletion removes the session and its embedded messages, case record, assessment, cards, summaries and evidence references, plus turn operations and committed usage. Pending completion cannot recreate a deleted session. Usage totals for deleted conversations disappear; separate provider-attempt spend remains so failures, cancellation and deletion cannot bypass spending limits.
 

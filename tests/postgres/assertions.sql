@@ -4,6 +4,10 @@ SELECT public.app_store('putProfile', '{"profile":{"id":"00000000-0000-4000-8000
 SELECT public.app_store('putProfile', '{"profile":{"id":"00000000-0000-4000-8000-000000000002","email":"sam@example.test","disabled":false,"deletionState":"none","createdAt":"2026-10-14T09:00:00Z"}}');
 SELECT public.app_store('createSession', '{"userId":"00000000-0000-4000-8000-000000000001","input":{"mode":"business","topic":"startup"},"now":"2026-10-14T09:00:00Z"}', '00000000-0000-4000-8000-000000000001');
 SELECT public.app_store('createSession', '{"userId":"00000000-0000-4000-8000-000000000002","input":{"mode":"philosophy","topic":"life"},"now":"2026-10-14T09:00:00Z"}', '00000000-0000-4000-8000-000000000002');
+DO $$ BEGIN
+ INSERT INTO public.user_model_keys VALUES ('00000000-0000-4000-8000-000000000001','{"provider":"anthropic","sealedKey":"v1.sealed"}','2026-11-12T10:00:00Z');
+ IF (SELECT data->>'provider' FROM public.user_model_keys WHERE user_id='00000000-0000-4000-8000-000000000001') <> 'anthropic' THEN RAISE EXCEPTION 'Service role cannot store a model key'; END IF;
+END $$;
 SET ROLE authenticated;
 SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
 DO $$ BEGIN
@@ -128,6 +132,24 @@ DO $$ BEGIN
  BEGIN
   PERFORM public.knowledge_operation('search','{"match":"pricing","limit":3}');
   RAISE EXCEPTION 'Anonymous knowledge search allowed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+DO $$ BEGIN
+ BEGIN
+  PERFORM count(*) FROM public.user_model_keys;
+  RAISE EXCEPTION 'Anonymous model key access allowed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+DO $$ BEGIN
+ BEGIN
+  PERFORM count(*) FROM public.user_model_keys;
+  RAISE EXCEPTION 'Signed-in users can read model keys';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  DELETE FROM public.user_model_keys;
+  RAISE EXCEPTION 'Signed-in users can remove model keys directly';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
